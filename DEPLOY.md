@@ -73,23 +73,25 @@ security section below).
 
 ---
 
-## Security — read before the URL is reachable by anyone else
+## Security
 
-Three real issues, in priority order. None of these block deployment, but all
-three are live right now in the existing Supabase project.
+### 1. Password hashing — FIXED ✅
 
-### 1. Passwords are stored in plain text
+Passwords are now hashed with bcrypt (cost 10) on register, password reset and
+profile update, and verified with `bcrypt.compare` on login. They were
+previously written and compared as plain text in both Supabase and the local
+JSON store.
 
-`app_users.password` holds real, unhashed passwords for real accounts — I
-confirmed this against the live database. `server.ts` compares them with
-`data.password === password`. There is no hashing anywhere in the auth path.
+**Existing accounts need no manual reset.** Any password still stored as
+plaintext is detected on the owner's next successful login and transparently
+re-stored as a hash. Their existing password keeps working.
 
-Anyone who can read that table can read every user's actual password, and
-people reuse passwords across services. Fixing this means hashing with
-bcrypt/argon2 on register and comparing hashes on login, plus a forced reset of
-every existing account. It is a code change, not a deploy setting.
+Two accounts were still plaintext at the time of writing
+(`kaixian.tan@qiu.edu.my`, `ongyeemun@gmail.com`); both convert automatically
+the next time each person logs in. Until they do, those two rows remain
+readable — see issue 2.
 
-### 2. Row Level Security is enabled but wide open
+### 2. Row Level Security is enabled but wide open — STILL OPEN ⚠️
 
 Both tables use `FOR ALL USING (true) WITH CHECK (true)` — RLS is on, but the
 policy permits everything. Combined with issue 1, **anyone holding the anon key
@@ -105,12 +107,34 @@ ever been pasted into a chat, ticket, or email. Rotate it in
 A tighter policy would deny anon access to `app_users` entirely and let only the
 service-role key touch it.
 
-### 3. Seeded demo accounts with published passwords
+### 3. Seeded demo accounts — FIXED ✅
 
-`DEFAULT_USERS` in `server.ts` seeds `admin@company.com` / `admin123` and
-`sarah.chen@company.com` / `user123`. These are in the source, so anyone with
-repo access — or anyone who guesses — gets an admin login. Register your own
-admin account, then delete the seeded rows from `app_users`.
+`DEFAULT_USERS` seeded `admin@company.com` / `admin123` plus two others. These
+were never rows in Supabase — they were injected at runtime from the source
+code, and because login falls back to local file storage when Supabase has no
+matching user, they were a **working admin login on any deployment of this
+code**. `DEFAULT_USERS` is now empty and the accounts were removed from
+`data/server-storage.json`. Verified: that login now returns 404.
+
+---
+
+## AI quota limits
+
+The Gemini free tier is tighter than it looks, and it shapes what this app can
+do:
+
+- **~5 requests per minute** per model
+- **A daily cap** as well — reached during setup testing, which returns 429
+  until it resets
+
+The server now retries transient failures (429/503/500/504) with backoff and
+honours the `retryDelay` Google returns, capped at 12s so a browser request is
+never held open for a full quota window. Beyond that it returns an accurate
+error: a per-minute throttle says how many seconds to wait, while daily
+exhaustion says so plainly instead of implying a short retry will help.
+
+If the team hits these limits in normal use, enabling billing on the Google
+Cloud project raises them substantially.
 
 ---
 
