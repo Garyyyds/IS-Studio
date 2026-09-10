@@ -1,0 +1,49 @@
+# Keeps the free-tier Supabase project from being paused.
+#
+# A free Supabase project is paused after 7 days without database activity, and
+# a paused project is unreachable until it is manually restored from the
+# dashboard. This job hits the app's status endpoint, which performs a real
+# query against Supabase, resetting that timer.
+#
+# No secrets are required: the URL is public and the endpoint returns no
+# sensitive data.
+name: Keep alive
+
+on:
+  schedule:
+    # 06:00 UTC every third day - comfortably inside the 7-day pause window.
+    - cron: '0 6 */3 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ping app (wakes Render, queries Supabase)
+        run: |
+          URL="https://is-studio.onrender.com/api/data/status"
+
+          # Render's free tier sleeps after 15 minutes idle and takes 30-60s to
+          # wake, so the first attempt often times out. Retry before failing.
+          for attempt in 1 2 3 4 5; do
+            echo "Attempt $attempt..."
+            body=$(curl -sS --max-time 120 "$URL" || true)
+
+            if echo "$body" | grep -q '"storageType":"supabase"'; then
+              echo "OK - Supabase reached, pause timer reset."
+              echo "$body" | head -c 300
+              exit 0
+            fi
+
+            if [ -n "$body" ]; then
+              echo "Reached the app but Supabase was not connected:"
+              echo "$body" | head -c 300
+            fi
+
+            sleep 30
+          done
+
+          echo "::error::Could not confirm a Supabase query after 5 attempts."
+          echo "The project may already be paused - check the Supabase dashboard."
+          exit 1

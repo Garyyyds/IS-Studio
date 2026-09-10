@@ -24,7 +24,8 @@ Do not redo these. They are committed and verified:
 - Passwords hashed with bcrypt; legacy plaintext upgrades automatically on login
 - Seeded `admin@company.com` / `admin123` backdoor removed
 - Gemini calls retry on 429/503 and return accurate errors
-- `GEMINI_MODEL` configurable; currently `gemini-3.6-flash`
+- `GEMINI_MODEL` accepts a fallback chain; a model out of daily quota hands off
+  to the next automatically
 - Supabase connected and verified (`storageType: "supabase"`)
 - Git repo initialised with all work committed
 
@@ -123,17 +124,18 @@ variables. **Copy each value from your local `.env` file.**
 | --- | --- |
 | `GEMINI_API_KEY` | `.env` — starts with `AQ.` |
 | `SUPABASE_URL` | `.env` — the `https://….supabase.co` URL |
-| `SUPABASE_ANON_KEY` | `.env` — the long `eyJ…` token |
-| `GEMINI_MODEL` | `gemini-3.6-flash` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `.env` — the `sb_secret_…` key |
+| `GEMINI_MODEL` | `gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash` |
 
 Notes:
 
 - `NODE_ENV=production` and `NODE_VERSION=22` come from `render.yaml` — do not
   add them by hand.
 - **Do not set `APP_URL`.** It is unused by the code (leftover template config).
-- `GEMINI_MODEL` is optional but recommended: the default `gemini-3.7-flash`
-  had its free daily quota exhausted during setup testing. Quotas are counted
-  per model, so `gemini-3.6-flash` has its own allowance.
+- `GEMINI_MODEL` takes a comma-separated chain, tried in order. The default
+  `gemini-3.7-flash` had its daily quota exhausted during setup testing. Quotas
+  are counted per model, so the next model in the chain still has its own
+  allowance and the app fails over to it without intervention.
 
 ### 2.5 Deploy
 
@@ -143,7 +145,7 @@ Watch the log until you see both lines:
 
 ```
 IT TaskFlow server running at http://0.0.0.0:10000
-Gemini model: gemini-3.6-flash
+Gemini models (in order): gemini-3.7-flash -> gemini-3.6-flash -> gemini-3.5-flash
 ```
 
 ### 2.6 Verify — do not skip this
@@ -173,67 +175,64 @@ read *and write* access to every table — including the password column.
 
 Do this **after** Part 2 is working, so you are not debugging two things at once.
 
-### 3.1 Let both users log in first (recommended)
+### 3.1 Switch to a secret key — DONE ✅
 
-Passwords still stored as plaintext are converted to bcrypt automatically the
-next time each person logs in successfully. Ask both users to log in to the new
-Render URL before rotating. This removes the most sensitive data the key exposes.
+Legacy `anon`/`service_role` JWT keys **can no longer be rotated** in Supabase;
+they are being retired entirely. The replacement is the new key pair:
 
-### 3.2 Rotate the key
+| Legacy | Replacement |
+| --- | --- |
+| `anon` | `sb_publishable_…` — browser-safe, respects RLS |
+| `service_role` | `sb_secret_…` — server-only, bypasses RLS, independently revocable |
 
-1. Supabase → **Project Settings** → **API**
-2. Rotate the anon key
+This server runs server-side only, so it uses a **secret key**, set as
+`SUPABASE_SERVICE_ROLE_KEY`. `SUPABASE_ANON_KEY` has been removed from both
+Render and `.env`. Verified live: the app runs with the secret key alone.
 
-> **Read this before clicking.** This project uses a *legacy JWT* key. On legacy
-> projects, rotating means regenerating the project's JWT secret, which **also
-> invalidates the `service_role` key** and signs out any Supabase-authenticated
-> sessions. Newer projects offer independently rollable keys — check which your
-> dashboard presents before proceeding.
+`getSupabase()` deliberately reads `SUPABASE_SERVICE_ROLE_KEY` **before**
+`SUPABASE_ANON_KEY`, so adding the secret key takes effect immediately even if
+an old anon key is still configured. Switching keys is additive and cannot
+break login through ordering.
 
-3. Copy the new key
-4. Update it in **two** places, or the app breaks:
-   - Local `.env` → `SUPABASE_ANON_KEY`
-   - Render → **Environment** → `SUPABASE_ANON_KEY` → **Save**, which triggers a
-     redeploy
-5. Re-run the Part 2.6 checks
+### 3.2 Deactivate the legacy anon key — STILL TO DO ⚠️
 
-### 3.3 Close the underlying hole (the part that actually matters)
+The old anon key still exists and still works. Until it is deactivated, anyone
+holding a copy has full read/write on every table.
 
-Rotation alone gives you a *new* key with exactly the same excessive power. The
-real weakness is the policy:
+1. Supabase → **Settings** → **API Keys**
+2. Find the legacy `anon` key → **Deactivate**
+
+This is **reversible** — it can be reactivated if anything unexpected breaks.
+Nothing in this app uses it any more, so nothing should.
+
+### 3.3 Let both users log in — STILL TO DO ⚠️
+
+Passwords stored as plaintext convert to bcrypt automatically on each user's
+next successful login. Both accounts were still plaintext at the time of
+writing. Ask both to log in once at the Render URL. Their existing passwords
+keep working — nothing changes for them.
+
+### 3.4 Close the underlying hole
+
+The policy created with the original schema permits everything:
 
 ```sql
 CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);
 ```
 
-`USING (true)` means any holder of the anon key can read every row of
-`app_users`. The fix is to have the server authenticate as `service_role`
-(which bypasses RLS) and deny anon access to that table entirely.
+`USING (true)` means any holder of a *publishable/anon* key can read every row
+of `app_users`. Now that the server authenticates with a secret key — which
+bypasses RLS entirely — that policy can be dropped without affecting the app.
 
-**Step 1** — Supabase → **Project Settings → API** → copy the **`service_role`**
-key. Treat it like a root password; it must never reach the frontend.
-
-**Step 2** — Supabase → **SQL Editor** → run:
+Supabase → **SQL Editor** → run:
 
 ```sql
--- Remove the wide-open policy. service_role bypasses RLS, so the server
--- continues to work; the anon key loses all access to user accounts.
+-- The server uses a secret key and bypasses RLS, so it keeps working.
+-- Anon/publishable keys lose all access to user accounts.
 DROP POLICY IF EXISTS "Allow user sync" ON app_users;
 ```
 
-**Step 3** — In Render → **Environment**:
-
-- **Delete** `SUPABASE_ANON_KEY`
-- **Add** `SUPABASE_SERVICE_ROLE_KEY` with the value from Step 1
-- Save and let it redeploy
-
-> **Critical.** [`server.ts`](./server.ts) reads
-> `SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY`. The anon key wins if both
-> are present, so you must **remove** the anon variable, not merely add the new
-> one. Leaving both set means the policy change breaks login instead of
-> hardening it.
-
-**Step 4** — Re-run the Part 2.6 checks and log in once to confirm.
+Then re-run the Part 2.6 checks and log in once to confirm.
 
 ---
 
@@ -245,8 +244,8 @@ DROP POLICY IF EXISTS "Allow user sync" ON app_users;
 | Build fails, `vite: not found` | Build command wrong | Must be `npm install && npm run build` |
 | Build fails, `Cannot find module 'bcryptjs'` | Install did not run from `package-lock.json` | Confirm build command; `bun.lock` was removed deliberately |
 | `storageType` is `"file"` | Supabase env vars missing or misspelled | Re-check both in Render; names are case-sensitive |
-| Login fails for everyone | Both Supabase key vars set at once | Delete `SUPABASE_ANON_KEY`, keep only the service-role one |
-| AI returns 429 | Gemini quota | Change `GEMINI_MODEL` to `gemini-3.5-flash`; quotas are per model |
+| Login fails for everyone | Supabase key missing or wrong | Confirm `SUPABASE_SERVICE_ROLE_KEY` is set on Render |
+| AI returns 429 | Every model in the chain is out of quota | Add another model to the `GEMINI_MODEL` chain; quotas are per model |
 | First load takes 30–60s | Render free tier sleeps after 15 min idle | Expected. $7/month removes it |
 | App broken after a quiet week | Supabase free project paused | Restore from the Supabase dashboard; see below |
 
@@ -262,7 +261,20 @@ This is the most likely way this deployment fails months from now: a quiet week
 or a holiday, and the app breaks with the cause long forgotten. A few queries a
 day prevents it.
 
-The standard free fix is a GitHub Actions cron in this repo that pings Supabase
+**This is handled.** [`.github/workflows/keep-alive.yml`](./.github/workflows/keep-alive.yml)
+runs every third day, calls `/api/data/status`, and that endpoint performs a
+real Supabase query — resetting the pause timer. It needs no secrets, since the
+URL is public and the response contains nothing sensitive.
+
+Two things to know about it:
+
+- GitHub disables scheduled workflows in repositories with **no activity for 60
+  days**. If the repo goes untouched that long, re-enable it under the Actions
+  tab.
+- It can be run on demand: **Actions → Keep alive → Run workflow**.
+
+The original description, for reference: the standard free fix is a GitHub
+Actions cron in this repo that pings Supabase
 on a schedule. Ask and it can be added — it needs no new paid service.
 
 ---
