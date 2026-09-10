@@ -42,18 +42,24 @@ security section below).
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `npm start`
    - **Runtime:** Node
-4. Under **Environment**, add these four variables:
+4. Under **Environment**, add these variables:
 
    | Key | Value |
    | --- | --- |
    | `GEMINI_API_KEY` | from step 2 |
    | `SUPABASE_URL` | `https://rfeekheavantjnfszmmx.supabase.co` |
    | `SUPABASE_ANON_KEY` | the anon key in your local `.env` |
-   | `APP_URL` | your Render URL, e.g. `https://is-studio.onrender.com` |
+   | `APP_URL` | not used by the code — safe to skip |
 
    `NODE_ENV=production` and `NODE_VERSION=22` come from `render.yaml`.
-   You only learn `APP_URL` after the first deploy — deploy once, copy the URL
-   Render gives you, set it, let it redeploy.
+
+   `APP_URL` is **not referenced anywhere in the code** — it is leftover from
+   the AI Studio template this project came from. Setting it is harmless but
+   has no effect.
+
+   Only the two Supabase values are load-bearing. Without them the app falls
+   back to file storage on Render's ephemeral disk and loses every ticket on
+   each restart or redeploy — silently, which is what makes it dangerous.
 
 5. **Create Web Service**, then watch the log for
    `IT TaskFlow server running at http://0.0.0.0:<port>`.
