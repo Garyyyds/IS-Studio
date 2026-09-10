@@ -21,7 +21,11 @@ const STORAGE_FILE = path.join(DATA_DIR, 'server-storage.json');
 let supabaseClient: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
   const url = process.env.SUPABASE_URL?.trim();
-  const key = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
+  // Prefer the service-role/secret key. It is server-only and bypasses RLS,
+  // which lets the anon key's access be revoked without breaking the server.
+  // Deliberately checked first so that adding it takes effect immediately,
+  // even if an older SUPABASE_ANON_KEY is still configured alongside it.
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)?.trim();
   if (!url || !key) {
     return null;
   }
