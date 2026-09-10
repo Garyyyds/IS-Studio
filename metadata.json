@@ -1,0 +1,7 @@
+{
+  "name": "Personal IT Workspace & Runbook Studio",
+  "description": "Personal IT task management with Kanban board, priority tagging, troubleshooting runbook handbook, and PDF documentation export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

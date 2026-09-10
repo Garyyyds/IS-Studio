@@ -1,0 +1,458 @@
+{
+  "tasks": [],
+  "runbooks": [
+    {
+      "id": "runbook-1",
+      "code": "SOP-DB-001",
+      "title": "PostgreSQL Connection Pool Exhaustion & Deadlock Recovery",
+      "category": "Database",
+      "severityTarget": "P1",
+      "environment": "Production",
+      "lastUpdated": "2026-08-28",
+      "author": "Elena Rostova",
+      "authorRole": "Principal Database Reliability Engineer",
+      "version": "2.4.0",
+      "status": "active",
+      "symptom": "Applications return 503/500 errors. PgBouncer and PostgreSQL server report \"FATAL: remaining connection slots are reserved for non-replication superuser connections\" or high query wait times on pg_stat_activity.",
+      "triggerAlertPatterns": [
+        "FATAL: sorry, too many clients already",
+        "PgBouncer: client_max_connections exceeded",
+        "pg_stat_activity: state = \"idle in transaction\" > 60s"
+      ],
+      "rootCauseAnalysis": "Unclosed transaction blocks in web API workers combined with connection pooling max limit misconfiguration or unindexed queries creating table-level lock contention.",
+      "diagnosticSteps": [
+        {
+          "title": "Check Active Client Connections by State",
+          "cli": "sudo -u postgres psql -c \"SELECT state, count(*) FROM pg_stat_activity GROUP BY state;\"",
+          "explanation": "Identify if connections are stuck in \"idle in transaction\" or actively executing queries.",
+          "shellType": "sql"
+        },
+        {
+          "title": "Inspect Long-Running Queries and Deadlocks (>30s)",
+          "cli": "sudo -u postgres psql -c \"SELECT pid, now() - query_start AS duration, query, state FROM pg_stat_activity WHERE state != 'idle' AND (now() - query_start) > interval '30 seconds' ORDER BY duration DESC LIMIT 10;\"",
+          "explanation": "Pinpoints specific SQL queries holding transaction locks and blocking the connection queue.",
+          "shellType": "sql"
+        },
+        {
+          "title": "Verify PgBouncer Pool Health",
+          "cli": "psql -p 6432 -U pgbouncer pgbouncer -c \"SHOW POOLS;\"",
+          "explanation": "Check cl_waiting (client waiting count) and sv_active (server active count).",
+          "shellType": "bash"
+        }
+      ],
+      "remediationSteps": [
+        {
+          "stepNumber": 1,
+          "title": "Terminate Blocking Idle Transactions",
+          "instruction": "Gracefully cancel blocking queries that have been idle in transaction for over 5 minutes.",
+          "command": "SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - state_change) > interval '5 minutes';",
+          "dangerous": false,
+          "verification": "Re-run diagnostic query #1 to confirm connection count drops below 75% capacity."
+        },
+        {
+          "stepNumber": 2,
+          "title": "Force-Kill Critical Deadlocking PID (If Cancel Fails)",
+          "instruction": "If pg_cancel_backend does not release the worker, terminate the backend PID directly.",
+          "command": "SELECT pg_terminate_backend(<BLOCKED_PID>);",
+          "dangerous": true,
+          "verification": "Check application HTTP error rate graph on Grafana to verify 503 errors diminish."
+        },
+        {
+          "stepNumber": 3,
+          "title": "Reload PgBouncer Configuration or Scale Pool Size",
+          "instruction": "Safely increase default_pool_size in /etc/pgbouncer/pgbouncer.ini if traffic surge is legitimate.",
+          "command": "sudo systemctl reload pgbouncer",
+          "dangerous": false,
+          "verification": "Run `psql -p 6432 -U pgbouncer pgbouncer -c \"SHOW STATS;\"` to ensure active traffic throughput."
+        }
+      ],
+      "rollbackPlan": "If connection starvation increases after reload, revert pgbouncer.ini from /etc/pgbouncer/pgbouncer.ini.bak and execute `systemctl restart pgbouncer`. Keep standby replica ready for emergency write-traffic split.",
+      "postMortemChecklist": [
+        "Enable `idle_in_transaction_session_timeout = 60000` (60s) in postgresql.conf",
+        "Audit microservice ORM connection pool release hooks in try/finally blocks",
+        "Add Prometheus alert threshold for `pg_stat_database_numbackends / max_connections > 0.85`"
+      ],
+      "relatedTaskIds": [],
+      "tags": [
+        "postgresql",
+        "pgbouncer",
+        "deadlock",
+        "p1-outage",
+        "database-sre"
+      ]
+    },
+    {
+      "id": "runbook-2",
+      "code": "SOP-K8S-014",
+      "title": "Kubernetes Pod CrashLoopBackOff & OOMKilled Diagnostics",
+      "category": "DevOps & SRE",
+      "severityTarget": "P2",
+      "environment": "Production",
+      "lastUpdated": "2026-08-30",
+      "author": "Marcus Vance",
+      "authorRole": "Staff SRE & Kubernetes Lead",
+      "version": "3.1.2",
+      "status": "active",
+      "symptom": "Kubernetes deployment pods continuously crashing with status CrashLoopBackOff, exit code 137 (OOMKilled) or exit code 1 (Application startup failure).",
+      "triggerAlertPatterns": [
+        "KubePodCrashLooping: pod in namespace payment-service",
+        "Reason: OOMKilled, exitCode: 137",
+        "Liveness probe failed: HTTP probe failed with statuscode: 500"
+      ],
+      "rootCauseAnalysis": "Container memory limit (resources.limits.memory) exceeded by JVM garbage collection spikes or unoptimized node process, or missing environment secret causing fatal startup exit.",
+      "diagnosticSteps": [
+        {
+          "title": "Fetch Detailed Pod Termination Reason and Exit Code",
+          "cli": "kubectl get pods -n <NAMESPACE> -o wide | grep -E 'CrashLoopBackOff|OOMKilled|Error'",
+          "explanation": "Lists all failing pods and their node placement.",
+          "shellType": "kubectl"
+        },
+        {
+          "title": "Inspect Previous Container Logs and Crash Dumps",
+          "cli": "kubectl logs <POD_NAME> -n <NAMESPACE> --previous --tail=100",
+          "explanation": "Crucial: Inspect the logs right before the container was killed by kubelet.",
+          "shellType": "kubectl"
+        },
+        {
+          "title": "Describe Pod Events & Resource Quotas",
+          "cli": "kubectl describe pod <POD_NAME> -n <NAMESPACE> | grep -A 10 -B 2 \"Last State\"",
+          "explanation": "Confirms exact Exit Code (137 = OOM, 1 = Config/Code Panic, 143 = SIGTERM).",
+          "shellType": "kubectl"
+        }
+      ],
+      "remediationSteps": [
+        {
+          "stepNumber": 1,
+          "title": "Patch Memory Limits for OOMKilled Pods",
+          "instruction": "Temporarily increase memory request and limit for the affected deployment to stabilize traffic.",
+          "command": "kubectl set resources deployment/<DEPLOYMENT_NAME> -n <NAMESPACE> --limits=memory=2Gi,cpu=1000m --requests=memory=1Gi,cpu=500m",
+          "dangerous": false,
+          "verification": "Watch rollout progress: `kubectl rollout status deployment/<DEPLOYMENT_NAME> -n <NAMESPACE>`"
+        },
+        {
+          "stepNumber": 2,
+          "title": "Check Secret and ConfigMap Bindings",
+          "instruction": "If exit code is 1, verify all required Vault or K8s secret keys exist and are not empty.",
+          "command": "kubectl get secret <SECRET_NAME> -n <NAMESPACE> -o jsonpath='{.data}'",
+          "dangerous": false,
+          "verification": "Confirm all environment keys referenced in Deployment envFrom match existing Secret keys."
+        },
+        {
+          "stepNumber": 3,
+          "title": "Restart Deployment Rollout",
+          "instruction": "Trigger a clean zero-downtime rolling restart once resources or configs are corrected.",
+          "command": "kubectl rollout restart deployment/<DEPLOYMENT_NAME> -n <NAMESPACE>",
+          "dangerous": false,
+          "verification": "Confirm all new replica pods reach 1/1 Running and Ready status without restarts."
+        }
+      ],
+      "rollbackPlan": "Execute `kubectl rollout undo deployment/<DEPLOYMENT_NAME> -n <NAMESPACE>` to immediately revert to previous stable revision.",
+      "postMortemChecklist": [
+        "Review memory heap profiles with pprof / Datadog APM",
+        "Calibrate JVM `-XX:MaxRAMPercentage=75.0` to avoid Linux cgroup OOM killer",
+        "Set up Vertical Pod Autoscaler (VPA) recommendation rules"
+      ],
+      "relatedTaskIds": [],
+      "tags": [
+        "kubernetes",
+        "k8s",
+        "oomkilled",
+        "crashloopbackoff",
+        "devops"
+      ]
+    },
+    {
+      "id": "runbook-3",
+      "code": "SOP-SEC-008",
+      "title": "Emergency TLS/SSL Certificate Renewal & Ingress Reload Protocol",
+      "category": "Networking",
+      "severityTarget": "P2",
+      "environment": "Production",
+      "lastUpdated": "2026-08-25",
+      "author": "Sarah Chen",
+      "authorRole": "Security Operations & Cryptography Architect",
+      "version": "1.8.0",
+      "status": "active",
+      "symptom": "Browsers and API clients reject incoming connections with \"SEC_ERROR_EXPIRED_CERTIFICATE\" or \"SSL: CERTIFICATE_VERIFY_FAILED\".",
+      "triggerAlertPatterns": [
+        "CertManagerCertExpiringInHours < 24h",
+        "x509: certificate has expired or is not yet valid",
+        "NGINX ingress controller cert reload failure"
+      ],
+      "rootCauseAnalysis": "Automated cert-manager ACME HTTP-01 challenge blocked by ingress routing rule, or DNS provider API rate limit during automated Let's Encrypt certificate renewal.",
+      "diagnosticSteps": [
+        {
+          "title": "Inspect Cert-Manager Certificate and Order Status",
+          "cli": "kubectl get certificate,certificaterequest,order,challenges -A",
+          "explanation": "Check if challenge is stuck in \"pending\" or \"invalid\" state.",
+          "shellType": "kubectl"
+        },
+        {
+          "title": "Check Expiry Date of Ingress Secret on Live Endpoint",
+          "cli": "echo | openssl s_client -servername api.internal.corp -connect api.internal.corp:443 2>/dev/null | openssl x509 -noout -dates -subject",
+          "explanation": "Inspect exact notBefore and notAfter timestamps served by edge proxies.",
+          "shellType": "bash"
+        }
+      ],
+      "remediationSteps": [
+        {
+          "stepNumber": 1,
+          "title": "Trigger Immediate Manual Certificate Renewal",
+          "instruction": "Delete existing stalled certificate request to force cert-manager to issue a fresh ACME challenge.",
+          "command": "kubectl cert-manager renew <CERT_NAME> -n <NAMESPACE>",
+          "dangerous": false,
+          "verification": "Check certificate status transitions to `Ready: True`."
+        },
+        {
+          "stepNumber": 2,
+          "title": "Fallback: Inject Wildcard Commercial Backup Certificate",
+          "instruction": "If Let's Encrypt rate limits apply, apply the pre-approved DigiCert wildcard secret.",
+          "command": "kubectl create secret tls edge-tls-backup --cert=/etc/ssl/corp-wildcard.crt --key=/etc/ssl/corp-wildcard.key -n ingress-nginx --dry-run=client -o yaml | kubectl apply -f -",
+          "dangerous": false,
+          "verification": "Verify SSL handshake: `curl -Iv https://api.internal.corp` returns HTTP 200 with valid issuer."
+        }
+      ],
+      "rollbackPlan": "Re-apply previous tls secret if custom cipher compatibility issues occur on legacy client systems.",
+      "postMortemChecklist": [
+        "Switch ACME challenge from HTTP-01 to DNS-01 for wildcard resilience",
+        "Add Blackbox Exporter TLS expiry alert at 30 days and 7 days threshold"
+      ],
+      "relatedTaskIds": [],
+      "tags": [
+        "tls",
+        "ssl",
+        "cert-manager",
+        "nginx",
+        "security"
+      ]
+    },
+    {
+      "id": "runbook-4",
+      "code": "SOP-NET-004",
+      "title": "Windows SMB Fileshare Connection Failure & Network Drive Mapping (\\\\hq-file01)",
+      "category": "Networking",
+      "severityTarget": "P3",
+      "environment": "Corporate LAN",
+      "lastUpdated": "2026-09-01",
+      "author": "Alex Rivera",
+      "authorRole": "Senior Systems & Network Administrator",
+      "version": "1.2.0",
+      "status": "active",
+      "symptom": "End-users cannot access corporate fileshare \\\\hq-file01. Error dialog displays \"The network path was not found (0x80070035)\" or \"Windows cannot access \\\\hq-file01\". Mapped drive Z: appears disconnected with a red cross icon.",
+      "triggerAlertPatterns": [
+        "The network path was not found (0x80070035)",
+        "ping: could not find host hq-file01",
+        "Windows cannot access \\\\hq-file01",
+        "System error 53 has occurred. The network path was not found."
+      ],
+      "rootCauseAnalysis": "Client workstation network adapter is misconfigured with stale or invalid static DNS server addresses instead of DHCP automatic DNS, preventing internal Active Directory domain name resolution of the fileshare hostname. Alternatively, cached DNS is corrupt or network drive Z: mapping was dropped.",
+      "diagnosticSteps": [
+        {
+          "title": "1. Test Hostname & IP Reachability via Command Prompt",
+          "cli": "ping hq-file01",
+          "explanation": "Check whether cmd receives valid ICMP echo replies or \"Destination host unreachable\" / \"Could not find host\". If hostname fails, try pinging the direct IP address.",
+          "shellType": "general"
+        },
+        {
+          "title": "2. Inspect Current Adapter IPv4 & DNS Server Settings",
+          "cli": "ipconfig /all",
+          "explanation": "Inspect the active Ethernet / Wi-Fi adapter. Check if \"DHCP Enabled: Yes\" and whether listed \"DNS Servers\" match corporate domain controllers.",
+          "shellType": "general"
+        },
+        {
+          "title": "3. Flush Local DNS Resolver Cache",
+          "cli": "ipconfig /flushdns",
+          "explanation": "Purges cached DNS lookup table to ensure fresh name resolution from internal domain DNS servers.",
+          "shellType": "general"
+        },
+        {
+          "title": "4. Test SMB Port 445 Connectivity via PowerShell",
+          "cli": "Test-NetConnection -ComputerName hq-file01 -Port 445",
+          "explanation": "Confirms whether TCP port 445 (Server Message Block / SMB) is open and reachable without firewall blocks.",
+          "shellType": "powershell"
+        }
+      ],
+      "remediationSteps": [
+        {
+          "stepNumber": 1,
+          "title": "Reset Network Adapter to Obtain DNS Automatically (DHCP)",
+          "instruction": "1. Open View Network Connections (Win+R -> ncpa.cpl).\n2. Right-click the active Ethernet/Wi-Fi adapter -> Properties.\n3. Double-click \"Internet Protocol Version 4 (TCP/IPv4)\".\n4. Select \"Obtain DNS server address automatically\" (and \"Obtain an IP address automatically\").\n5. Click OK -> OK to apply changes.",
+          "command": "netsh interface ip set dns name=\"Ethernet\" source=dhcp",
+          "dangerous": false,
+          "verification": "Run `ipconfig /all` and verify DNS servers match the corporate domain controller IP assigned by DHCP."
+        },
+        {
+          "stepNumber": 2,
+          "title": "Verify Ping Response from Command Prompt",
+          "instruction": "Open Command Prompt (cmd) and execute ping to hq-file01 (or destination IP address). Verify 4 packets sent and 4 packets received with 0% loss.",
+          "command": "ping -n 4 hq-file01",
+          "dangerous": false,
+          "verification": "Ensure output displays: \"Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)\"."
+        },
+        {
+          "stepNumber": 3,
+          "title": "Access Fileshare & Map Network Drive to Z:",
+          "instruction": "1. Click Start (or press Win+R) -> type `\\\\hq-file01` and press Enter.\n2. When fileshare window opens, right-click the shared folder.\n3. Select \"Map network drive...\".\n4. Select Drive letter `Z:`.\n5. Check \"Reconnect at sign-in\" and click Finish.",
+          "command": "net use Z: \\\\hq-file01\\Shared /persistent:yes",
+          "dangerous": false,
+          "verification": "Command outputs: \"The command completed successfully.\" Drive Z: is mounted."
+        },
+        {
+          "stepNumber": 4,
+          "title": "Test Connection in File Explorer",
+          "instruction": "Open Windows File Explorer (Win+E) -> navigate to \"This PC\" -> double-click \"Shared (\\\\hq-file01) (Z:)\". Confirm files and folders load normally and test creating/opening a test file.",
+          "command": "explorer.exe Z:\\",
+          "dangerous": false,
+          "verification": "Folder directory structure loads immediately with read/write access."
+        }
+      ],
+      "rollbackPlan": "If specific static DNS settings are required for a dedicated VPN gateway, restore static DNS via `netsh interface ip set dns name=\"Ethernet\" static <PRIMARY_DNS_IP>` or reinstall the network adapter drivers.",
+      "postMortemChecklist": [
+        "Verify DHCP Option 006 (DNS Servers) and Option 015 (Domain Name) on corporate DHCP scope",
+        "Deploy GPO Drive Maps policy to automatically map Drive Z: on domain user login",
+        "Ensure SMBv2 / SMBv3 signing policies are enabled on \\\\hq-file01 server"
+      ],
+      "relatedTaskIds": [
+        "task-7"
+      ],
+      "tags": [
+        "fileshare",
+        "smb",
+        "windows",
+        "networking",
+        "dns",
+        "drive-mapping",
+        "sysadmin"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule-1",
+      "name": "Production Outage / Down Critical Match",
+      "matchType": "keyword",
+      "pattern": "prod down,outage,service unavailable,catastrophic,data corruption,database down",
+      "targetPriority": "P1",
+      "tagsToApply": [
+        "prod-outage",
+        "p1-critical",
+        "sla-1h",
+        "pager-duty-triggered",
+        "tier-0"
+      ],
+      "slaHours": 1,
+      "category": "DevOps & SRE",
+      "enabled": true,
+      "description": "Triggers P1 critical triage and 1-hour SLA when production is down or core service fails."
+    },
+    {
+      "id": "rule-2",
+      "name": "Critical Security & CVE Vulnerabilities",
+      "matchType": "keyword",
+      "pattern": "cve-,rce,sql injection,credential leak,unauthorized access,zero-day,breach",
+      "targetPriority": "P1",
+      "tagsToApply": [
+        "security-incident",
+        "cve-critical",
+        "infosec",
+        "sla-2h",
+        "legal-hold"
+      ],
+      "slaHours": 2,
+      "category": "Security & IAM",
+      "enabled": true,
+      "description": "Classifies active security exploits or zero-day vulnerabilities immediately as P1."
+    },
+    {
+      "id": "rule-3",
+      "name": "High Memory Leak & Pod CrashLoopBackOff",
+      "matchType": "keyword",
+      "pattern": "crashloopbackoff,oomkilled,memory leak,high cpu,deadlock,replica lag,502 bad gateway",
+      "targetPriority": "P2",
+      "tagsToApply": [
+        "k8s-pod",
+        "oom-investigation",
+        "degraded-perf",
+        "sla-4h"
+      ],
+      "slaHours": 4,
+      "category": "Cloud Infra",
+      "enabled": true,
+      "description": "Catches degraded cluster services, OOM kills, and backend 502/504 errors as P2."
+    },
+    {
+      "id": "rule-4",
+      "name": "Certificate & Domain Expiry",
+      "matchType": "keyword",
+      "pattern": "ssl certificate,cert expired,tls handshake,domain renewal,acme challenge",
+      "targetPriority": "P2",
+      "tagsToApply": [
+        "tls-cert",
+        "security",
+        "dns-network",
+        "sla-6h"
+      ],
+      "slaHours": 6,
+      "category": "Networking",
+      "enabled": true,
+      "description": "Flags expiring or invalid TLS/SSL certificates before customer outage."
+    },
+    {
+      "id": "rule-5",
+      "name": "Disk Space & CI/CD Queue Saturation",
+      "matchType": "keyword",
+      "pattern": "disk full,no space left on device,jenkins queue,docker prune,volume threshold",
+      "targetPriority": "P3",
+      "tagsToApply": [
+        "storage-cleanup",
+        "ci-cd",
+        "sysadmin",
+        "sla-24h"
+      ],
+      "slaHours": 24,
+      "category": "SysAdmin",
+      "enabled": true,
+      "description": "Automates maintenance priority for node storage thresholds and build workers."
+    },
+    {
+      "id": "rule-6",
+      "name": "Staging / QA Routine Operations",
+      "matchType": "environment",
+      "pattern": "Staging",
+      "targetPriority": "P4",
+      "tagsToApply": [
+        "non-prod",
+        "staging-env",
+        "standard-change"
+      ],
+      "slaHours": 72,
+      "category": "Application",
+      "enabled": true,
+      "description": "Defaults staging and non-customer facing tasks to standard P4 SLA."
+    }
+  ],
+  "settings": {
+    "visibleViews": {
+      "kanban": true,
+      "list": true,
+      "handbook": true,
+      "rules": true,
+      "analytics": true
+    },
+    "defaultView": "kanban",
+    "themeMode": "light",
+    "workstationMode": "personal",
+    "completedTicketRetentionMinutes": 60,
+    "showSlaCountdown": false,
+    "showP1Banner": true,
+    "showAutomatedTagsOnCards": true,
+    "showChecklistProgressOnCards": true,
+    "compactCards": false,
+    "operatorName": "Alex Rivera",
+    "defaultEnvironment": "Production",
+    "defaultCategory": "DevOps & SRE",
+    "defaultPriority": "P3"
+  },
+  "lastSaved": "2026-09-04T07:01:11.232Z",
+  "version": 1
+}
