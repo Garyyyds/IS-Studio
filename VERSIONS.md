@@ -24,3 +24,4 @@ away later work permanently.
 | Version | Date | Summary |
 | --- | --- | --- |
 | `10092026ver000` | 2026-09-10 | Baseline. Deployed IS Studio on Render with Supabase and Gemini, hashed passwords, Gemini model fallback chain, `DESIGN.md` blueprint. Fixed the dev-server reload loop by scoping Vite's watcher away from `data/`. |
+| `10092026ver001` | 2026-09-10 | Employee support chatbot. Floating assistant in the bottom-right of the employee portal, answered by Gemini via `POST /api/ai/chat`. Employee accounts only; scoped to the requester's own tickets. |

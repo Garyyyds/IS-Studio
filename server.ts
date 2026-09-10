@@ -1160,6 +1160,101 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
   }
 });
 
+
+// API: Employee support chat assistant
+// Answers IT questions for the employee portal. Unlike the triage and runbook
+// routes this returns prose rather than JSON, so no responseSchema is set.
+// Ticket context is supplied by the client and is already scoped to the signed-
+// in requester; the prompt forbids inventing ticket state on top of that.
+const CHAT_MAX_HISTORY = 12;
+const CHAT_MAX_MESSAGE_CHARS = 2000;
+
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const { message, history, user, tickets, runbooks } = req.body;
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    if (message.length > CHAT_MAX_MESSAGE_CHARS) {
+      return res.status(400).json({
+        error: 'Message is too long. Please keep it under ' + CHAT_MAX_MESSAGE_CHARS + ' characters.',
+      });
+    }
+
+    const ai = getAi();
+
+    const ticketLines = Array.isArray(tickets) && tickets.length
+      ? tickets
+          .slice(0, 15)
+          .map((t: any) =>
+            '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status +
+            ' | priority ' + t.priority +
+            (t.slaDeadline ? ' | SLA due ' + t.slaDeadline : '')
+          )
+          .join('\n')
+      : 'None open.';
+
+    const runbookLines = Array.isArray(runbooks) && runbooks.length
+      ? runbooks
+          .slice(0, 20)
+          .map((r: any) => '- ' + r.code + ': ' + r.title + (r.symptom ? ' — ' + r.symptom : ''))
+          .join('\n')
+      : 'No published guides available.';
+
+    // Only the last few turns are sent. Enough for follow-up questions like
+    // "what about the second one?" without growing the prompt without bound.
+    const priorTurns = Array.isArray(history)
+      ? history
+          .slice(-CHAT_MAX_HISTORY)
+          .map((m: any) => (m.role === 'assistant' ? 'Assistant: ' : 'Employee: ') + m.content)
+          .join('\n')
+      : '';
+
+    const prompt = `You are the IT Support Assistant inside an employee IT service portal.
+You are talking to an employee, not an IT engineer. They cannot run administrative
+commands and do not have server access.
+
+Employee: ${user?.name || 'Employee'}${user?.department ? ' (' + user.department + ')' : ''}
+
+Their open tickets:
+${ticketLines}
+
+Published IT self-help guides:
+${runbookLines}
+
+${priorTurns ? 'Conversation so far:\n' + priorTurns + '\n' : ''}
+Employee's new message: ${message}
+
+How to answer:
+- Be warm, brief and plain-spoken. Two or three short paragraphs at most, and
+  prefer a short numbered list when giving steps.
+- Give safe self-service steps an ordinary employee can do themselves: restart,
+  reconnect to Wi-Fi, clear a cache, check a cable, sign out and back in.
+- Never provide destructive actions, admin/root commands, registry edits,
+  database queries, or anything requiring elevated privileges. If the fix needs
+  IT, say so and tell them to raise a ticket in the portal.
+- Only state ticket status using the ticket list above. If they ask about a
+  ticket that is not listed, say you cannot see it and suggest checking "My
+  Service Requests".
+- Never invent a ticket number, a policy, a deadline, or a person's name.
+- If you genuinely do not know, say so and point them to raising a ticket.
+- Reply in plain text. No markdown headings, no code fences, no asterisks.`;
+
+    const response = await generateWithRetry(ai, { contents: prompt });
+
+    const reply = response.text?.trim();
+    if (!reply) {
+      return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
+    }
+
+    res.json({ reply });
+  } catch (error: any) {
+    console.error('Support chat error:', error);
+    sendAiError(res, error, 'Failed to reach the IT assistant');
+  }
+});
+
 // Setup Vite middleware
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

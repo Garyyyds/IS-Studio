@@ -32,6 +32,7 @@ import { QuickTriageModal } from './components/QuickTriageModal';
 import { AiRunbookGeneratorModal } from './components/AiRunbookGeneratorModal';
 import { AuthPage } from './components/AuthPage';
 import { UserPortalView } from './components/UserPortalView';
+import { SupportChatAssistant } from './components/SupportChatAssistant';
 import { evaluateTaskPriorityWithRules } from './utils/priorityEngine';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
 import { Check, Zap, Info } from 'lucide-react';
@@ -954,6 +955,16 @@ export default function App() {
           }}
           onRunbookGenerated={handleRunbookGenerated}
           initialTask={taskForAiRunbook}
+        />
+      )}
+
+      {/* Employee-only support chat. Admins have the full triage tooling
+          instead, so it is deliberately not rendered for them. */}
+      {isEmployeeView && (
+        <SupportChatAssistant
+          currentUser={currentUser}
+          tasks={tasks}
+          runbooks={runbooks}
         />
       )}
     </div>
