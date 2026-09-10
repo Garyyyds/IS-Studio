@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
@@ -40,38 +41,64 @@ function getSupabase(): SupabaseClient | null {
   return supabaseClient;
 }
 
-const DEFAULT_USERS = [
-  {
-    id: 'usr-admin-1',
-    email: 'admin@company.com',
-    password: 'admin123',
-    name: 'Alex Mercer',
-    role: 'admin',
-    department: 'IT Operations & SRE',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'usr-employee-1',
-    email: 'sarah.chen@company.com',
-    password: 'user123',
-    name: 'Sarah Chen',
-    role: 'user',
-    department: 'Product & Design',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'usr-employee-2',
-    email: 'david.kim@company.com',
-    password: 'user123',
-    name: 'David Kim',
-    role: 'user',
-    department: 'Engineering',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString()
+const BCRYPT_ROUNDS = 10;
+
+// A bcrypt digest is always 60 chars and starts with a $2a$/$2b$/$2y$ version
+// tag. Anything else in the password column is a legacy plaintext value from
+// before hashing was introduced.
+function isHashed(value: string): boolean {
+  if (typeof value !== 'string' || value.length !== 60) return false;
+  return value.startsWith('$2a$') || value.startsWith('$2b$') || value.startsWith('$2y$');
+}
+
+async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(String(plain).trim(), BCRYPT_ROUNDS);
+}
+
+// Returns { ok, needsUpgrade }. needsUpgrade is true when the stored value was
+// still plaintext and matched, so the caller can transparently re-store it as a
+// hash without forcing existing users to reset their password.
+async function verifyPassword(
+  plain: string,
+  stored: string
+): Promise<{ ok: boolean; needsUpgrade: boolean }> {
+  const candidate = String(plain).trim();
+  if (!stored) return { ok: false, needsUpgrade: false };
+  if (isHashed(stored)) {
+    return { ok: await bcrypt.compare(candidate, stored), needsUpgrade: false };
   }
-];
+  const matches = stored === candidate;
+  return { ok: matches, needsUpgrade: matches };
+}
+
+// Re-store a legacy plaintext password as a bcrypt hash. Best-effort: a failure
+// here must never block an otherwise valid login.
+async function upgradeStoredPassword(email: string, plain: string) {
+  try {
+    const hashed = await hashPassword(plain);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('app_users').update({ password: hashed }).ilike('email', email);
+    }
+    const stored = getStoredData() || {};
+    const users = stored.users || [];
+    const idx = users.findIndex((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (idx >= 0) {
+      users[idx].password = hashed;
+      saveStoredData({ ...stored, users });
+    }
+    console.log('Upgraded plaintext password to bcrypt for', email);
+  } catch (err) {
+    console.warn('Password upgrade skipped for', email, err);
+  }
+}
+
+// Intentionally empty. This previously held demo accounts with hardcoded
+// passwords (admin@company.com / admin123 and two others). Because login falls
+// back to local file storage when Supabase has no matching user, those seeded
+// credentials were a working admin login on any deployment of this code.
+// Real accounts live in Supabase (app_users) and are created via /api/auth/register.
+const DEFAULT_USERS: any[] = [];
 
 // Ensure data directory and file exist
 function getStoredData() {
@@ -109,6 +136,98 @@ function saveStoredData(data: any) {
   };
   fs.writeFileSync(STORAGE_FILE, JSON.stringify(payload, null, 2), 'utf-8');
   return payload;
+}
+
+// Gemini's free tier returns 503 (capacity) and 429 (per-minute rate limit)
+// regularly. Both are transient, so retry with exponential backoff rather than
+// surfacing a 500 that looks to the user like an application bug.
+const AI_MAX_ATTEMPTS = 4;
+// Longest we will hold a request open waiting out a quota window. The free tier
+// caps generate_content at 5 requests/minute, so a burst can be told to wait
+// ~30-60s; blocking a browser request that long is worse than failing clearly.
+const AI_MAX_WAIT_MS = 12000;
+
+function aiErrorStatus(err: any): number | undefined {
+  return err?.status ?? err?.code;
+}
+
+function isTransientAiError(err: any): boolean {
+  const status = aiErrorStatus(err);
+  return status === 429 || status === 500 || status === 503 || status === 504;
+}
+
+// Google returns the exact wait in a RetryInfo detail ("37s"). Honour it when
+// present -- exponential backoff alone cannot clear a per-minute quota window.
+function retryDelayMsFromError(err: any): number | null {
+  const raw = typeof err?.message === 'string' ? err.message : '';
+  const match = raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  if (!match) return null;
+  return Math.ceil(parseFloat(match[1]) * 1000);
+}
+
+async function generateWithRetry(ai: any, request: any): Promise<any> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await ai.models.generateContent(request);
+    } catch (err: any) {
+      lastError = err;
+      if (!isTransientAiError(err) || attempt === AI_MAX_ATTEMPTS) throw err;
+
+      const advised = retryDelayMsFromError(err);
+      const backoffMs =
+        advised ?? 800 * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 400);
+
+      // If Google wants us to wait longer than we are willing to hold the
+      // request open, stop retrying and surface an actionable error instead.
+      if (backoffMs > AI_MAX_WAIT_MS) {
+        console.warn('Gemini quota exhausted; advised wait ' + backoffMs + 'ms exceeds cap');
+        throw err;
+      }
+
+      console.warn(
+        'Gemini transient error (status ' + aiErrorStatus(err) + '); retrying in ' +
+        backoffMs + 'ms [attempt ' + attempt + '/' + AI_MAX_ATTEMPTS + ']'
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw lastError;
+}
+
+// Turn a Gemini failure into a response the UI can show verbatim, so a quota
+// pause does not read to the user as a broken app.
+function sendAiError(res: any, error: any, fallbackMessage: string) {
+  const status = aiErrorStatus(error);
+  if (status === 429) {
+    const raw = typeof error?.message === 'string' ? error.message : '';
+    // Per-day and per-minute exhaustion need very different advice: one clears
+    // in under a minute, the other not until the daily quota resets.
+    const isDailyQuota = raw.includes('PerDayPerProject');
+    if (isDailyQuota) {
+      return res.status(429).json({
+        error:
+          'The daily free-tier AI quota for this project has been used up. ' +
+          'AI triage and runbook generation will work again after the quota ' +
+          'resets, or immediately if billing is enabled on the Google project.',
+        quotaScope: 'daily',
+      });
+    }
+    const waitSeconds = Math.ceil((retryDelayMsFromError(error) ?? 60000) / 1000);
+    return res.status(429).json({
+      error:
+        'AI rate limit reached (free tier allows a few requests per minute). ' +
+        'Please try again in about ' + waitSeconds + ' seconds.',
+      retryAfterSeconds: waitSeconds,
+      quotaScope: 'minute',
+    });
+  }
+  if (status === 503 || status === 504) {
+    return res.status(503).json({
+      error: 'The AI service is temporarily busy. Please try again in a moment.',
+    });
+  }
+  return res.status(500).json({ error: error?.message || fallbackMessage });
 }
 
 // Initialize Google GenAI on server
@@ -366,8 +485,10 @@ app.post('/api/auth/login', async (req, res) => {
           .maybeSingle();
 
         if (!error && data) {
-          if (data.password === password) {
+          const check = await verifyPassword(password, data.password);
+          if (check.ok) {
             userFound = data;
+            if (check.needsUpgrade) await upgradeStoredPassword(cleanEmail, password);
           } else {
             return res.status(401).json({ error: 'Invalid password. Please try again.' });
           }
@@ -383,8 +504,10 @@ app.post('/api/auth/login', async (req, res) => {
       const users = stored.users || DEFAULT_USERS;
       const matched = users.find((u: any) => u.email.toLowerCase() === cleanEmail);
       if (matched) {
-        if (matched.password === password) {
+        const check = await verifyPassword(password, matched.password);
+        if (check.ok) {
           userFound = matched;
+          if (check.needsUpgrade) await upgradeStoredPassword(cleanEmail, password);
         } else {
           return res.status(401).json({ error: 'Invalid password. Please try again.' });
         }
@@ -544,6 +667,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     let userUpdated = false;
+    const hashedNewPassword = await hashPassword(newPassword);
 
     // Check & update local storage users
     const stored = getStoredData() || {};
@@ -551,7 +675,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     const userIndex = localUsers.findIndex((u: any) => u.email.toLowerCase() === cleanEmail);
 
     if (userIndex !== -1) {
-      localUsers[userIndex].password = String(newPassword).trim();
+      localUsers[userIndex].password = hashedNewPassword;
       saveStoredData({ ...stored, users: localUsers });
       userUpdated = true;
     }
@@ -562,7 +686,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
       try {
         const { data, error } = await supabase
           .from('app_users')
-          .update({ password: String(newPassword).trim() })
+          .update({ password: hashedNewPassword })
           .eq('email', cleanEmail)
           .select();
 
@@ -604,7 +728,7 @@ app.post('/api/auth/register', async (req, res) => {
     const newUser = {
       id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       email: cleanEmail,
-      password: String(password).trim(),
+      password: await hashPassword(password),
       name: String(name).trim(),
       role: cleanRole,
       department: department?.trim() || (cleanRole === 'admin' ? 'IT Operations & SRE' : 'General Staff'),
@@ -698,7 +822,7 @@ app.post('/api/auth/profile', async (req, res) => {
         if (name) updatePayload.name = name.trim();
         if (department !== undefined) updatePayload.department = department.trim();
         if (avatar) updatePayload.avatar = avatar;
-        if (newPassword && newPassword.length >= 6) updatePayload.password = newPassword;
+        if (newPassword && newPassword.length >= 6) updatePayload.password = await hashPassword(newPassword);
 
         let query = supabase.from('app_users').update(updatePayload);
         if (id) {
@@ -730,7 +854,7 @@ app.post('/api/auth/profile', async (req, res) => {
       if (name) localUsers[userIdx].name = name.trim();
       if (department !== undefined) localUsers[userIdx].department = department.trim();
       if (avatar) localUsers[userIdx].avatar = avatar;
-      if (newPassword && newPassword.length >= 6) localUsers[userIdx].password = newPassword;
+      if (newPassword && newPassword.length >= 6) localUsers[userIdx].password = await hashPassword(newPassword);
       stored.users = localUsers;
       saveStoredData(stored);
       if (!updatedUser) {
@@ -771,7 +895,7 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
 - P3 (Medium): Minor bug, non-critical service degradation, internal tool issue, standard change. SLA: 24-48 hours.
 - P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance. SLA: 72+ hours.`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
@@ -843,7 +967,7 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
     res.json(result);
   } catch (error: any) {
     console.error('Priority classification error:', error);
-    res.status(500).json({ error: error.message || 'Failed to classify priority' });
+    sendAiError(res, error, 'Failed to classify priority');
   }
 });
 
@@ -876,7 +1000,7 @@ Error Output / Logs: ${errorLogs || 'None provided'}
 Provide real, production-tested diagnostic and remediation CLI commands (Bash, PowerShell, cmd, kubectl, docker, SQL, systemctl, netsh, ping).
 Make the handbook thorough, unambiguous, and formatted for junior and senior engineers during live outages.`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
@@ -963,7 +1087,7 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
     res.json(result);
   } catch (error: any) {
     console.error('Runbook generation error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate handbook runbook' });
+    sendAiError(res, error, 'Failed to generate handbook runbook');
   }
 });
 
