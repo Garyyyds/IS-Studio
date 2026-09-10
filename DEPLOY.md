@@ -1,178 +1,304 @@
-# Deploying to Render
+# Deployment SOP — IT TaskFlow
 
-Status: the repo is committed, the build is verified, and Supabase is **already
-live and connected**. Three steps remain, all in a browser.
+Standard operating procedure to take this app from the local machine to a live
+Render URL, and to harden the Supabase credentials afterwards.
 
-## 1. Supabase — DONE ✅
+| | |
+| --- | --- |
+| **Estimated time** | ~15 minutes |
+| **Cost** | £0 / $0 — every service used here is free tier |
+| **Prerequisites** | A GitHub account, a web browser, this repo on your machine |
 
-Project `rfeekheavantjnfszmmx` is provisioned, both tables (`workspace_data`,
-`app_users`) exist and already hold real data. Verified end to end: the server
-reports `storageType: "supabase"`, `connected: true`.
+**Do the parts in order.** Part 2 cannot start until Part 1 is finished, because
+Render deploys *from* a GitHub repository.
 
-You do **not** need to run [`supabase-setup.sql`](./supabase-setup.sql) — it is
-kept only as a reference for rebuilding the schema from scratch.
+---
 
-Credentials are in your local `.env` (gitignored, never committed). You will
-paste the same two values into Render in step 3.
+## Before you start — what is already done
 
-## 2. Get a Gemini API key — still needed
+Do not redo these. They are committed and verified:
 
-<https://aistudio.google.com/apikey> → **Create API key**. This is `GEMINI_API_KEY`.
-Without it, AI triage and runbook generation return a 500; everything else works.
+- Node 24 installed; dependencies installed
+- `PORT` reads from the environment (Render assigns it)
+- Frontend builds to `dist/public`, so the backend bundle is not publicly served
+- Passwords hashed with bcrypt; legacy plaintext upgrades automatically on login
+- Seeded `admin@company.com` / `admin123` backdoor removed
+- Gemini calls retry on 429/503 and return accurate errors
+- `GEMINI_MODEL` configurable; currently `gemini-3.6-flash`
+- Supabase connected and verified (`storageType: "supabase"`)
+- Git repo initialised with all work committed
 
-## 3. Push the code to GitHub
+### Where the secret values live
+
+Every credential you need is in your local **`.env`** file. Open it and keep it
+to hand — you will paste from it in Part 2.
+
+`.env` is gitignored and must stay that way. **Never** paste real keys into
+`DEPLOY.md`, `render.yaml`, or any other committed file.
+
+---
+
+## Part 1 — Push to GitHub
+
+**Purpose.** Render has no folder upload; its pipeline is *clone repo → build →
+start*, so the repository is the delivery mechanism. It also gives you automatic
+redeploys on every push, and one-click rollback to any earlier commit.
+
+### 1.1 Create an empty repository
+
+1. Go to <https://github.com/new>
+2. **Repository name:** `is-studio` (or your preference)
+3. **Visibility:** select **Private**
+4. **Do not tick** "Add a README file", "Add .gitignore", or "Choose a license"
+5. Click **Create repository**
+
+> **Why private.** Git history still contains the old plaintext-password code
+> and the seeded `admin123` account. Later commits do not erase history.
+
+> **Why no README.** Those options create an initial commit on GitHub. This repo
+> already has commits, so the two histories collide and the push is rejected.
+
+### 1.2 Push
+
+In the project folder, run:
 
 ```bash
-# Create an EMPTY repo at https://github.com/new  — choose PRIVATE.
-# Do NOT add a README or .gitignore there — this repo already has commits.
-
 git remote add origin https://github.com/<your-username>/<your-repo>.git
 git push -u origin main
 ```
 
-Private matters here: `server.ts` contains seeded demo credentials (see the
-security section below).
+If GitHub prompts for a password, it wants a **Personal Access Token**, not your
+account password. Create one at <https://github.com/settings/tokens> with the
+`repo` scope, and paste that as the password.
 
-## 4. Create the Render service
+### 1.3 Verify
 
-1. <https://dashboard.render.com> → **New** → **Web Service**.
-2. Connect GitHub, pick the repo.
-3. Render reads [`render.yaml`](./render.yaml) and fills in build/start commands.
-   If it does not, set them by hand:
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm start`
-   - **Runtime:** Node
-4. Under **Environment**, add these variables:
+Refresh the GitHub page. You should see the project files and a commit count
+above 8. Confirm **`.env` is NOT listed** — if it appears, stop and fix that
+before continuing, because your keys are now published.
 
-   | Key | Value |
+---
+
+## Part 2 — Deploy on Render
+
+**Purpose.** This is the actual hosting. Render installs dependencies, builds
+the frontend and backend, then keeps the Node process running behind a public
+HTTPS URL.
+
+### 2.1 Create the account
+
+1. Go to <https://dashboard.render.com>
+2. Sign up — **choose "Sign up with GitHub"**, which handles Part 2.2 at the
+   same time
+3. Verify your email if prompted
+
+No credit card is required for the free tier.
+
+### 2.2 Connect the repository
+
+If you did not sign up with GitHub, connect it now: **Dashboard → New → Web
+Service → Connect GitHub**. This installs Render's GitHub App. Grant access
+either to all repositories or just the one from Part 1.
+
+### 2.3 Create the web service
+
+1. **New** → **Web Service**
+2. Select your repository
+3. Render reads [`render.yaml`](./render.yaml) and fills in the settings. If it
+   does not, set them manually:
+
+   | Field | Value |
    | --- | --- |
-   | `GEMINI_API_KEY` | from step 2 |
-   | `SUPABASE_URL` | `https://rfeekheavantjnfszmmx.supabase.co` |
-   | `SUPABASE_ANON_KEY` | the anon key in your local `.env` |
-   | `APP_URL` | not used by the code — safe to skip |
+   | Runtime | `Node` |
+   | Build Command | `npm install && npm run build` |
+   | Start Command | `npm start` |
+   | Instance Type | `Free` |
 
-   `NODE_ENV=production` and `NODE_VERSION=22` come from `render.yaml`.
+### 2.4 Add environment variables
 
-   `APP_URL` is **not referenced anywhere in the code** — it is leftover from
-   the AI Studio template this project came from. Setting it is harmless but
-   has no effect.
+Still on the creation page, open **Environment** / **Advanced** and add four
+variables. **Copy each value from your local `.env` file.**
 
-   Only the two Supabase values are load-bearing. Without them the app falls
-   back to file storage on Render's ephemeral disk and loses every ticket on
-   each restart or redeploy — silently, which is what makes it dangerous.
-
-5. **Create Web Service**, then watch the log for
-   `IT TaskFlow server running at http://0.0.0.0:<port>`.
-
-## 5. Verify
-
-- `https://<your-app>.onrender.com/api/health` → `{"status":"ok",...}`
-- `https://<your-app>.onrender.com/api/data/status` → `"storageType"` must read
-  `"supabase"` and `supabase.connected` must be `true`. If it says `"file"`,
-  the env vars did not take.
-
----
-
-## Security
-
-### 1. Password hashing — FIXED ✅
-
-Passwords are now hashed with bcrypt (cost 10) on register, password reset and
-profile update, and verified with `bcrypt.compare` on login. They were
-previously written and compared as plain text in both Supabase and the local
-JSON store.
-
-**Existing accounts need no manual reset.** Any password still stored as
-plaintext is detected on the owner's next successful login and transparently
-re-stored as a hash. Their existing password keeps working.
-
-Two accounts were still plaintext at the time of writing
-(`kaixian.tan@qiu.edu.my`, `ongyeemun@gmail.com`); both convert automatically
-the next time each person logs in. Until they do, those two rows remain
-readable — see issue 2.
-
-### 2. Row Level Security is enabled but wide open — STILL OPEN ⚠️
-
-Both tables use `FOR ALL USING (true) WITH CHECK (true)` — RLS is on, but the
-policy permits everything. Combined with issue 1, **anyone holding the anon key
-can read and write every account row, including passwords**.
-
-The anon key is designed to be publicly distributable, so it must never be the
-only thing standing between the internet and a password column. In this app's
-architecture the key is at least server-side only — it is not in the frontend
-bundle (verified) — but it should still be treated as compromised if it has
-ever been pasted into a chat, ticket, or email. Rotate it in
-**Supabase → Project Settings → API**, then update `.env` and the Render env var.
-
-A tighter policy would deny anon access to `app_users` entirely and let only the
-service-role key touch it.
-
-### 3. Seeded demo accounts — FIXED ✅
-
-`DEFAULT_USERS` seeded `admin@company.com` / `admin123` plus two others. These
-were never rows in Supabase — they were injected at runtime from the source
-code, and because login falls back to local file storage when Supabase has no
-matching user, they were a **working admin login on any deployment of this
-code**. `DEFAULT_USERS` is now empty and the accounts were removed from
-`data/server-storage.json`. Verified: that login now returns 404.
-
----
-
-## AI quota limits
-
-The Gemini free tier is tighter than it looks, and it shapes what this app can
-do:
-
-- **~5 requests per minute** per model
-- **A daily cap** as well — reached during setup testing, which returns 429
-  until it resets
-
-The server now retries transient failures (429/503/500/504) with backoff and
-honours the `retryDelay` Google returns, capped at 12s so a browser request is
-never held open for a full quota window. Beyond that it returns an accurate
-error: a per-minute throttle says how many seconds to wait, while daily
-exhaustion says so plainly instead of implying a short retry will help.
-
-If the team hits these limits in normal use, enabling billing on the Google
-Cloud project raises them substantially.
-
-### Switching model when a quota runs out
-
-Quotas are counted **per model** (`GenerateRequestsPerDayPerProjectPerModel`),
-so moving to a different model grants a fresh daily allowance straight away.
-The model is not hardcoded — set `GEMINI_MODEL` in `.env` locally or as a Render
-env var:
-
-```
-GEMINI_MODEL="gemini-3.6-flash"
-```
-
-Verified working on this key:
-
-| Model | Notes |
+| Key | Where to get the value |
 | --- | --- |
-| `gemini-3.7-flash` | default; daily quota exhausted during setup testing |
-| `gemini-3.6-flash` | currently in use locally, quality equivalent |
-| `gemini-3.5-flash` | available |
-| `gemini-3.5-flash-lite` | fastest and cheapest, lower reasoning quality |
+| `GEMINI_API_KEY` | `.env` — starts with `AQ.` |
+| `SUPABASE_URL` | `.env` — the `https://….supabase.co` URL |
+| `SUPABASE_ANON_KEY` | `.env` — the long `eyJ…` token |
+| `GEMINI_MODEL` | `gemini-3.6-flash` |
 
-`gemini-2.5-flash` and `gemini-2.5-flash-lite` return 404 for this key — do not
-use them. The model in use is printed at startup, so Render's log confirms which
-one a deploy picked up.
+Notes:
+
+- `NODE_ENV=production` and `NODE_VERSION=22` come from `render.yaml` — do not
+  add them by hand.
+- **Do not set `APP_URL`.** It is unused by the code (leftover template config).
+- `GEMINI_MODEL` is optional but recommended: the default `gemini-3.7-flash`
+  had its free daily quota exhausted during setup testing. Quotas are counted
+  per model, so `gemini-3.6-flash` has its own allowance.
+
+### 2.5 Deploy
+
+Click **Create Web Service**. The first build takes 3–5 minutes.
+
+Watch the log until you see both lines:
+
+```
+IT TaskFlow server running at http://0.0.0.0:10000
+Gemini model: gemini-3.6-flash
+```
+
+### 2.6 Verify — do not skip this
+
+Replace `<your-app>` with your Render URL.
+
+| Check | Expected |
+| --- | --- |
+| `https://<your-app>.onrender.com/` | The app loads |
+| `…/api/health` | `{"status":"ok",…}` |
+| `…/api/data/status` | `"storageType":"supabase"` and `"connected":true` |
+
+**The third check is the important one.** If `storageType` reads `"file"`, the
+Supabase variables did not take effect. The app will appear to work and then
+lose every ticket on the next restart. Fix the env vars and redeploy before
+letting anyone use it.
+
+Then log in with a real account and confirm your existing tickets appear.
 
 ---
 
-## Free-tier note
+## Part 3 — Harden the Supabase credentials
 
-Render free web services sleep after ~15 minutes idle; the first request after
-that takes 30–60s to wake. A paid instance removes this.
+**Purpose.** The current anon key has been shared in plain text, and the
+database's row-level security policy permits everything, so that key grants full
+read *and write* access to every table — including the password column.
 
-## Running locally
+Do this **after** Part 2 is working, so you are not debugging two things at once.
+
+### 3.1 Let both users log in first (recommended)
+
+Passwords still stored as plaintext are converted to bcrypt automatically the
+next time each person logs in successfully. Ask both users to log in to the new
+Render URL before rotating. This removes the most sensitive data the key exposes.
+
+### 3.2 Rotate the key
+
+1. Supabase → **Project Settings** → **API**
+2. Rotate the anon key
+
+> **Read this before clicking.** This project uses a *legacy JWT* key. On legacy
+> projects, rotating means regenerating the project's JWT secret, which **also
+> invalidates the `service_role` key** and signs out any Supabase-authenticated
+> sessions. Newer projects offer independently rollable keys — check which your
+> dashboard presents before proceeding.
+
+3. Copy the new key
+4. Update it in **two** places, or the app breaks:
+   - Local `.env` → `SUPABASE_ANON_KEY`
+   - Render → **Environment** → `SUPABASE_ANON_KEY` → **Save**, which triggers a
+     redeploy
+5. Re-run the Part 2.6 checks
+
+### 3.3 Close the underlying hole (the part that actually matters)
+
+Rotation alone gives you a *new* key with exactly the same excessive power. The
+real weakness is the policy:
+
+```sql
+CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);
+```
+
+`USING (true)` means any holder of the anon key can read every row of
+`app_users`. The fix is to have the server authenticate as `service_role`
+(which bypasses RLS) and deny anon access to that table entirely.
+
+**Step 1** — Supabase → **Project Settings → API** → copy the **`service_role`**
+key. Treat it like a root password; it must never reach the frontend.
+
+**Step 2** — Supabase → **SQL Editor** → run:
+
+```sql
+-- Remove the wide-open policy. service_role bypasses RLS, so the server
+-- continues to work; the anon key loses all access to user accounts.
+DROP POLICY IF EXISTS "Allow user sync" ON app_users;
+```
+
+**Step 3** — In Render → **Environment**:
+
+- **Delete** `SUPABASE_ANON_KEY`
+- **Add** `SUPABASE_SERVICE_ROLE_KEY` with the value from Step 1
+- Save and let it redeploy
+
+> **Critical.** [`server.ts`](./server.ts) reads
+> `SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY`. The anon key wins if both
+> are present, so you must **remove** the anon variable, not merely add the new
+> one. Leaving both set means the policy change breaks login instead of
+> hardening it.
+
+**Step 4** — Re-run the Part 2.6 checks and log in once to confirm.
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Push rejected, "fetch first" | GitHub repo was created with a README | `git push -u origin main --force`, or delete the repo and redo 1.1 |
+| Build fails, `vite: not found` | Build command wrong | Must be `npm install && npm run build` |
+| Build fails, `Cannot find module 'bcryptjs'` | Install did not run from `package-lock.json` | Confirm build command; `bun.lock` was removed deliberately |
+| `storageType` is `"file"` | Supabase env vars missing or misspelled | Re-check both in Render; names are case-sensitive |
+| Login fails for everyone | Both Supabase key vars set at once | Delete `SUPABASE_ANON_KEY`, keep only the service-role one |
+| AI returns 429 | Gemini quota | Change `GEMINI_MODEL` to `gemini-3.5-flash`; quotas are per model |
+| First load takes 30–60s | Render free tier sleeps after 15 min idle | Expected. $7/month removes it |
+| App broken after a quiet week | Supabase free project paused | Restore from the Supabase dashboard; see below |
+
+---
+
+## After deployment — the one thing that will bite you later
+
+**A free Supabase project is paused after 7 days without database activity**, and
+a paused project is unreachable until manually restored from the dashboard.
+Supabase emails a warning roughly a week beforehand.
+
+This is the most likely way this deployment fails months from now: a quiet week
+or a holiday, and the app breaks with the cause long forgotten. A few queries a
+day prevents it.
+
+The standard free fix is a GitHub Actions cron in this repo that pings Supabase
+on a schedule. Ask and it can be added — it needs no new paid service.
+
+---
+
+## Reference
+
+### Local development
 
 ```bash
 npm install
-npm run dev             # http://localhost:3000
+npm run dev     # http://localhost:3000
 ```
 
-`.env` is already populated with the Supabase credentials. Add `GEMINI_API_KEY`
-to enable the AI features.
+`.env` is already populated.
+
+### Gemini free-tier limits
+
+- ~5 requests per minute, per model
+- A separate daily cap, per model
+
+Verified working on this key: `gemini-3.7-flash`, `gemini-3.6-flash`,
+`gemini-3.5-flash`, `gemini-3.5-flash-lite` (fastest, weakest reasoning).
+`gemini-2.5-flash` and `gemini-2.5-flash-lite` return 404 — do not use them.
+
+The model in use is printed at startup, so Render's log confirms which one a
+deploy picked up.
+
+### Free-tier costs
+
+| Service | Free tier | Paid upgrade |
+| --- | --- | --- |
+| GitHub | Unlimited private repos | — |
+| Render | 750 instance hrs/month, sleeps after 15 min | $7/mo always-on |
+| Supabase | 500MB DB, pauses after 7 days idle | $25/mo Pro, no pausing |
+| Gemini | ~5 req/min, daily cap | Enable Google Cloud billing |
+
+If this becomes something the team depends on daily, **Supabase Pro is the first
+thing worth paying for** — a slow first load is an annoyance, a silently paused
+database is an outage.
