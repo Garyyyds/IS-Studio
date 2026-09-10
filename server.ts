@@ -144,7 +144,17 @@ function saveStoredData(data: any) {
 // Free-tier request quotas are counted per model, so switching models gives a
 // fresh allowance. Overridable via env so the model can be changed on Render
 // without a code change or redeploy of new source.
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.7-flash';
+// GEMINI_MODEL accepts either one model or a comma-separated fallback chain,
+// e.g. "gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash". Free-tier quotas
+// are counted per model, so when one model's daily allowance is spent the next
+// in the chain still has its own. Tried strictly in order.
+const GEMINI_MODELS: string[] = (process.env.GEMINI_MODEL || 'gemini-3.7-flash')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+// Kept for logging and anything that wants a single representative name.
+const GEMINI_MODEL = GEMINI_MODELS[0];
 
 const AI_MAX_ATTEMPTS = 4;
 // Longest we will hold a request open waiting out a quota window. The free tier
@@ -170,13 +180,27 @@ function retryDelayMsFromError(err: any): number | null {
   return Math.ceil(parseFloat(match[1]) * 1000);
 }
 
-async function generateWithRetry(ai: any, request: any): Promise<any> {
+// True when this model's allowance is gone for the rest of the day. Waiting
+// cannot help, but a different model has its own separate quota.
+function isDailyQuotaError(err: any): boolean {
+  if (aiErrorStatus(err) !== 429) return false;
+  const raw = typeof err?.message === 'string' ? err.message : '';
+  return raw.includes('PerDayPerProject');
+}
+
+// Retry one model through transient failures. Throws so the caller can decide
+// whether to move on to the next model in the chain.
+async function generateWithModel(ai: any, request: any, model: string): Promise<any> {
   let lastError: any;
   for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
     try {
-      return await ai.models.generateContent(request);
+      return await ai.models.generateContent({ ...request, model });
     } catch (err: any) {
       lastError = err;
+
+      // A spent daily quota is permanent for today -- fail out immediately so
+      // the caller can fall through to the next model rather than sleeping.
+      if (isDailyQuotaError(err)) throw err;
       if (!isTransientAiError(err) || attempt === AI_MAX_ATTEMPTS) throw err;
 
       const advised = retryDelayMsFromError(err);
@@ -186,17 +210,49 @@ async function generateWithRetry(ai: any, request: any): Promise<any> {
       // If Google wants us to wait longer than we are willing to hold the
       // request open, stop retrying and surface an actionable error instead.
       if (backoffMs > AI_MAX_WAIT_MS) {
-        console.warn('Gemini quota exhausted; advised wait ' + backoffMs + 'ms exceeds cap');
+        console.warn(
+          'Gemini quota wait ' + backoffMs + 'ms exceeds cap on ' + model
+        );
         throw err;
       }
 
       console.warn(
-        'Gemini transient error (status ' + aiErrorStatus(err) + '); retrying in ' +
-        backoffMs + 'ms [attempt ' + attempt + '/' + AI_MAX_ATTEMPTS + ']'
+        'Gemini transient error on ' + model + ' (status ' + aiErrorStatus(err) +
+        '); retrying in ' + backoffMs + 'ms [attempt ' + attempt + '/' + AI_MAX_ATTEMPTS + ']'
       );
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
     }
   }
+  throw lastError;
+}
+
+// Walk the configured model chain. Moves to the next model when the current
+// one is out of daily quota or is not available to this key (404), so a spent
+// allowance degrades to a working model instead of a user-visible failure.
+async function generateWithRetry(ai: any, request: any): Promise<any> {
+  let lastError: any;
+
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    try {
+      const response = await generateWithModel(ai, request, model);
+      if (i > 0) console.log('Gemini served by fallback model ' + model);
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const canFallBack = isDailyQuotaError(err) || aiErrorStatus(err) === 404;
+      const nextModel = GEMINI_MODELS[i + 1];
+
+      if (!canFallBack || !nextModel) throw err;
+
+      console.warn(
+        'Gemini model ' + model + ' unavailable (' +
+        (isDailyQuotaError(err) ? 'daily quota spent' : 'not available for this key') +
+        '); falling back to ' + nextModel
+      );
+    }
+  }
+
   throw lastError;
 }
 
@@ -210,12 +266,18 @@ function sendAiError(res: any, error: any, fallbackMessage: string) {
     // in under a minute, the other not until the daily quota resets.
     const isDailyQuota = raw.includes('PerDayPerProject');
     if (isDailyQuota) {
+      const tried = GEMINI_MODELS.length;
       return res.status(429).json({
         error:
-          'The daily free-tier AI quota for this project has been used up. ' +
-          'AI triage and runbook generation will work again after the quota ' +
-          'resets, or immediately if billing is enabled on the Google project.',
+          'The daily free-tier AI quota is used up on ' +
+          (tried > 1 ? 'all ' + tried + ' configured models' : 'this model') +
+          '. AI triage and runbook generation will work again after the quota ' +
+          'resets' +
+          (tried > 1
+            ? ', or sooner if another model is added to GEMINI_MODEL.'
+            : ', or sooner if more models are added to GEMINI_MODEL.'),
         quotaScope: 'daily',
+        modelsTried: GEMINI_MODELS,
       });
     }
     const waitSeconds = Math.ceil((retryDelayMsFromError(error) ?? 60000) / 1000);
@@ -901,7 +963,6 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
 - P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance. SLA: 72+ hours.`;
 
     const response = await generateWithRetry(ai, {
-      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -1006,7 +1067,6 @@ Provide real, production-tested diagnostic and remediation CLI commands (Bash, P
 Make the handbook thorough, unambiguous, and formatted for junior and senior engineers during live outages.`;
 
     const response = await generateWithRetry(ai, {
-      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -1114,7 +1174,7 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`IT TaskFlow server running at http://0.0.0.0:${PORT}`);
-    console.log(`Gemini model: ${GEMINI_MODEL}`);
+    console.log(`Gemini models (in order): ${GEMINI_MODELS.join(' -> ')}`);
   });
 }
 
