@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-C:/Users/tankaixian/Desktop/IS Studio/IS-Studio-main/IS-Studio-main}/.claude/version-bump.sh\"",
+            "timeout": 60,
+            "statusMessage": "Saving version..."
+          }
+        ]
+      }
+    ]
+  }
+}

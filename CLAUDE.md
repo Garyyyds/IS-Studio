@@ -55,3 +55,24 @@ safe; deleting records while testing deletes them for real.
   `dependencies` (not just `devDependencies`) or production startup breaks.
 - `GEMINI_MODEL` accepts a comma-separated fallback chain; a model out of daily
   quota hands off to the next automatically.
+
+## Versioning: automatic
+
+Every turn that changes files is committed and tagged automatically by a `Stop`
+hook (`.claude/settings.json` -> `.claude/version-bump.sh`). Versions are named
+`DDMMYYYYverNNN` — the date, then a counter that restarts at `000` each day.
+A turn that changes nothing produces no version.
+
+`VERSIONS.md` holds the log. To describe a version in your own words rather than
+a file list, write one line to `.claude/.version-note` before the turn ends; the
+hook uses it for the commit message and the log row, then deletes it.
+
+```bash
+git tag -n99                      # every version with its note
+git diff 10092026ver000 HEAD      # what changed since a version
+git checkout <version>            # inspect a version (safe)
+git reset --hard <version>        # discard everything after it
+```
+
+Tags and commits stay local. Pushing to `main` deploys to Render, so it is never
+automatic — ask before pushing.
