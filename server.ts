@@ -141,6 +141,11 @@ function saveStoredData(data: any) {
 // Gemini's free tier returns 503 (capacity) and 429 (per-minute rate limit)
 // regularly. Both are transient, so retry with exponential backoff rather than
 // surfacing a 500 that looks to the user like an application bug.
+// Free-tier request quotas are counted per model, so switching models gives a
+// fresh allowance. Overridable via env so the model can be changed on Render
+// without a code change or redeploy of new source.
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.7-flash';
+
 const AI_MAX_ATTEMPTS = 4;
 // Longest we will hold a request open waiting out a quota window. The free tier
 // caps generate_content at 5 requests/minute, so a burst can be told to wait
@@ -896,7 +901,7 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
 - P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance. SLA: 72+ hours.`;
 
     const response = await generateWithRetry(ai, {
-      model: 'gemini-3.7-flash',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -1001,7 +1006,7 @@ Provide real, production-tested diagnostic and remediation CLI commands (Bash, P
 Make the handbook thorough, unambiguous, and formatted for junior and senior engineers during live outages.`;
 
     const response = await generateWithRetry(ai, {
-      model: 'gemini-3.7-flash',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -1109,6 +1114,7 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`IT TaskFlow server running at http://0.0.0.0:${PORT}`);
+    console.log(`Gemini model: ${GEMINI_MODEL}`);
   });
 }
 

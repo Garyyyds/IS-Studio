@@ -136,6 +136,30 @@ exhaustion says so plainly instead of implying a short retry will help.
 If the team hits these limits in normal use, enabling billing on the Google
 Cloud project raises them substantially.
 
+### Switching model when a quota runs out
+
+Quotas are counted **per model** (`GenerateRequestsPerDayPerProjectPerModel`),
+so moving to a different model grants a fresh daily allowance straight away.
+The model is not hardcoded — set `GEMINI_MODEL` in `.env` locally or as a Render
+env var:
+
+```
+GEMINI_MODEL="gemini-3.6-flash"
+```
+
+Verified working on this key:
+
+| Model | Notes |
+| --- | --- |
+| `gemini-3.7-flash` | default; daily quota exhausted during setup testing |
+| `gemini-3.6-flash` | currently in use locally, quality equivalent |
+| `gemini-3.5-flash` | available |
+| `gemini-3.5-flash-lite` | fastest and cheapest, lower reasoning quality |
+
+`gemini-2.5-flash` and `gemini-2.5-flash-lite` return 404 for this key — do not
+use them. The model in use is printed at startup, so Render's log confirms which
+one a deploy picked up.
+
 ---
 
 ## Free-tier note
