@@ -212,7 +212,19 @@ next successful login. Both accounts were still plaintext at the time of
 writing. Ask both to log in once at the Render URL. Their existing passwords
 keep working — nothing changes for them.
 
-### 3.4 Close the underlying hole
+### 3.4 Close the underlying hole — DEFERRED, and that is fine
+
+> ### ⚠️ READ THIS BEFORE CREATING A PUBLISHABLE KEY
+>
+> The permissive RLS policies below were **left in place deliberately**. They are
+> harmless today because no anon-level key exists: the legacy keys are disabled
+> and no publishable key has been created.
+>
+> **The moment a `sb_publishable_…` key is created, these policies become live
+> again** and grant that key full read/write on `app_users`, including password
+> hashes. Run the SQL in this section *first*.
+
+
 
 The policy created with the original schema permits everything:
 
