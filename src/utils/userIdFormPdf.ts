@@ -7,6 +7,7 @@ import {
   drawInfoRows,
   drawSignatureBlock,
   drawRuledRemarks,
+  drawFileNames,
   drawTickBox,
   SECTION_GAP,
 } from './formChrome';
@@ -183,27 +184,7 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
       ? form.attachmentFileNames.map((n) => n.trim()).filter(Boolean)
       : [];
 
-  if (attachedNames.length) {
-    const fileLabel = attachedNames.length > 1 ? 'Files:' : 'File:';
-    doc.setFont('helvetica', 'bold');
-    doc.text(fileLabel, optionX, ctx.y);
-    doc.setFont('helvetica', 'normal');
-
-    // One file per line, every line starting at the same indent. Running the
-    // names together and wrapping them sent the overflow back to the left
-    // margin and could split a single file name across two different columns.
-    const nameX = optionX + doc.getTextWidth(fileLabel) + 2;
-    const nameWidth = margin + contentWidth - nameX;
-
-    attachedNames.forEach((name, nameIndex) => {
-      const lines = doc.splitTextToSize(name, nameWidth) as string[];
-      lines.forEach((line, lineIndex) => {
-        // The first line sits beside the label; everything after it steps down.
-        if (nameIndex > 0 || lineIndex > 0) ctx.y += 5;
-        doc.text(line, nameX, ctx.y);
-      });
-    });
-  }
+  drawFileNames(ctx, optionX, attachedNames);
 
   ctx.y += 7;
 

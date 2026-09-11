@@ -7,6 +7,7 @@ import {
   drawInfoRows,
   drawSignatureBlock,
   drawRuledRemarks,
+  drawFileNames,
   drawItemTable,
   drawFootnote,
   drawTickOptions,
@@ -30,6 +31,8 @@ export const REQ_ATTACHMENT_FORMATS: { id: 'hardcopy' | 'softcopy'; label: strin
   { id: 'hardcopy', label: 'Hardcopy' },
   { id: 'softcopy', label: 'Softcopy' },
 ];
+export const REQ_ATTACHMENT_REMARK_LABEL = 'Remark:';
+export const REQ_ATTACHMENT_REMARK_PLACEHOLDER = 'e.g. Quotation QT-2026-0881';
 export const REQ_SUPPORTING_DOCS_NOTE =
   'Kindly attach supporting documents, i.e. quotation, proposal, drawings or specifications.';
 
@@ -183,23 +186,20 @@ export async function exportRequisitionFormPdf(form: RequisitionFormData) {
     }))
   );
 
-  // Write-in for the document reference, on the ruled line to the right.
-  const detailX = optionsX + REQ_ATTACHMENT_FORMATS.length * attachPitch;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text('Detail:', detailX, ctx.y);
-  doc.setFont('helvetica', 'normal');
-  const detailLineStart = detailX + doc.getTextWidth('Detail:') + 2;
-  doc.line(detailLineStart, ctx.y + 1, margin + contentWidth, ctx.y + 1);
-  if (form.attachmentDetail && form.attachmentDetail.trim()) {
-    const fitted = doc.splitTextToSize(
-      form.attachmentDetail.trim(),
-      margin + contentWidth - detailLineStart - 1
-    )[0] as string;
-    doc.text(fitted, detailLineStart + 1, ctx.y);
-  }
+  // Recorded file names sit to the right of the format ticks, one per line so
+  // a second name never starts back at the left margin.
+  const fileLabelX = optionsX + REQ_ATTACHMENT_FORMATS.length * attachPitch;
+  const attachedNames =
+    form.hasAttachments === 'yes' && form.attachmentFormat === 'softcopy'
+      ? form.attachmentFileNames
+      : [];
+  drawFileNames(ctx, fileLabelX, attachedNames);
 
   ctx.y += 6.5;
+
+  // The remark gets its own full-width ruled line beneath, rather than sharing
+  // the format row, so there is room to write more than a reference number.
+  drawRuledRemarks(ctx, REQ_ATTACHMENT_REMARK_LABEL, form.attachmentRemark, 1);
   drawFootnote(ctx, REQ_SUPPORTING_DOCS_NOTE);
   ctx.y += 7;
 

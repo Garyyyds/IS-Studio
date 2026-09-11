@@ -67,3 +67,4 @@ away later work permanently.
 | `11092026ver038` | 2026-09-11 | Add the IT Hardware, Software & Peripherals Requisition Form, Sections A to F, with item tables, live totals and a two-page PDF |
 | `11092026ver039` | 2026-09-11 | Install @types/react and @types/react-dom, scope tsconfig to src so the editor stops loading dist, and fix the four type errors that surfaced |
 | `11092026ver040` | 2026-09-11 | Align every attachment file name under the first on the User ID form, one file per line |
+| `11092026ver041` | 2026-09-11 | Requisition form: Detail becomes Remark on its own ruled line, and attachments now take multiple files printed one per line at a shared indent |

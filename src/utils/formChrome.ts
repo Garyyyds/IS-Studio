@@ -481,3 +481,54 @@ export function tickOptionPitch(ctx: FormDoc, labels: string[]): number {
   doc.setFontSize(8.5);
   return 3.6 + 2.5 + Math.max(...labels.map((l) => doc.getTextWidth(l))) + 10;
 }
+
+/**
+ * The recorded attachment file names: a bold File:/Files: label at `labelX`,
+ * then one name per line, every line at the same indent. Names are never run
+ * together, because wrapping a joined list sends the overflow back to the left
+ * margin and can split one file name across two different columns.
+ *
+ * The cursor is left on the last line drawn.
+ */
+export function drawFileNames(ctx: FormDoc, labelX: number, names: string[]): void {
+  const { doc, margin, contentWidth } = ctx;
+  const listed = names.map((n) => n.trim()).filter(Boolean);
+  if (!listed.length) return;
+
+  const label = listed.length > 1 ? 'Files:' : 'File:';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(label, labelX, ctx.y);
+
+  const nameX = labelX + doc.getTextWidth(label) + 2;
+  const nameWidth = margin + contentWidth - nameX;
+  doc.setFont('helvetica', 'normal');
+
+  listed.forEach((name, nameIndex) => {
+    const lines = doc.splitTextToSize(name, nameWidth) as string[];
+    lines.forEach((line, lineIndex) => {
+      // The first line sits beside the label; everything after it steps down.
+      if (nameIndex > 0 || lineIndex > 0) ctx.y += 5;
+      doc.text(line, nameX, ctx.y);
+    });
+  });
+}
+
+/** Height drawFileNames will add below its first line, for spacing decisions. */
+export function measureFileNames(ctx: FormDoc, labelX: number, names: string[]): number {
+  const { doc, margin, contentWidth } = ctx;
+  const listed = names.map((n) => n.trim()).filter(Boolean);
+  if (!listed.length) return 0;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  const nameX = labelX + doc.getTextWidth(listed.length > 1 ? 'Files:' : 'File:') + 2;
+  doc.setFont('helvetica', 'normal');
+
+  const lines = listed.reduce(
+    (sum, name) => sum + (doc.splitTextToSize(name, margin + contentWidth - nameX) as string[]).length,
+    0
+  );
+  return (lines - 1) * 5;
+}

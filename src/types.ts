@@ -232,8 +232,11 @@ export interface RequisitionFormData {
   /** Whether supporting documents accompany the request. */
   hasAttachments: 'yes' | 'no' | '';
   attachmentFormat: 'hardcopy' | 'softcopy' | '';
-  /** Write-in beside the attachment format, e.g. a quotation reference. */
-  attachmentDetail: string;
+  /** Free-text remark beside the attachment format, e.g. a quotation reference. */
+  attachmentRemark: string;
+  /** Names of the attached files. Softcopy only; the files themselves travel
+   * separately, the form only records which ones accompany it. */
+  attachmentFileNames: string[];
   /** Whether the spend was budgeted for. */
   budgeted: 'yes' | 'no' | '';
   budgetedAmount: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ArrowLeft,
   FileDown,
@@ -10,6 +10,7 @@ import {
   Lock,
   Paperclip,
   Wallet,
+  X,
 } from 'lucide-react';
 import { AppUser, RequisitionFormData, RequisitionItem } from '../types';
 import {
@@ -22,6 +23,8 @@ import {
   REQ_SECTION_F_TITLE,
   REQ_ATTACHMENTS_LABEL,
   REQ_ATTACHMENT_FORMATS,
+  REQ_ATTACHMENT_REMARK_LABEL,
+  REQ_ATTACHMENT_REMARK_PLACEHOLDER,
   REQ_SUPPORTING_DOCS_NOTE,
   REQ_BUDGETED_LABEL,
   REQ_COST_FIELDS,
@@ -78,7 +81,8 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
     location: '',
     hasAttachments: '',
     attachmentFormat: '',
-    attachmentDetail: '',
+    attachmentRemark: '',
+    attachmentFileNames: [],
     budgeted: '',
     budgetedAmount: '',
     utilisedAmount: '',
@@ -91,6 +95,7 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   };
 
   const [form, setForm] = useState(initialForm);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,14 +104,20 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   };
 
   // Yes and No clear each other; re-picking the current answer clears it so
-  // nothing is stuck selected. Answering No also drops the format and detail,
-  // which would otherwise print beside an unticked Yes.
+  // nothing is stuck selected. Answering No also drops the format, remark and
+  // files, which would otherwise print beside an unticked Yes.
   const setHasAttachments = (value: 'yes' | 'no') => {
     setForm((prev) => {
       const next = prev.hasAttachments === value ? '' : value;
       return next === 'yes'
         ? { ...prev, hasAttachments: next }
-        : { ...prev, hasAttachments: next, attachmentFormat: '', attachmentDetail: '' };
+        : {
+            ...prev,
+            hasAttachments: next,
+            attachmentFormat: '',
+            attachmentRemark: '',
+            attachmentFileNames: [],
+          };
     });
   };
 
@@ -114,11 +125,45 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
     setForm((prev) => ({ ...prev, budgeted: prev.budgeted === value ? '' : value }));
   };
 
+  // Only a softcopy carries file names, so switching away from it drops them.
   const setAttachmentFormat = (value: 'hardcopy' | 'softcopy') => {
+    setForm((prev) => {
+      const next = prev.attachmentFormat === value ? '' : value;
+      return {
+        ...prev,
+        attachmentFormat: next,
+        attachmentFileNames: next === 'softcopy' ? prev.attachmentFileNames : [],
+      };
+    });
+  };
+
+  // Picked files are appended, so the button can be used repeatedly. Names are
+  // de-duplicated because the same file adds nothing the second time.
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list: FileList | null = e.target.files;
+    const picked: string[] = list ? Array.from(list).map((file) => file.name) : [];
+    if (picked.length) {
+      setForm((prev) => ({
+        ...prev,
+        attachmentFileNames: [
+          ...prev.attachmentFileNames,
+          ...picked.filter((name) => !prev.attachmentFileNames.includes(name)),
+        ],
+      }));
+    }
+    // Reset the input so picking the same file again still fires a change.
+    e.target.value = '';
+  };
+
+  const removeFile = (name: string) => {
     setForm((prev) => ({
       ...prev,
-      attachmentFormat: prev.attachmentFormat === value ? '' : value,
+      attachmentFileNames: prev.attachmentFileNames.filter((n) => n !== name),
     }));
+  };
+
+  const clearFiles = () => {
+    setForm((prev) => ({ ...prev, attachmentFileNames: [] }));
   };
 
   // Both item tables share these handlers; `key` picks which one to act on.
@@ -464,7 +509,8 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
             {/* Format and reference only apply once Yes is chosen. */}
             {form.hasAttachments === 'yes' && (
               <div className="mt-3 pl-1 space-y-3">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   {REQ_ATTACHMENT_FORMATS.map((option) => (
                     <div key={option.id} className="flex items-center gap-2">
                       <input
@@ -479,17 +525,76 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
                       </label>
                     </div>
                   ))}
+                  </div>
+
+                  {/* Attaching is only meaningful for a softcopy. The files
+                      themselves travel separately; the form records which ones
+                      accompany it. */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFilesPicked}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={form.attachmentFormat !== 'softcopy'}
+                      title={
+                        form.attachmentFormat === 'softcopy'
+                          ? 'Attach one or more files'
+                          : 'Select Softcopy to attach files'
+                      }
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <span>{form.attachmentFileNames.length ? 'Add more' : 'Attach'}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Attached files */}
+                {form.attachmentFormat === 'softcopy' && form.attachmentFileNames.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {form.attachmentFileNames.map((name) => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1.5 max-w-[240px] px-2 py-1 rounded-md text-[11px] font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                      >
+                        <span className="truncate" title={name}>
+                          {name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(name)}
+                          aria-label={`Remove ${name}`}
+                          className="shrink-0 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={clearFiles}
+                      className="text-[11px] font-medium text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Detail
+                    {REQ_ATTACHMENT_REMARK_LABEL.replace(/:$/, '')}
                   </label>
                   <input
                     type="text"
-                    value={form.attachmentDetail}
-                    onChange={(e) => setField('attachmentDetail', e.target.value)}
-                    placeholder="e.g. Quotation QT-2026-0881"
+                    value={form.attachmentRemark}
+                    onChange={(e) => setField('attachmentRemark', e.target.value)}
+                    placeholder={REQ_ATTACHMENT_REMARK_PLACEHOLDER}
                     className={inputClass}
                   />
                 </div>
