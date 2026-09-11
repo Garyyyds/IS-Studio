@@ -40,6 +40,8 @@ export interface AssetFormConfig {
   pickerBlurb: string;
   /** Message when Section B is empty on export. */
   emptyItemsError: string;
+  /** Three signing columns at the foot of the printed form. */
+  signatureLabels: [string, string, string];
 }
 
 export const DISPOSAL_FORM: AssetFormConfig = {
@@ -62,6 +64,7 @@ export const DISPOSAL_FORM: AssetFormConfig = {
   pickerBlurb:
     'List faulty or obsolete IT assets for withdrawal from service, then export the signed-off PDF.',
   emptyItemsError: 'Add at least one item under Section B before exporting.',
+  signatureLabels: ['Requestor', 'HOD', 'IT'],
 };
 
 export const ALLOCATION_FORM: AssetFormConfig = {
@@ -87,6 +90,7 @@ export const ALLOCATION_FORM: AssetFormConfig = {
   pickerBlurb:
     'Record IT assets issued to an employee, then export the signed-off PDF for handover.',
   emptyItemsError: 'Add at least one item under Section B before exporting.',
+  signatureLabels: ['Prepared/Installed By', 'Authorised By', 'Acknowledged/Accepted By'],
 };
 
 // jsPDF cannot embed WebP. Browsers decode it natively, so round-trip the logo
@@ -345,26 +349,10 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     y += h;
   });
 
-  // A short form leaves the lower half of the page blank, so drop the
-  // signatures to the foot of the sheet when there is room. On a page that is
-  // already full they simply follow the notes, and overflow starts a new page.
-  const signatureBlockHeight = 14;
-  const signatureFootRoom = 10;
-  const naturalSignatureY = y + SECTION_GAP * 2;
-  const anchoredSignatureY = pageHeight - margin - signatureBlockHeight - signatureFootRoom;
-
-  if (naturalSignatureY + signatureBlockHeight > pageHeight - margin) {
-    doc.addPage();
-    y = anchoredSignatureY;
-  } else {
-    y = Math.max(naturalSignatureY, anchoredSignatureY);
-  }
-
   // --- Signature block ---
   // Three equal columns rather than the spreadsheet's uneven merges, so the
-  // signing lines are the same length. Within a column the colon sits at a
-  // fixed offset, which lines "Requestor :" up with "Date :" beneath it.
-  const sigLabels = ['Requestor', 'HOD', 'IT'];
+  // signing lines are the same length.
+  const sigLabels = config.signatureLabels;
   const sigColWidth = contentWidth / 3;
   const sigGutter = 8;
 
@@ -372,20 +360,61 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
   doc.setFontSize(9);
 
   // Widest label decides where every colon sits, in every column.
-  const labelColWidth = Math.max(...[...sigLabels, 'Date'].map((l) => doc.getTextWidth(l))) + 2;
+  const inlineLabelWidth = Math.max(...[...sigLabels, 'Date'].map((l) => doc.getTextWidth(l))) + 2;
+  const inlineLineLength = sigColWidth - sigGutter - (inlineLabelWidth + 3);
 
-  const signatureRow = (labels: string[], rowY: number) => {
-    labels.forEach((label, i) => {
+  // Short labels sit beside their signing line with the colons aligned. Long
+  // ones (the allocation form's "Acknowledged/Accepted By") would squeeze the
+  // line down to about 11mm, so those stack the label above a full-width line.
+  const MIN_INLINE_LINE = 25;
+  const stacked = inlineLineLength < MIN_INLINE_LINE;
+
+  const signatureBlockHeight = stacked ? 20 : 14;
+  const signatureFootRoom = 10;
+  const naturalSignatureY = y + SECTION_GAP * 2;
+  const anchoredSignatureY = pageHeight - margin - signatureBlockHeight - signatureFootRoom;
+
+  // A short form leaves the lower half of the page blank, so drop the
+  // signatures to the foot of the sheet when there is room. On a page that is
+  // already full they simply follow the notes, and overflow starts a new page.
+  if (naturalSignatureY + signatureBlockHeight > pageHeight - margin) {
+    doc.addPage();
+    y = anchoredSignatureY;
+  } else {
+    y = Math.max(naturalSignatureY, anchoredSignatureY);
+  }
+
+  if (stacked) {
+    doc.setFontSize(8);
+    const dateLabelWidth = doc.getTextWidth('Date') + 2;
+
+    sigLabels.forEach((label, i) => {
       const x = margin + i * sigColWidth;
-      doc.text(label, x, rowY);
-      doc.text(':', x + labelColWidth, rowY);
-      doc.line(x + labelColWidth + 3, rowY + 1, x + sigColWidth - sigGutter, rowY + 1);
-    });
-  };
+      const lineEnd = x + sigColWidth - sigGutter;
 
-  signatureRow(sigLabels, y);
-  y += 10;
-  signatureRow(['Date', 'Date', 'Date'], y);
+      doc.text(`${label}:`, x, y);
+      doc.line(x, y + 6, lineEnd, y + 6);
+
+      doc.text('Date', x, y + 14);
+      doc.text(':', x + dateLabelWidth, y + 14);
+      doc.line(x + dateLabelWidth + 3, y + 15, lineEnd, y + 15);
+    });
+  } else {
+    // Within a column the colon sits at a fixed offset, which lines
+    // "Requestor :" up with "Date :" beneath it.
+    const signatureRow = (labels: string[], rowY: number) => {
+      labels.forEach((label, i) => {
+        const x = margin + i * sigColWidth;
+        doc.text(label, x, rowY);
+        doc.text(':', x + inlineLabelWidth, rowY);
+        doc.line(x + inlineLabelWidth + 3, rowY + 1, x + sigColWidth - sigGutter, rowY + 1);
+      });
+    };
+
+    signatureRow(sigLabels, y);
+    y += 10;
+    signatureRow(['Date', 'Date', 'Date'], y);
+  }
 
   const safeRef = (form.referenceNo || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`${config.fileStem}_${safeRef}.pdf`);
