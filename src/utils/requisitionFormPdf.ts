@@ -13,6 +13,7 @@ import {
   drawTickOptions,
   tickOptionPitch,
   ensureRoom,
+  FormDoc,
   TableColumn,
   SECTION_GAP,
 } from './formChrome';
@@ -129,8 +130,8 @@ function itemRows(items: RequisitionItem[]): string[][] {
   ]);
 }
 
-export async function exportRequisitionFormPdf(form: RequisitionFormData) {
-  const ctx = createFormDoc();
+/** Lays the whole form out on `ctx`, masthead through to the CEO block. */
+async function drawRequisitionBody(ctx: FormDoc, form: RequisitionFormData) {
   const { doc, margin, contentWidth } = ctx;
 
   await drawHeaderBand(ctx);
@@ -318,7 +319,86 @@ export async function exportRequisitionFormPdf(form: RequisitionFormData) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text(REQ_CEO_SIGNATORY, margin, ctx.y);
+}
+
+/**
+ * How far the sheet may be reduced to win a single page. At this floor the
+ * smallest type on the form, the 7.5pt footnotes, prints just under 5pt, which
+ * is about as small as survives a print-and-scan round trip. A form that still
+ * will not fit is printed at full size across two pages instead: unreadable on
+ * one page is worse than readable on two.
+ */
+export const REQ_MIN_SCALE = 0.62;
+
+/** Tall enough that a measuring pass never breaks a page. */
+const MEASURE_HEIGHT = 5000;
+
+/** Left clear at the foot so descenders never sit on the margin itself. */
+const FIT_SLACK = 2;
+
+export async function exportRequisitionFormPdf(form: RequisitionFormData) {
+  const a4 = createFormDoc();
+  const available = a4.pageHeight - a4.margin * 2 - FIT_SLACK;
+
+  // Lay the form out end to end, without page breaks, and report how tall it
+  // came out in its own co-ordinate space.
+  const measure = async (scale: number) => {
+    const probe = createFormDoc({ scale, virtualHeight: MEASURE_HEIGHT });
+    await drawRequisitionBody(probe, form);
+    return probe.y - probe.margin;
+  };
+
+  const withinFloor = (value: number) => Math.max(REQ_MIN_SCALE, Math.min(1, value));
+
+  let scale = 1;
+  let height = await measure(1);
+
+  if (height > available) {
+    // Reducing the sheet changes how much text fits on a line, so a block that
+    // wrapped onto three lines can come back as two - or, for a block sized off
+    // the page rather than off the type, as four. An estimate can therefore
+    // land either side of the truth, so each candidate is measured and only
+    // adopted once it is known to fit. A scale is never used on the strength of
+    // arithmetic alone, which is what keeps the sheet on the page.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const candidate = withinFloor(available / height);
+      const candidateHeight = await measure(candidate);
+
+      if (candidateHeight * candidate <= available) {
+        scale = candidate;
+        break;
+      }
+      // Already as small as legibility allows, so stop and print full size.
+      if (candidate <= REQ_MIN_SCALE) break;
+      height = candidateHeight;
+    }
+    // Nothing fitted at the floor, so `scale` stays 1 and the form prints full
+    // size over two pages.
+  }
+
+  // A reduced sheet is drawn without page breaks. The per-section guards carry
+  // deliberately generous height estimates, so on a form that fills the page to
+  // the millimetre they fire and split it anyway - which would defeat the whole
+  // exercise. Suppressing them is only safe because the reduction was chosen
+  // from a measurement of this very form, not from an estimate.
+  const ctx = createFormDoc({
+    scale,
+    virtualHeight: scale < 1 ? MEASURE_HEIGHT : undefined,
+  });
+  await drawRequisitionBody(ctx, form);
 
   const safeRef = (form.refNo || form.requestorName || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
-  doc.save('IT_Requisition_' + safeRef + '.pdf');
+  const fileName = 'IT_Requisition_' + safeRef + '.pdf';
+
+  // Safety net for the suppressed breaks: if the sheet somehow came out taller
+  // than it measured, print it full size across two pages rather than let the
+  // tail run off the paper.
+  if (scale < 1 && (ctx.y - ctx.margin) * scale > available) {
+    const fullSize = createFormDoc();
+    await drawRequisitionBody(fullSize, form);
+    fullSize.doc.save(fileName);
+    return;
+  }
+
+  ctx.doc.save(fileName);
 }

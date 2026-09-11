@@ -24,30 +24,110 @@ export interface FormDoc {
   contentWidth: number;
   /** Current vertical cursor, in mm from the top of the page. */
   y: number;
+  /**
+   * Uniform reduction applied to everything drawn, 1 when the form prints at
+   * full size. Layout code never reads this - it works in unscaled millimetres
+   * and the document underneath does the shrinking.
+   */
+  scale: number;
 }
 
-export function createFormDoc(): FormDoc {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+/**
+ * Wraps a jsPDF instance so a form can be laid out in plain millimetres and
+ * come out uniformly reduced. Every length going in is multiplied by `scale`
+ * and every measurement coming back is divided by it, so the layout above is
+ * unaware. Because one factor applies to positions, sizes, rules and type
+ * alike, a reduced sheet is the full-size sheet photographically shrunk -
+ * nothing can move relative to anything else, so nothing can collide.
+ */
+function scaleDoc(doc: jsPDF, scale: number): jsPDF {
+  if (scale === 1) return doc;
 
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.2);
+  const scaled: any = {
+    // Colour and font family carry no lengths.
+    setDrawColor: (...args: any[]) => (doc.setDrawColor as any)(...args),
+    setFillColor: (...args: any[]) => (doc.setFillColor as any)(...args),
+    setTextColor: (...args: any[]) => (doc.setTextColor as any)(...args),
+    setFont: (...args: any[]) => (doc.setFont as any)(...args),
+
+    setLineWidth: (width: number) => doc.setLineWidth(width * scale),
+    setFontSize: (size: number) => doc.setFontSize(size * scale),
+
+    text: (text: any, x: number, y: number, options?: any) =>
+      doc.text(text, x * scale, y * scale, options),
+    rect: (x: number, y: number, w: number, h: number, style?: any) =>
+      doc.rect(x * scale, y * scale, w * scale, h * scale, style),
+    line: (x1: number, y1: number, x2: number, y2: number) =>
+      doc.line(x1 * scale, y1 * scale, x2 * scale, y2 * scale),
+    addImage: (data: any, format: any, x: number, y: number, w: number, h: number) =>
+      doc.addImage(data, format, x * scale, y * scale, w * scale, h * scale),
+
+    // Measurements come back in the caller's unscaled millimetres. Both of
+    // these use the live font size, which is already reduced, so dividing by
+    // the same factor restores the caller's frame of reference.
+    getTextWidth: (text: string) => doc.getTextWidth(text) / scale,
+    splitTextToSize: (text: string, width: number, options?: any) =>
+      doc.splitTextToSize(text, width * scale, options),
+
+    addPage: () => doc.addPage(),
+    save: (name: string) => doc.save(name),
+    output: (...args: any[]) => (doc.output as any)(...args),
+    internal: doc.internal,
+  };
+
+  return scaled as jsPDF;
+}
+
+/**
+ * `scale` shrinks the finished sheet; the layout keeps working in the larger
+ * co-ordinate space, which is what lets a taller form be pulled onto one page.
+ * `virtualHeight` replaces the page height for a measuring pass, so a form can
+ * be laid out end to end without page breaks to find its natural height.
+ */
+export function createFormDoc(
+  options: { scale?: number; virtualHeight?: number } = {}
+): FormDoc {
+  const scale = options.scale ?? 1;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // The sheet stays A4; dividing by the scale gives the roomier space the
+  // layout is drawn in before being reduced onto it.
+  const pageWidth = doc.internal.pageSize.getWidth() / scale;
+  const pageHeight = options.virtualHeight ?? doc.internal.pageSize.getHeight() / scale;
+  const margin = MARGIN / scale;
+
+  const scaled = scaleDoc(doc, scale);
+  scaled.setDrawColor(0, 0, 0);
+  scaled.setLineWidth(0.2);
 
   return {
-    doc,
+    doc: scaled,
     pageWidth,
     pageHeight,
-    margin: MARGIN,
-    contentWidth: pageWidth - MARGIN * 2,
-    y: MARGIN,
+    margin,
+    contentWidth: pageWidth - margin * 2,
+    y: margin,
+    scale,
   };
 }
 
 // jsPDF cannot embed WebP. Browsers decode it natively, so round-trip the logo
 // through a canvas to get PNG bytes. Returns null rather than throwing - a
 // missing logo must not stop someone exporting their form.
-export async function loadLogoAsPng(): Promise<{
+let logoCache: Promise<{ data: string; width: number; height: number } | null> | null = null;
+
+// Memoised: fitting a form to one page lays it out several times over, and the
+// canvas round-trip should not be repeated for each pass.
+export function loadLogoAsPng(): Promise<{
+  data: string;
+  width: number;
+  height: number;
+} | null> {
+  if (!logoCache) logoCache = decodeLogo();
+  return logoCache;
+}
+
+async function decodeLogo(): Promise<{
   data: string;
   width: number;
   height: number;
@@ -185,9 +265,15 @@ export function drawInfoRows(ctx: FormDoc, rows: InfoRow[], splitAt?: number) {
     doc.text(leftLabel, margin + 2, ctx.y + 4.6);
     doc.text(rightLabel, rightX + 2, ctx.y + 4.6);
 
+    // Measured in the weight they were drawn in. Measuring the bold labels
+    // after switching to the regular weight under-reads them, and the value
+    // then starts a fraction of a millimetre inside the colon.
+    const leftLabelWidth = doc.getTextWidth(leftLabel);
+    const rightLabelWidth = doc.getTextWidth(rightLabel);
+
     doc.setFont('helvetica', 'normal');
-    if (leftValue) doc.text(leftValue, margin + 4 + doc.getTextWidth(leftLabel), ctx.y + 4.6);
-    if (rightValue) doc.text(rightValue, rightX + 4 + doc.getTextWidth(rightLabel), ctx.y + 4.6);
+    if (leftValue) doc.text(leftValue, margin + 4 + leftLabelWidth, ctx.y + 4.6);
+    if (rightValue) doc.text(rightValue, rightX + 4 + rightLabelWidth, ctx.y + 4.6);
 
     ctx.y += rowHeight;
   });

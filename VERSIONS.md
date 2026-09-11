@@ -69,3 +69,4 @@ away later work permanently.
 | `11092026ver040` | 2026-09-11 | Align every attachment file name under the first on the User ID form, one file per line |
 | `11092026ver041` | 2026-09-11 | Requisition form: Detail becomes Remark on its own ruled line, and attachments now take multiple files printed one per line at a shared indent |
 | `11092026ver042` | 2026-09-11 | Requisition form: one tick grid for all three checkbox pairs, no Remark placeholder, and Section E captions its table directly with the signature note moved to the foot |
+| `11092026ver043` | 2026-09-11 | Fit the requisition form onto one page by measuring it and uniformly reducing the sheet, down to a legibility floor, falling back to full size over two pages; also fix bold labels being measured in the regular weight |
