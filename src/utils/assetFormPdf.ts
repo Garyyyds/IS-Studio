@@ -70,13 +70,13 @@ export const ALLOCATION_FORM: AssetFormConfig = {
   sectionATitle: 'A. ALLOCATION APPLICATION INFORMATION',
   sectionBTitle: 'B. INVENTORY LIST FOR ALLOCATION',
   descriptionHeader: 'Asset Description',
-  // Drafted to mirror the disposal wording - replace with the official policy
-  // text when it is available.
+  // Official policy wording supplied by the company - reproduced verbatim.
   notes: [
-    '1. Covers IT assets issued for work use — system units, monitors, keyboards, mice, and attached peripherals.',
-    '2. Check each item against Section B on collection. Report any damage, missing component, or wrong specification before signing.',
-    '3. The asset remains company property. Do not swap, modify, or transfer it to another user or department without IT approval.',
-    '4. Return the asset to IT on resignation, transfer, or when it is no longer required for the assigned role.',
+    '1. Employee shall be solely or jointly responsible for the items listed above.',
+    '2. Should the item(s) be lost or damaged due the negligence under the care of employee the company shall reserves the rights to demand from the employee the replacement or payment for the items damaged or lost.',
+    '3. Employee shall not transfer the possession of the items without written approval from IT Department and The Management.',
+    '4. Upon expiry of the loan/usage period, employee must return the items to IT Department without further delay.',
+    '5. Should the employee failed to observed the above guidelines, the matter might be reffered to The Management and disciplinary action may be imposed upon the employee.',
   ],
   fileStem: 'IT_Asset_Allocation',
   screenTitle: 'IT Fixed Asset Allocation',
