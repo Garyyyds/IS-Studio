@@ -73,7 +73,6 @@ export interface Task {
   requesterDepartment?: string;
   deviceInfo?: string;
   isUserSubmitted?: boolean;
-  urgencyLevel?: 'low' | 'medium' | 'high' | 'critical';
   createdAt: string;
   updatedAt: string;
   dueDate?: string;

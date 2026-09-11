@@ -45,7 +45,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ITCategory>('Application');
-  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [deviceInfo, setDeviceInfo] = useState('Company Laptop (macOS / Windows)');
   const [rawLogs, setRawLogs] = useState('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -87,24 +86,11 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
     setIsSubmitting(true);
 
-    // Map urgency to priority
-    let mappedPriority: PriorityLevel = 'P3';
-    let impactScore = 5;
-    let urgencyScore = 5;
-
-    if (urgency === 'critical') {
-      mappedPriority = 'P1';
-      impactScore = 9;
-      urgencyScore = 9;
-    } else if (urgency === 'high') {
-      mappedPriority = 'P2';
-      impactScore = 7;
-      urgencyScore = 8;
-    } else if (urgency === 'low') {
-      mappedPriority = 'P4';
-      impactScore = 3;
-      urgencyScore = 3;
-    }
+    // Submitted tickets land at the neutral default; IT triages from there,
+    // either by hand or via the automated tagging rules.
+    const mappedPriority: PriorityLevel = 'P3';
+    const impactScore = 5;
+    const urgencyScore = 5;
 
     const ticketNumber = `REQ-${1000 + tasks.length + 1}`;
 
@@ -116,11 +102,11 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       category,
       environment: 'Corporate LAN',
       priority: mappedPriority,
-      priorityRationale: `User submitted request via Employee Portal with ${urgency.toUpperCase()} urgency.`,
+      priorityRationale: 'User submitted request via Employee Portal. Awaiting IT triage.',
       status: 'backlog',
       impactScore,
       urgencyScore,
-      automatedTags: ['User Request', urgency.toUpperCase(), category],
+      automatedTags: ['User Request', category],
       manualTags: ['Portal Submission'],
       isAutoTagged: false,
       checklist: [
@@ -141,7 +127,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       requesterDepartment: currentUser.department || 'General',
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
-      urgencyLevel: urgency,
     };
 
     onSubmitTicket(newTicket);
@@ -392,65 +377,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       placeholder="e.g. MacBook Pro M2, ThinkPad X1"
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Urgency / Work Impact */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  How does this impact your work?
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div
-                    onClick={() => setUrgency('low')}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
-                      urgency === 'low'
-                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-700 dark:text-emerald-400">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>Low Impact</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                      Minor issue or question. I can still perform my day-to-day work.
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setUrgency('medium')}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
-                      urgency === 'medium'
-                        ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 ring-2 ring-amber-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-amber-700 dark:text-amber-400">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span>Medium / Slowed Down</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                      Impaired productivity. A core task is slowed down or troublesome.
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setUrgency('critical')}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
-                      urgency === 'critical'
-                        ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 ring-2 ring-rose-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-rose-700 dark:text-rose-400">
-                      <span className="w-2 h-2 rounded-full bg-rose-500" />
-                      <span>Critical / Work Blocked</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                      Complete blocker. Unable to do my job until resolved.
-                    </p>
                   </div>
                 </div>
               </div>

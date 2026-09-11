@@ -41,7 +41,7 @@ DATE="$(date +%d%m%Y)"
 # Counters restart at 000 each day, so yesterday's tags never affect today.
 HIGHEST="$(git tag --list "${DATE}ver*" \
   | sed -n "s/^${DATE}ver\([0-9][0-9][0-9]\)$/\1/p" \
-  | sed 's/^0*//' \
+  | sed 's/^0*\([0-9]\)/\1/' \
   | sort -n \
   | tail -1)"
 [ -z "$HIGHEST" ] && HIGHEST=-1

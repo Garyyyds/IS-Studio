@@ -507,7 +507,6 @@ export default function App() {
       requesterDepartment: currentUser?.department || 'General',
       deviceInfo: 'Company Workstation (macOS / Windows)',
       isUserSubmitted: true,
-      urgencyLevel: 'medium',
       assignee: {
         name: settings.operatorName || 'Alex Rivera',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -721,7 +720,6 @@ export default function App() {
       requesterDepartment: currentUser?.department || 'General Staff',
       deviceInfo: ticketData.deviceInfo || 'Company Workstation',
       isUserSubmitted: true,
-      urgencyLevel: ticketData.urgencyLevel || 'medium',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       checklist: ticketData.checklist || [

@@ -61,7 +61,6 @@ const emptyTask: Task = {
   requesterEmail: '',
   requesterDepartment: 'General',
   deviceInfo: 'Company Workstation (macOS / Windows)',
-  urgencyLevel: 'medium',
   assignee: {
     name: 'Unassigned',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
@@ -151,24 +150,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setFormData({
       ...formData,
       checklist: formData.checklist.filter((item) => item.id !== id),
-    });
-  };
-
-  const handleUrgencyChange = (urgency: 'low' | 'medium' | 'critical') => {
-    let priority: PriorityLevel = 'P3';
-
-    if (urgency === 'critical') {
-      priority = 'P1';
-    } else if (urgency === 'medium') {
-      priority = 'P2';
-    } else {
-      priority = 'P4';
-    }
-
-    setFormData({
-      ...formData,
-      urgencyLevel: urgency,
-      priority,
     });
   };
 
@@ -377,22 +358,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <span className="truncate">{formData.deviceInfo || 'Workstation / Laptop'}</span>
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Reported Urgency</span>
-                  <span className={`inline-flex items-center gap-1 font-semibold text-[11px] ${
-                    formData.urgencyLevel === 'critical'
-                      ? 'text-red-600 dark:text-red-400'
-                      : formData.urgencyLevel === 'low'
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-amber-600 dark:text-amber-400'
-                  }`}>
-                    {formData.urgencyLevel === 'critical'
-                      ? 'Critical / Work Blocked'
-                      : formData.urgencyLevel === 'low'
-                      ? 'Low Impact / Routine'
-                      : 'Medium / Slowed Down'}
-                  </span>
-                </div>
               </div>
             )}
           </div>
@@ -420,7 +385,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               />
             </div>
 
-            {/* Category and Impact / Urgency */}
+            {/* Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Category */}
               <div>
@@ -465,77 +430,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </select>
                   {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                 </div>
-              </div>
-            </div>
-
-            {/* Urgency Level Selector (Matches User Portal cards) */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                Work Impact & Urgency Level
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => !isReadOnly && handleUrgencyChange('low')}
-                  className={`p-3 rounded-xl border text-left transition ${
-                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
-                  } ${
-                    formData.urgencyLevel === 'low'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 ring-1 ring-emerald-500'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>Low Impact</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Minor inquiry or question. Work is unblocked.
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => !isReadOnly && handleUrgencyChange('medium')}
-                  className={`p-3 rounded-xl border text-left transition ${
-                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
-                  } ${
-                    formData.urgencyLevel === 'medium'
-                      ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-500 ring-1 ring-amber-500'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <span>Medium / Slowed Down</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Impaired productivity. Core task is delayed.
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => !isReadOnly && handleUrgencyChange('critical')}
-                  className={`p-3 rounded-xl border text-left transition ${
-                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
-                  } ${
-                    formData.urgencyLevel === 'critical'
-                      ? 'bg-red-50 dark:bg-red-950/50 border-red-500 ring-1 ring-red-500'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 dark:text-red-300 mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                    <span>Critical / Blocked</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Complete work blocker. Cannot perform job.
-                  </p>
-                </button>
               </div>
             </div>
 
