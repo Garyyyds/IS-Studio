@@ -108,7 +108,17 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Recycle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <span>IT Fixed Asset Disposal Request</span>
+          </h2>
+          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+            Fill in and export as PDF for signing
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onBack}
@@ -117,26 +127,17 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <Recycle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <span>IT Fixed Asset Disposal Request</span>
-            </h2>
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-              Fill in and export as PDF for signing
-            </p>
-          </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={isExporting}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
-        >
-          {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-          <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
-        </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
+          >
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
+          </button>
+        </div>
       </div>
 
       {error && (
