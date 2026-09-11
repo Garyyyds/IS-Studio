@@ -190,17 +190,14 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   y += headerRowHeight;
 
   const bodyRowHeight = 7;
+  const bodyLineHeight = 3.6;
+  const cellPadX = 1.5;
+  const firstBaseline = 4.6;
   // The table prints exactly the rows the requester filled in - no padding to a
   // fixed count - so the PDF matches what they saw on screen.
   const printedRows = Math.max(form.items.length, 1);
 
   for (let i = 0; i < printedRows; i++) {
-    // Start a new page before a row would cross the bottom margin.
-    if (y + bodyRowHeight > pageHeight - margin) {
-      doc.addPage();
-      y = margin;
-    }
-
     const item = form.items[i];
     const cells = [
       String(i + 1),
@@ -211,24 +208,42 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
       item?.remarks || '',
     ];
 
-    cells.forEach((text, c) => {
-      doc.rect(colX[c], y, colWidths[c], bodyRowHeight);
-      if (!text) return;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    // Wrap each cell to its column. splitTextToSize honours the newlines the
+    // requester typed as well as wrapping anything too long, so a cell holding
+    // "os: win 11\ncpu speed: 123" comes back as two lines.
+    const wrapped = cells.map((text, c) =>
+      text ? (doc.splitTextToSize(text, colWidths[c] - cellPadX * 2) as string[]) : []
+    );
+
+    // The row grows to whichever cell needs the most lines.
+    const maxLines = Math.max(1, ...wrapped.map((lines) => lines.length));
+    const rowHeight = Math.max(bodyRowHeight, maxLines * bodyLineHeight + 3);
+
+    // Start a new page before a row would cross the bottom margin.
+    if (y + rowHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+
+    wrapped.forEach((lines, c) => {
+      doc.rect(colX[c], y, colWidths[c], rowHeight);
+      if (!lines.length) return;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       // Centre the narrow numeric columns, left-align the prose ones.
       const centred = c === 0 || c === 4;
-      const available = colWidths[c] - 3;
-      const clipped = doc.splitTextToSize(text, available)[0];
       doc.text(
-        clipped,
-        centred ? colX[c] + colWidths[c] / 2 : colX[c] + 1.5,
-        y + 4.6,
+        lines,
+        centred ? colX[c] + colWidths[c] / 2 : colX[c] + cellPadX,
+        y + firstBaseline,
         centred ? { align: 'center' } : undefined
       );
     });
 
-    y += bodyRowHeight;
+    y += rowHeight;
   }
 
   y += SECTION_GAP;

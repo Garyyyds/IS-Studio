@@ -32,6 +32,13 @@ const blankItem = (): DisposalItem => ({
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+// Grow a Section B cell to fit however many lines it now holds, so typed
+// newlines stay visible instead of scrolling out of a one-line box.
+const autoGrow = (el: HTMLTextAreaElement) => {
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+};
+
 export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser, onBack }) => {
   const [form, setForm] = useState<DisposalFormData>(() => ({
     employeeId: '',
@@ -102,7 +109,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
     'w-full px-3.5 py-2 rounded-lg text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition';
 
   const cellClass =
-    'w-full px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition';
+    'w-full px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition resize-y min-h-[30px] leading-snug';
 
   return (
     <div className="space-y-5">
@@ -274,34 +281,43 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
                   <td className="py-2 px-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 text-center">
                     {index + 1}
                   </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="text"
+                  <td className="py-2 px-3 align-top">
+                    <textarea
+                      rows={1}
                       value={item.description}
-                      onChange={(e) => setItem(item.id, 'description', e.target.value)}
+                      onChange={(e) => {
+                        setItem(item.id, 'description', e.target.value);
+                        autoGrow(e.target);
+                      }}
                       placeholder="e.g. Desktop system unit"
                       className={cellClass}
                     />
                   </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="text"
+                  <td className="py-2 px-3 align-top">
+                    <textarea
+                      rows={1}
                       value={item.specModel}
-                      onChange={(e) => setItem(item.id, 'specModel', e.target.value)}
-                      placeholder="e.g. Dell OptiPlex 7090"
+                      onChange={(e) => {
+                        setItem(item.id, 'specModel', e.target.value);
+                        autoGrow(e.target);
+                      }}
+                      placeholder={'e.g. Dell OptiPlex 7090\nos: win 11'}
                       className={cellClass}
                     />
                   </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="text"
+                  <td className="py-2 px-3 align-top">
+                    <textarea
+                      rows={1}
                       value={item.serialNumber}
-                      onChange={(e) => setItem(item.id, 'serialNumber', e.target.value)}
+                      onChange={(e) => {
+                        setItem(item.id, 'serialNumber', e.target.value);
+                        autoGrow(e.target);
+                      }}
                       placeholder="e.g. SN-88213"
                       className={cellClass}
                     />
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-2 px-3 align-top">
                     <input
                       type="text"
                       inputMode="numeric"
@@ -311,11 +327,14 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
                       className={`${cellClass} text-center`}
                     />
                   </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="text"
+                  <td className="py-2 px-3 align-top">
+                    <textarea
+                      rows={1}
                       value={item.remarks}
-                      onChange={(e) => setItem(item.id, 'remarks', e.target.value)}
+                      onChange={(e) => {
+                        setItem(item.id, 'remarks', e.target.value);
+                        autoGrow(e.target);
+                      }}
                       placeholder="e.g. Faulty PSU"
                       className={cellClass}
                     />
