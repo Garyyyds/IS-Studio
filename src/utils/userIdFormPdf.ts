@@ -82,6 +82,9 @@ export const USER_ID_SIGNATURE_LABELS = [
 export const USER_ID_SECTION_A_TITLE = 'A. USER ID APPLICATION INFORMATION';
 export const USER_ID_SECTION_B_TITLE = 'B. SERVER REQUEST';
 export const USER_ID_SECTION_C_TITLE = 'C. ACKNOWLEDGEMENT';
+export const USER_ID_SECTION_D_TITLE = 'D. FOR IT DEPARTMENT USE';
+
+export const USER_ID_IT_SIGNATURE_LABELS = ['Processed By', 'Approved By'];
 
 export async function exportUserIdFormPdf(form: UserIdFormData) {
   const ctx = createFormDoc();
@@ -255,6 +258,18 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   // Follows the header rather than dropping to the page foot, which would
   // leave the section bar stranded above a gap.
   drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: false });
+
+  ctx.y += SECTION_GAP * 2;
+
+  // --- Section D: completed by IT ---
+  drawSectionHeader(ctx, USER_ID_SECTION_D_TITLE);
+
+  // Stacked to match Section C above, even though these shorter labels would
+  // otherwise fit beside their lines.
+  drawSignatureBlock(ctx, USER_ID_IT_SIGNATURE_LABELS, {
+    anchorToFoot: false,
+    layout: 'stacked',
+  });
 
   const safeRef = (form.requestorName || form.designation || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`User_ID_Requisition_${safeRef}.pdf`);

@@ -1,5 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, FileDown, KeyRound, AlertTriangle, Loader2, Paperclip, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileDown,
+  KeyRound,
+  AlertTriangle,
+  Loader2,
+  Paperclip,
+  X,
+  Lock,
+} from 'lucide-react';
 import { AppUser, UserIdFormData } from '../types';
 import {
   exportUserIdFormPdf,
@@ -14,7 +23,9 @@ import {
   USER_ID_SECTION_A_TITLE,
   USER_ID_SECTION_B_TITLE,
   USER_ID_SECTION_C_TITLE,
+  USER_ID_SECTION_D_TITLE,
   USER_ID_SIGNATURE_LABELS,
+  USER_ID_IT_SIGNATURE_LABELS,
 } from '../utils/userIdFormPdf';
 
 interface UserIdFormViewProps {
@@ -27,7 +38,8 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
   // argument on useState widens the target to a union, which stops TypeScript
   // reporting missing or misspelled fields in this object.
   const initialForm: UserIdFormData = {
-    requestorName: currentUser.name || '',
+    // Left blank deliberately: the form may be raised on someone else's behalf.
+    requestorName: '',
     phoneExt: '',
     designation: '',
     requestDate: new Date().toISOString().slice(0, 10),
@@ -499,6 +511,33 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
           <p className="mt-4 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
             These are printed on the exported PDF for wet signing.
           </p>
+        </div>
+      </div>
+
+      {/* SECTION D - printed for IT to complete by hand */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            {USER_ID_SECTION_D_TITLE}
+          </h3>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+            <Lock className="w-3 h-3" />
+            <span>Completed by IT</span>
+          </span>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+            {USER_ID_IT_SIGNATURE_LABELS.map((label) => (
+              <div key={label}>
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                  {label}
+                </p>
+                <div className="mt-6 border-b border-slate-300 dark:border-slate-600" />
+                <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Date</p>
+                <div className="mt-1 border-b border-slate-300 dark:border-slate-600" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

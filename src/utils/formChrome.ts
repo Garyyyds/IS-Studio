@@ -253,7 +253,7 @@ export function drawTickBox(ctx: FormDoc, x: number, y: number, size: number, ti
 export function drawSignatureBlock(
   ctx: FormDoc,
   labels: string[],
-  options: { anchorToFoot: boolean }
+  options: { anchorToFoot: boolean; layout?: 'auto' | 'stacked' }
 ): void {
   const { doc, margin, contentWidth, pageHeight } = ctx;
   const colWidth = contentWidth / labels.length;
@@ -265,8 +265,10 @@ export function drawSignatureBlock(
   const inlineLabelWidth = Math.max(...[...labels, 'Date'].map((l) => doc.getTextWidth(l))) + 2;
   const inlineLineLength = colWidth - gutter - (inlineLabelWidth + 3);
 
+  // Short labels would fit inline, but a form that already stacks one block
+  // can ask for the same treatment so its sections match.
   const MIN_INLINE_LINE = 25;
-  const stacked = inlineLineLength < MIN_INLINE_LINE;
+  const stacked = options.layout === 'stacked' || inlineLineLength < MIN_INLINE_LINE;
 
   const blockHeight = stacked ? 20 : 14;
   const footRoom = 10;
