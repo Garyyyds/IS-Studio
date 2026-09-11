@@ -200,8 +200,6 @@ export interface UserIdFormData {
   systems: Record<string, boolean>;
   /** Write-in value for the "Others:" entry. */
   othersDetail: string;
-  /** Single-select nature of the request; empty when nothing is chosen. */
-  natureOfRequest: string;
   /** Free-text remarks, printed on ruled lines. */
   remarks: string;
   /** Whether attachments accompany the form; empty when neither is chosen. */

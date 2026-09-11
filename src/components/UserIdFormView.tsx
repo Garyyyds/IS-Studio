@@ -13,8 +13,6 @@ import { AppUser, UserIdFormData } from '../types';
 import {
   exportUserIdFormPdf,
   SERVER_REQUEST_ROWS,
-  NATURE_OF_REQUEST_ROWS,
-  NATURE_OF_REQUEST_LABEL,
   REMARKS_LABEL,
   REMARKS_PLACEHOLDER,
   ATTACHMENTS_LABEL,
@@ -47,7 +45,6 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     location: '',
     systems: {},
     othersDetail: '',
-    natureOfRequest: '',
     remarks: '',
     hasAttachments: '',
     attachmentFormat: '',
@@ -128,12 +125,6 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     el.style.height = `${el.scrollHeight}px`;
   };
 
-  // Single-select: ticking one option clears the rest, and re-ticking the
-  // current choice clears it so nothing is stuck selected.
-  const selectNature = (id: string, checked: boolean) => {
-    setForm((prev) => ({ ...prev, natureOfRequest: checked ? id : '' }));
-  };
-
   const handleExport = async () => {
     const anyTicked = Object.values(form.systems).some(Boolean);
     if (!anyTicked) {
@@ -162,7 +153,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
         <div>
           <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <span>User ID Requisition</span>
+            <span>New User ID Requisition</span>
           </h2>
           <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
             Fill in and export as PDF for signing
@@ -320,32 +311,6 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
                 )}
               </div>
             ))}
-          </div>
-
-          {/* Nature of request - only one may be chosen */}
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-3">
-              {NATURE_OF_REQUEST_LABEL}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-              {NATURE_OF_REQUEST_ROWS.flat().map((cell) => (
-                <div key={cell.id} className="flex items-center gap-2 min-w-0">
-                  <input
-                    id={`nature-${cell.id}`}
-                    type="checkbox"
-                    checked={form.natureOfRequest === cell.id}
-                    onChange={(e) => selectNature(cell.id, e.target.checked)}
-                    className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                  />
-                  <label
-                    htmlFor={`nature-${cell.id}`}
-                    className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer whitespace-nowrap"
-                  >
-                    {cell.label}
-                  </label>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

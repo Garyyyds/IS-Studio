@@ -662,7 +662,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                    User ID Requisition
+                    New User ID Requisition
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
                     Request access to company systems such as email, file server, NAV or HRIS.

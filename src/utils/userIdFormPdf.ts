@@ -11,7 +11,7 @@ import {
   SECTION_GAP,
 } from './formChrome';
 
-export const USER_ID_FORM_TITLE = 'USER ID REQUISITION FORM';
+export const USER_ID_FORM_TITLE = 'NEW USER ID REQUISITION FORM';
 
 /**
  * Section B is a three-column grid of systems the requester can tick. The
@@ -41,24 +41,6 @@ export const SERVER_REQUEST_ROWS: { id: string; label: string; freeText?: boolea
   ],
 ];
 
-export const NATURE_OF_REQUEST_LABEL = 'Nature of Request:';
-
-/**
- * Single-select: only one nature applies to a request, so the on-screen tick
- * boxes clear each other and the PDF marks at most one.
- */
-export const NATURE_OF_REQUEST_ROWS: { id: string; label: string }[][] = [
-  [
-    { id: 'new', label: 'New' },
-    { id: 'transfer', label: 'Transfer' },
-    { id: 'termination', label: 'Termination' },
-  ],
-  [
-    { id: 'reset-password', label: 'Reset Password / Quota' },
-    { id: 'temporary', label: 'Temporary' },
-  ],
-];
-
 export const REMARKS_LABEL = 'Remarks:';
 export const REMARKS_PLACEHOLDER = 'e.g. Function / Grouping';
 
@@ -73,11 +55,7 @@ export const ATTACHMENT_FORMATS: { id: 'hardcopy' | 'softcopy'; label: string }[
 export const ATTACHMENTS_NOTE =
   '*Note: HR to route this form to Document Controller when there is a staff movement or new staff onboard and provide the related attachment.';
 
-export const USER_ID_SIGNATURE_LABELS = [
-  'User/Requestor Name',
-  'Authorized By (HOD)',
-  'Approved By (COO) *Optional',
-];
+export const USER_ID_SIGNATURE_LABELS = ['User/Requestor Name', 'Authorized By (HOD)'];
 
 export const USER_ID_SECTION_A_TITLE = 'A. USER ID APPLICATION INFORMATION';
 export const USER_ID_SECTION_B_TITLE = 'B. SERVER REQUEST';
@@ -119,8 +97,7 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   doc.setFontSize(8.5);
   doc.setTextColor(0, 0, 0);
 
-  // Shared three-column tick grid, used by both the server list and the
-  // nature-of-request options so the two blocks line up on the page.
+  // Three-column tick grid for the server list.
   const drawTickRows = (
     rows: { id: string; label: string; freeText?: boolean }[][],
     isTicked: (id: string) => boolean
@@ -155,15 +132,6 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
 
   ctx.y += firstRowBaseline;
   drawTickRows(SERVER_REQUEST_ROWS, (id) => Boolean(form.systems?.[id]));
-
-  // --- Nature of request, continuing below the server list ---
-  ctx.y += 3;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text(NATURE_OF_REQUEST_LABEL, margin, ctx.y);
-  ctx.y += 6;
-
-  drawTickRows(NATURE_OF_REQUEST_ROWS, (id) => form.natureOfRequest === id);
 
   // --- Remarks ---
   ctx.y += 4;
@@ -256,21 +224,24 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   drawSectionHeader(ctx, USER_ID_SECTION_C_TITLE);
 
   // Follows the header rather than dropping to the page foot, which would
-  // leave the section bar stranded above a gap.
-  drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: false });
+  // leave the section bar stranded above a gap. Stacked so the two remaining
+  // columns keep the full-width signing rules they had as three.
+  drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, {
+    anchorToFoot: false,
+    layout: 'stacked',
+  });
 
   ctx.y += SECTION_GAP * 2;
 
   // --- Section D: completed by IT ---
   drawSectionHeader(ctx, USER_ID_SECTION_D_TITLE);
 
-  // Stacked to match Section C above, even though these shorter labels would
-  // otherwise fit beside their lines.
+  // Stacked to match Section C above.
   drawSignatureBlock(ctx, USER_ID_IT_SIGNATURE_LABELS, {
     anchorToFoot: false,
     layout: 'stacked',
   });
 
   const safeRef = (form.requestorName || form.designation || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
-  doc.save(`User_ID_Requisition_${safeRef}.pdf`);
+  doc.save(`New_User_ID_Requisition_${safeRef}.pdf`);
 }
