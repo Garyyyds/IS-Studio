@@ -80,7 +80,7 @@ export const DISPOSAL_FORM: AssetFormConfig = {
   screenTitle: 'IT Fixed Asset Disposal Request',
   descriptionPlaceholder: 'e.g. Desktop system unit',
   remarksPlaceholder: 'e.g. Faulty PSU',
-  pickerTitle: 'IT Fixed Asset Disposal Request',
+  pickerTitle: 'IT Fixed Asset Disposal',
   pickerBlurb:
     'List faulty or obsolete IT assets for withdrawal from service, then export the signed-off PDF.',
   emptyItemsError: 'Add at least one item under Section B before exporting.',
