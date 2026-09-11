@@ -12,6 +12,9 @@ const COL_RATIOS = [0.0527, 0.2593, 0.2047, 0.174, 0.095, 0.2144];
 // Uniform vertical gap between the form's sections.
 const SECTION_GAP = 5;
 
+// Blank remarks rules printed when nothing was typed, so there is room to write.
+const REMARKS_MIN_RULES = 2;
+
 const COMPANY_ADDRESS = [
   'Lot 55992, Batu 5 Off Jalan Tunku Abdul Rahman',
   '31200 Ipoh, Perak Malaysia.',
@@ -463,7 +466,25 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     const d = config.sectionD;
     const tickBoxSize = 4;
     const tickBoxX = margin + contentWidth - tickBoxSize - 2;
-    const sectionDHeight = 72;
+
+    // Wrap the remarks first: the number of rules decides how tall the section
+    // is, so it has to be known before choosing whether to break the page.
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    const remarksLabelWidth = doc.getTextWidth(d.remarksLabel);
+    const remarksStart = margin + remarksLabelWidth + 2;
+    const remarksLines = form.itRemarks?.trim()
+      ? (doc.splitTextToSize(
+          form.itRemarks.trim(),
+          margin + contentWidth - remarksStart - 2
+        ) as string[])
+      : [];
+    const remarksRules = Math.max(REMARKS_MIN_RULES, remarksLines.length);
+
+    // Header + gap + subheading + one line per option + remarks rules + the
+    // two signing columns with their date lines.
+    const sectionDHeight =
+      6.5 + 6 + 6 + d.options.length * 6 + 2 + remarksRules * 6 + 10 + 19;
 
     if (y + sectionDHeight > pageHeight - margin) {
       doc.addPage();
@@ -505,23 +526,20 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
 
     y += 2;
 
-    // Remarks rule runs to the right margin.
+    // Remarks: one rule per line of text, each running to the right margin.
+    // The first rule starts after the label; the rest span the full width.
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(d.remarksLabel, margin, y);
-    const remarksLabelWidth = doc.getTextWidth(d.remarksLabel);
-    const remarksStart = margin + remarksLabelWidth + 2;
-    doc.line(remarksStart, y + 1, margin + contentWidth, y + 1);
 
-    if (form.itRemarks?.trim()) {
-      const remarksText = doc.splitTextToSize(
-        form.itRemarks.trim(),
-        margin + contentWidth - remarksStart - 2
-      )[0];
-      doc.text(remarksText, remarksStart + 1, y);
+    for (let line = 0; line < remarksRules; line++) {
+      const lineStart = line === 0 ? remarksStart : margin;
+      doc.line(lineStart, y + 1, margin + contentWidth, y + 1);
+      if (remarksLines[line]) doc.text(remarksLines[line], lineStart + 1, y);
+      y += 6;
     }
 
-    y += 16;
+    y += 10;
 
     // Two evenly spaced signing columns, each with a signing line and a date.
     const dColWidth = contentWidth / 2;

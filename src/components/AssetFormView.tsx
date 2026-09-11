@@ -447,11 +447,14 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
               <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                 {config.sectionD.remarksLabel.replace(/:$/, '')}
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={3}
                 value={form.itRemarks ?? ''}
-                onChange={(e) => setField('itRemarks', e.target.value)}
-                className={inputClass}
+                onChange={(e) => {
+                  setField('itRemarks', e.target.value);
+                  autoGrow(e.target);
+                }}
+                className={`${inputClass} resize-y min-h-[72px] leading-relaxed`}
               />
             </div>
 
