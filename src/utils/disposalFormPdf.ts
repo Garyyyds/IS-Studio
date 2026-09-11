@@ -102,8 +102,17 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
+
+  // Centre the address block in its box, horizontally and vertically. The
+  // first baseline is offset by half the block height plus the font's rough
+  // ascent so the two lines sit optically centred rather than top-aligned.
+  const addressLineHeight = 4.5;
+  const addressCentreX = colX[2] + span(2, 5) / 2;
+  const addressFirstBaseline =
+    y + headerHeight / 2 - ((COMPANY_ADDRESS.length - 1) * addressLineHeight) / 2 + 1.2;
+
   COMPANY_ADDRESS.forEach((line, i) => {
-    doc.text(line, colX[2] + 2, y + 6 + i * 4.5);
+    doc.text(line, addressCentreX, addressFirstBaseline + i * addressLineHeight, { align: 'center' });
   });
 
   y += headerHeight;
@@ -248,7 +257,20 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
     y += h;
   });
 
-  y += SECTION_GAP * 2;
+  // A short form leaves the lower half of the page blank, so drop the
+  // signatures to the foot of the sheet when there is room. On a page that is
+  // already full they simply follow the notes, and overflow starts a new page.
+  const signatureBlockHeight = 14;
+  const signatureFootRoom = 10;
+  const naturalSignatureY = y + SECTION_GAP * 2;
+  const anchoredSignatureY = pageHeight - margin - signatureBlockHeight - signatureFootRoom;
+
+  if (naturalSignatureY + signatureBlockHeight > pageHeight - margin) {
+    doc.addPage();
+    y = anchoredSignatureY;
+  } else {
+    y = Math.max(naturalSignatureY, anchoredSignatureY);
+  }
 
   // --- Signature block ---
   // Three equal columns rather than the spreadsheet's uneven merges, so the
