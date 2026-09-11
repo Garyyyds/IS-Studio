@@ -24,7 +24,7 @@ import {
   ChevronDown,
   Lock
 } from 'lucide-react';
-import { Task, Runbook, PriorityLevel, EnvironmentType, ITCategory, TaskStatus, UserRole } from '../types';
+import { Task, Runbook, EnvironmentType, ITCategory, TaskStatus, UserRole } from '../types';
 import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
 
 interface TaskModalProps {
@@ -153,13 +153,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     });
   };
 
-  const handlePriorityChange = (priority: PriorityLevel) => {
-    setFormData({
-      ...formData,
-      priority,
-    });
-  };
-
   const handleStatusChange = (status: TaskStatus) => {
     const isDone = status === 'done';
     setFormData({
@@ -196,17 +189,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {formData.ticketNumber || 'NEW TICKET'}
             </span>
             <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                formData.priority === 'P1'
-                  ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900'
-                  : formData.priority === 'P2'
-                  ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
-                  : formData.priority === 'P3'
-                  ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-              }`}>
-                {formData.priority}
-              </span>
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                 STATUS_OPTIONS.find((s) => s.value === formData.status)?.color || ''
               }`}>
@@ -484,8 +466,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <span>{isReadOnly ? 'IT Support & Assignment Status' : 'Admin Triage & Ticket Management'}</span>
             </h3>
 
-            {/* Status, Priority & Assignee controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Status & assignee controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Status */}
               <div>
                 <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
@@ -503,27 +485,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         {opt.label}
                       </option>
                     ))}
-                  </select>
-                  {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
-                </div>
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Priority {isReadOnly ? 'Assigned' : 'Override'}
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.priority}
-                    disabled={isReadOnly}
-                    onChange={(e) => handlePriorityChange(e.target.value as PriorityLevel)}
-                    className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    <option value="P1">P1 - Critical Blocker</option>
-                    <option value="P2">P2 - High Degraded</option>
-                    <option value="P3">P3 - Standard Medium</option>
-                    <option value="P4">P4 - Low / Routine</option>
                   </select>
                   {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                 </div>
