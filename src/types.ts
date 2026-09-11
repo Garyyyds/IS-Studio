@@ -193,4 +193,6 @@ export interface UserIdFormData {
   systems: Record<string, boolean>;
   /** Write-in value for the "Others:" entry. */
   othersDetail: string;
+  /** Single-select nature of the request; empty when nothing is chosen. */
+  natureOfRequest: string;
 }
