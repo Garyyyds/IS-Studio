@@ -114,12 +114,14 @@ export const ALLOCATION_FORM: AssetFormConfig = {
   sectionD: {
     title: 'D. FOR IT DEPARTMENT USE',
     subheading: 'Allocated Unit Returned Acknowledgement:',
+    // Segments are joined with a single space when drawn, so none of them
+    // carry leading or trailing whitespace of their own.
     options: [
       [{ text: '1. Allocated units returned as stated above in good condition.' }],
       [
-        { text: '2. Allocated units returned as stated above ' },
+        { text: '2. Allocated units returned as stated above' },
         { text: 'NOT', bold: true },
-        { text: ' in good condition.' },
+        { text: 'in good condition.' },
       ],
     ],
     remarksLabel: 'Remarks:',
@@ -501,11 +503,16 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     y += 6;
 
     doc.setFontSize(8);
+    const segmentGap = doc.getTextWidth(' ');
+
     d.options.forEach((segments, optionIndex) => {
-      // Draw the runs left to right so a single word can be bold mid-sentence.
+      // Draw the runs left to right so a single word can be bold mid-sentence,
+      // advancing by an explicit space between them rather than relying on
+      // whitespace inside the strings.
       let x = margin;
-      segments.forEach((segment) => {
+      segments.forEach((segment, segmentIndex) => {
         doc.setFont('helvetica', segment.bold ? 'bold' : 'normal');
+        if (segmentIndex > 0) x += segmentGap;
         doc.text(segment.text, x, y);
         x += doc.getTextWidth(segment.text);
       });

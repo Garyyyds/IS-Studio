@@ -422,15 +422,20 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
                 <li key={i}>
                   <label className="flex items-start justify-between gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer">
                     <span>
-                      {segments.map((segment, s) =>
-                        segment.bold ? (
-                          <strong key={s} className="font-bold text-slate-900 dark:text-slate-100">
-                            {segment.text}
-                          </strong>
-                        ) : (
-                          <span key={s}>{segment.text}</span>
-                        )
-                      )}
+                      {/* Joined with an explicit space so the gap around a bold
+                          run does not depend on whitespace inside the strings. */}
+                      {segments.map((segment, s) => (
+                        <React.Fragment key={s}>
+                          {s > 0 && ' '}
+                          {segment.bold ? (
+                            <strong className="font-bold text-slate-900 dark:text-slate-100">
+                              {segment.text}
+                            </strong>
+                          ) : (
+                            segment.text
+                          )}
+                        </React.Fragment>
+                      ))}
                     </span>
                     <input
                       type="checkbox"
