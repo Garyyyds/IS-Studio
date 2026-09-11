@@ -85,9 +85,12 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   drawSectionHeader(ctx, USER_ID_SECTION_B_TITLE);
 
   const colWidth = contentWidth / 3;
-  const rowHeight = 9;
+  const rowHeight = 7;
   const tickBoxSize = 3.6;
   const labelOffset = tickBoxSize + 2.5;
+  // Tick rows are positioned by their text baseline, so the first one has to be
+  // pushed clear of the section header it would otherwise be drawn on top of.
+  const firstRowBaseline = 6;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -127,14 +130,15 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
     });
   };
 
+  ctx.y += firstRowBaseline;
   drawTickRows(SERVER_REQUEST_ROWS, (id) => Boolean(form.systems?.[id]));
 
   // --- Nature of request, continuing below the server list ---
-  ctx.y += 2;
+  ctx.y += 3;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.text(NATURE_OF_REQUEST_LABEL, margin, ctx.y);
-  ctx.y += 7;
+  ctx.y += 6;
 
   drawTickRows(NATURE_OF_REQUEST_ROWS, (id) => form.natureOfRequest === id);
 
