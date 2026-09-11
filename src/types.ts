@@ -180,4 +180,8 @@ export interface AssetFormData {
   department: string;
   location: string;
   items: AssetFormItem[];
+  /** Section D tick boxes, indexed to the form config's options. */
+  itReturnOptions?: boolean[];
+  /** Section D free-text remarks. */
+  itRemarks?: string;
 }

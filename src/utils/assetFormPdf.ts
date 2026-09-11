@@ -417,6 +417,10 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     y = Math.max(naturalSignatureY, anchoredSignatureY);
   }
 
+  // Bottom edge of whichever signature layout was drawn, so the next section
+  // can be spaced from the ink rather than from the block's starting baseline.
+  let signatureBlockBottom = y;
+
   if (stacked) {
     doc.setFontSize(8);
     const dateLabelWidth = doc.getTextWidth('Date') + 2;
@@ -432,6 +436,8 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
       doc.text(':', x + dateLabelWidth, y + 14);
       doc.line(x + dateLabelWidth + 3, y + 15, lineEnd, y + 15);
     });
+
+    signatureBlockBottom = y + 15;
   } else {
     // Within a column the colon sits at a fixed offset, which lines
     // "Requestor :" up with "Date :" beneath it.
@@ -447,16 +453,17 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     signatureRow(sigLabels, y);
     y += 10;
     signatureRow(['Date', 'Date', 'Date'], y);
+    signatureBlockBottom = y + 1;
   }
 
-  y += stacked ? 16 : 6;
+  y = signatureBlockBottom + SECTION_GAP * 2;
 
   // --- Section D: completed by IT when the asset comes back ---
   if (config.sectionD) {
     const d = config.sectionD;
     const tickBoxSize = 4;
     const tickBoxX = margin + contentWidth - tickBoxSize - 2;
-    const sectionDHeight = 60;
+    const sectionDHeight = 72;
 
     if (y + sectionDHeight > pageHeight - margin) {
       doc.addPage();
@@ -473,7 +480,7 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     y += 6;
 
     doc.setFontSize(8);
-    d.options.forEach((segments) => {
+    d.options.forEach((segments, optionIndex) => {
       // Draw the runs left to right so a single word can be bold mid-sentence.
       let x = margin;
       segments.forEach((segment) => {
@@ -481,7 +488,18 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
         doc.text(segment.text, x, y);
         x += doc.getTextWidth(segment.text);
       });
-      doc.rect(tickBoxX, y - tickBoxSize + 1, tickBoxSize, tickBoxSize);
+
+      const boxTop = y - tickBoxSize + 1;
+      doc.rect(tickBoxX, boxTop, tickBoxSize, tickBoxSize);
+
+      // Tick whichever option was selected on screen.
+      if (form.itReturnOptions?.[optionIndex]) {
+        doc.setLineWidth(0.5);
+        doc.line(tickBoxX + 0.8, boxTop + 2.1, tickBoxX + 1.6, boxTop + 3.1);
+        doc.line(tickBoxX + 1.6, boxTop + 3.1, tickBoxX + 3.3, boxTop + 0.9);
+        doc.setLineWidth(0.2);
+      }
+
       y += 6;
     });
 
@@ -492,18 +510,35 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     doc.setFontSize(8.5);
     doc.text(d.remarksLabel, margin, y);
     const remarksLabelWidth = doc.getTextWidth(d.remarksLabel);
-    doc.line(margin + remarksLabelWidth + 2, y + 1, margin + contentWidth, y + 1);
+    const remarksStart = margin + remarksLabelWidth + 2;
+    doc.line(remarksStart, y + 1, margin + contentWidth, y + 1);
+
+    if (form.itRemarks?.trim()) {
+      const remarksText = doc.splitTextToSize(
+        form.itRemarks.trim(),
+        margin + contentWidth - remarksStart - 2
+      )[0];
+      doc.text(remarksText, remarksStart + 1, y);
+    }
 
     y += 16;
 
-    // Two evenly spaced signing columns, label above a full-width line.
+    // Two evenly spaced signing columns, each with a signing line and a date.
     const dColWidth = contentWidth / 2;
     const dGutter = 10;
     doc.setFontSize(8);
+    const dDateLabelWidth = doc.getTextWidth('Date') + 2;
+
     d.signatories.forEach((label, i) => {
       const x = margin + i * dColWidth;
+      const lineEnd = x + dColWidth - dGutter;
+
       doc.text(`${label}:`, x, y);
-      doc.line(x, y + 10, x + dColWidth - dGutter, y + 10);
+      doc.line(x, y + 10, lineEnd, y + 10);
+
+      doc.text('Date', x, y + 18);
+      doc.text(':', x + dDateLabelWidth, y + 18);
+      doc.line(x + dDateLabelWidth + 3, y + 19, lineEnd, y + 19);
     });
   }
 

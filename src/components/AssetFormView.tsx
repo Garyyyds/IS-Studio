@@ -56,8 +56,16 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (field: keyof Omit<AssetFormData, 'items'>, value: string) => {
+  const setField = (field: keyof Omit<AssetFormData, 'items' | 'itReturnOptions'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const setReturnOption = (index: number, checked: boolean) => {
+    setForm((prev) => {
+      const next = [...(prev.itReturnOptions ?? [])];
+      next[index] = checked;
+      return { ...prev, itReturnOptions: next };
+    });
   };
 
   const setItem = (id: string, field: keyof Omit<AssetFormItem, 'id'>, value: string) => {
@@ -411,32 +419,45 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
             </p>
             <ul className="space-y-2">
               {config.sectionD.options.map((segments, i) => (
-                <li
-                  key={i}
-                  className="flex items-start justify-between gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
-                >
-                  <span>
-                    {segments.map((segment, s) =>
-                      segment.bold ? (
-                        <strong key={s} className="font-bold text-slate-900 dark:text-slate-100">
-                          {segment.text}
-                        </strong>
-                      ) : (
-                        <span key={s}>{segment.text}</span>
-                      )
-                    )}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="mt-0.5 w-4 h-4 shrink-0 rounded-sm border border-slate-300 dark:border-slate-600"
-                  />
+                <li key={i}>
+                  <label className="flex items-start justify-between gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer">
+                    <span>
+                      {segments.map((segment, s) =>
+                        segment.bold ? (
+                          <strong key={s} className="font-bold text-slate-900 dark:text-slate-100">
+                            {segment.text}
+                          </strong>
+                        ) : (
+                          <span key={s}>{segment.text}</span>
+                        )
+                      )}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={form.itReturnOptions?.[i] ?? false}
+                      onChange={(e) => setReturnOption(i, e.target.checked)}
+                      className="mt-0.5 w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                    />
+                  </label>
                 </li>
               ))}
             </ul>
+
+            <div className="pt-2">
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                {config.sectionD.remarksLabel.replace(/:$/, '')}
+              </label>
+              <input
+                type="text"
+                value={form.itRemarks ?? ''}
+                onChange={(e) => setField('itRemarks', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
             <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
-              {config.sectionD.remarksLabel} a blank rule, plus{' '}
-              {config.sectionD.signatories.join(' and ')} signing lines, are printed on the PDF for
-              IT to complete on return.
+              {config.sectionD.signatories.join(' and ')} signing lines, each with a date, are
+              printed on the PDF for wet signing on return.
             </p>
           </div>
         </div>
