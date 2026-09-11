@@ -6,6 +6,7 @@ import {
   drawSectionHeader,
   drawInfoRows,
   drawSignatureBlock,
+  drawRuledRemarks,
   drawTickBox,
   SECTION_GAP,
 } from './formChrome';
@@ -57,6 +58,17 @@ export const NATURE_OF_REQUEST_ROWS: { id: string; label: string }[][] = [
     { id: 'temporary', label: 'Temporary' },
   ],
 ];
+
+export const REMARKS_LABEL = 'Remarks:';
+export const REMARKS_PLACEHOLDER = 'e.g. Function / Grouping';
+
+export const ATTACHMENTS_LABEL = 'Attachments:';
+
+/** Options for the attachment type shown beside the "Yes" tick. */
+export const ATTACHMENT_OPTIONS = ['1. Hardcopy/Softcopy Attachment'];
+
+export const ATTACHMENTS_NOTE =
+  '*Note: HR to route this form to Document Controller when there is a staff movement or new staff onboard and provide the related attachment.';
 
 export const USER_ID_SIGNATURE_LABELS = ['Requestor', 'HOD', 'IT'];
 
@@ -141,6 +153,47 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   ctx.y += 6;
 
   drawTickRows(NATURE_OF_REQUEST_ROWS, (id) => form.natureOfRequest === id);
+
+  // --- Remarks ---
+  ctx.y += 4;
+  drawRuledRemarks(ctx, REMARKS_LABEL, form.remarks);
+
+  // --- Attachments ---
+  ctx.y += 5;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text(ATTACHMENTS_LABEL, margin, ctx.y);
+
+  doc.setFont('helvetica', 'normal');
+  let attachX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
+
+  // Yes, then the chosen attachment type, then No.
+  drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'yes');
+  doc.text('Yes', attachX + labelOffset, ctx.y);
+  attachX += labelOffset + doc.getTextWidth('Yes') + 6;
+
+  const attachmentType = form.attachmentType || ATTACHMENT_OPTIONS[0];
+  const typeWidth = 62;
+  doc.rect(attachX, ctx.y - 4, typeWidth, 5.5);
+  if (form.hasAttachments === 'yes') {
+    const fitted = doc.splitTextToSize(attachmentType, typeWidth - 3)[0];
+    doc.text(fitted, attachX + 1.5, ctx.y);
+  }
+  attachX += typeWidth + 8;
+
+  drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'no');
+  doc.text('No', attachX + labelOffset, ctx.y);
+
+  ctx.y += 7;
+
+  // --- Footnote ---
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(70, 70, 70);
+  const noteLines = doc.splitTextToSize(ATTACHMENTS_NOTE, contentWidth) as string[];
+  doc.text(noteLines, margin, ctx.y);
+  ctx.y += noteLines.length * 3.6;
+  doc.setTextColor(0, 0, 0);
 
   ctx.y += SECTION_GAP;
 

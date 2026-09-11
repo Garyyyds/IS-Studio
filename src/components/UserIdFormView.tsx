@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileDown, KeyRound, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileDown, KeyRound, AlertTriangle, Loader2, Paperclip } from 'lucide-react';
 import { AppUser, UserIdFormData } from '../types';
 import {
   exportUserIdFormPdf,
   SERVER_REQUEST_ROWS,
   NATURE_OF_REQUEST_ROWS,
   NATURE_OF_REQUEST_LABEL,
+  REMARKS_LABEL,
+  REMARKS_PLACEHOLDER,
+  ATTACHMENTS_LABEL,
+  ATTACHMENT_OPTIONS,
+  ATTACHMENTS_NOTE,
   USER_ID_SECTION_A_TITLE,
   USER_ID_SECTION_B_TITLE,
   USER_ID_SIGNATURE_LABELS,
@@ -30,6 +35,9 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     systems: {},
     othersDetail: '',
     natureOfRequest: '',
+    remarks: '',
+    hasAttachments: '',
+    attachmentType: ATTACHMENT_OPTIONS[0],
   };
 
   const [form, setForm] = useState(initialForm);
@@ -43,6 +51,17 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
 
   const setField = (field: 'employeeId' | 'phoneExt' | 'submittedBy' | 'requestDate' | 'department' | 'location', value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Yes and No are mutually exclusive; re-ticking the current one clears it.
+  const setAttachments = (value: 'yes' | 'no' | '') => {
+    setForm((prev) => ({ ...prev, hasAttachments: value }));
+  };
+
+  // Grow the remarks box to fit however many lines it holds.
+  const autoGrow = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
   };
 
   // Single-select: ticking one option clears the rest, and re-ticking the
@@ -262,6 +281,81 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Remarks and attachments */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-6 space-y-5">
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              {REMARKS_LABEL.replace(/:$/, '')}
+            </label>
+            <textarea
+              rows={3}
+              value={form.remarks}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, remarks: e.target.value }));
+                autoGrow(e.target);
+              }}
+              placeholder={REMARKS_PLACEHOLDER}
+              className={`${inputClass} resize-y min-h-[72px] leading-relaxed`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">
+              {ATTACHMENTS_LABEL.replace(/:$/, '')}
+            </label>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.hasAttachments === 'yes'}
+                  onChange={(e) => setAttachments(e.target.checked ? 'yes' : '')}
+                  className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                />
+                <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">Yes</span>
+              </label>
+
+              <div className="relative flex items-center gap-2 min-w-0">
+                <Paperclip
+                  className={`w-4 h-4 shrink-0 ${
+                    form.hasAttachments === 'yes'
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-slate-400 dark:text-slate-600'
+                  }`}
+                />
+                <select
+                  value={form.attachmentType}
+                  disabled={form.hasAttachments !== 'yes'}
+                  onChange={(e) => setForm((prev) => ({ ...prev, attachmentType: e.target.value }))}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {ATTACHMENT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.hasAttachments === 'no'}
+                  onChange={(e) => setAttachments(e.target.checked ? 'no' : '')}
+                  className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                />
+                <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">No</span>
+              </label>
+            </div>
+
+            <p className="mt-3 text-[10px] sm:text-xs italic text-slate-500 dark:text-slate-400 leading-relaxed">
+              {ATTACHMENTS_NOTE}
+            </p>
           </div>
         </div>
       </div>

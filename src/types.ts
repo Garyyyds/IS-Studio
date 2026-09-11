@@ -200,4 +200,10 @@ export interface UserIdFormData {
   othersDetail: string;
   /** Single-select nature of the request; empty when nothing is chosen. */
   natureOfRequest: string;
+  /** Free-text remarks, printed on ruled lines. */
+  remarks: string;
+  /** Whether attachments accompany the form; empty when neither is chosen. */
+  hasAttachments: 'yes' | 'no' | '';
+  /** Chosen attachment type, shown beside the Yes tick. */
+  attachmentType: string;
 }

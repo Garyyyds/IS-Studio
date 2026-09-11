@@ -193,6 +193,46 @@ export function drawInfoRows(ctx: FormDoc, rows: InfoRow[], splitAt?: number) {
   });
 }
 
+/**
+ * A labelled remarks block: one ruled line per line of text, each running to
+ * the right margin. The first rule starts after the label; the rest span the
+ * full width. Blank rules are still printed so there is room to write by hand.
+ */
+export function drawRuledRemarks(ctx: FormDoc, label: string, value?: string, minRules = 2) {
+  const { doc, margin, contentWidth } = ctx;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(label, margin, ctx.y);
+
+  const start = margin + doc.getTextWidth(label) + 2;
+  // Wrapped to the shorter first-line width so every line fits either rule.
+  const lines = value?.trim()
+    ? (doc.splitTextToSize(value.trim(), margin + contentWidth - start - 2) as string[])
+    : [];
+  const rules = Math.max(minRules, lines.length);
+
+  for (let i = 0; i < rules; i++) {
+    const lineStart = i === 0 ? start : margin;
+    doc.line(lineStart, ctx.y + 1, margin + contentWidth, ctx.y + 1);
+    if (lines[i]) doc.text(lines[i], lineStart + 1, ctx.y);
+    ctx.y += 6;
+  }
+}
+
+/** Height drawRuledRemarks will occupy, for page-break decisions. */
+export function measureRuledRemarks(ctx: FormDoc, label: string, value?: string, minRules = 2) {
+  const { doc, margin, contentWidth } = ctx;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  const start = margin + doc.getTextWidth(label) + 2;
+  const lines = value?.trim()
+    ? (doc.splitTextToSize(value.trim(), margin + contentWidth - start - 2) as string[])
+    : [];
+  return Math.max(minRules, lines.length) * 6;
+}
+
 /** A tick box, optionally ticked, drawn with its top-left at (x, y). */
 export function drawTickBox(ctx: FormDoc, x: number, y: number, size: number, ticked?: boolean) {
   const { doc } = ctx;
