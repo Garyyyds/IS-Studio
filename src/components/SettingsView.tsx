@@ -307,6 +307,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         visibleViews: {
           kanban: true,
           list: false,
+          history: false,
           handbook: false,
           rules: false,
           analytics: false,
@@ -319,6 +320,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         visibleViews: {
           kanban: true,
           list: true,
+          history: true,
           handbook: true,
           rules: true,
           analytics: true,

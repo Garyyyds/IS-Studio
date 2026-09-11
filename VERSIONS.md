@@ -65,3 +65,4 @@ away later work permanently.
 | `11092026ver036` | 2026-09-11 | Section C and D on screen: drop the label/date rule previews, keep only the hint line |
 | `11092026ver037` | 2026-09-11 | Rename to New User ID Requisition Form; remove Nature of Request and the COO acknowledgement column |
 | `11092026ver038` | 2026-09-11 | Add the IT Hardware, Software & Peripherals Requisition Form, Sections A to F, with item tables, live totals and a two-page PDF |
+| `11092026ver039` | 2026-09-11 | Install @types/react and @types/react-dom, scope tsconfig to src so the editor stops loading dist, and fix the four type errors that surfaced |

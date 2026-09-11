@@ -784,14 +784,11 @@ export default function App() {
             {activeView === 'history' && (
               <TicketHistoryView
                 tasks={tasks}
-                runbooks={runbooks}
                 settings={settings}
                 onSelectTask={handleSelectTask}
                 onReopenTask={handleReopenTask}
                 onDeleteTask={handleDeleteTask}
-                onBatchDelete={handleBatchDeleteTasks}
-                onOpenRunbook={handleOpenRunbookFromAnywhere}
-                onUpdateSettings={setSettings}
+                onBatchDeleteTasks={handleBatchDeleteTasks}
               />
             )}
 
