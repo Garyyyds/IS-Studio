@@ -161,11 +161,15 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   const tableHeaders = ['No.', 'Disposal Description', 'Spec / Model', 'Serial Number', 'Quantity', 'Remarks'];
   const headerRowHeight = 7;
 
-  doc.setFillColor(242, 242, 242);
   tableHeaders.forEach((label, i) => {
+    // doc.text() sets the non-stroking colour to the text colour, so the fill
+    // has to be re-set before every filled rect - otherwise each cell after the
+    // first inherits black and paints over its own label.
+    doc.setFillColor(242, 242, 242);
     doc.rect(colX[i], y, colWidths[i], headerRowHeight, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
+    doc.setTextColor(0, 0, 0);
     doc.text(label, colX[i] + colWidths[i] / 2, y + 4.6, { align: 'center' });
   });
   y += headerRowHeight;
