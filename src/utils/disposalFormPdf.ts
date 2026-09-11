@@ -20,10 +20,6 @@ const COMPANY_ADDRESS = [
   '31200 Ipoh, Perak Malaysia.',
 ];
 
-// The form is always printed with at least this many inventory rows so the
-// layout matches the spreadsheet even when the requester lists fewer items.
-const MIN_PRINTED_ROWS = 6;
-
 // jsPDF cannot embed WebP. Browsers decode it natively, so round-trip the logo
 // through a canvas to get PNG bytes. Returns null rather than throwing - a
 // missing logo must not stop someone exporting their form.
@@ -175,7 +171,9 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   y += headerRowHeight;
 
   const bodyRowHeight = 7;
-  const printedRows = Math.max(form.items.length, MIN_PRINTED_ROWS);
+  // The table prints exactly the rows the requester filled in - no padding to a
+  // fixed count - so the PDF matches what they saw on screen.
+  const printedRows = Math.max(form.items.length, 1);
 
   for (let i = 0; i < printedRows; i++) {
     // Start a new page before a row would cross the bottom margin.

@@ -17,9 +17,9 @@ interface DisposalFormViewProps {
   onBack: () => void;
 }
 
-// The printed form has six inventory rows, so the on-screen form opens with the
-// same six to keep the two recognisably the same document.
-const STARTING_ROWS = 6;
+// Open with a single row; the requester adds slots as needed and the PDF prints
+// exactly the rows they filled in.
+const STARTING_ROWS = 1;
 
 const blankItem = (): DisposalItem => ({
   id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -32,13 +32,10 @@ const blankItem = (): DisposalItem => ({
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-const suggestedReference = () =>
-  `DIS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
-
 export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser, onBack }) => {
   const [form, setForm] = useState<DisposalFormData>(() => ({
-    employeeId: currentUser.id || '',
-    referenceNo: suggestedReference(),
+    employeeId: '',
+    referenceNo: '',
     submittedBy: currentUser.name || '',
     requestDate: todayIso(),
     department: currentUser.department || '',
@@ -165,7 +162,6 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
               type="text"
               value={form.employeeId}
               onChange={(e) => setField('employeeId', e.target.value)}
-              placeholder="e.g. EMP-1042"
               className={inputClass}
             />
           </div>
@@ -178,7 +174,6 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
               type="text"
               value={form.referenceNo}
               onChange={(e) => setField('referenceNo', e.target.value)}
-              placeholder="e.g. DIS-20260911-001"
               className={inputClass}
             />
           </div>
@@ -229,7 +224,6 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
               type="text"
               value={form.location}
               onChange={(e) => setField('location', e.target.value)}
-              placeholder="e.g. Ipoh HQ, Level 3"
               className={inputClass}
             />
           </div>
