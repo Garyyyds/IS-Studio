@@ -169,33 +169,35 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
 
   doc.setFont('helvetica', 'normal');
 
-  // Row 1: Yes / No.
-  let attachX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
-  drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'yes');
-  doc.text('Yes', attachX + labelOffset, ctx.y);
-  attachX += labelOffset + doc.getTextWidth('Yes') + 10;
+  // Both rows sit on the same two-column pitch, wide enough for the longest of
+  // the four labels, so Hardcopy lines up under Yes and Softcopy under No.
+  const attachOptionsX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
+  const attachLabels = ['Yes', 'No', ...ATTACHMENT_FORMATS.map((o) => o.label)];
+  const attachPitch = labelOffset + Math.max(...attachLabels.map((l) => doc.getTextWidth(l))) + 10;
 
-  drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'no');
-  doc.text('No', attachX + labelOffset, ctx.y);
+  const drawOption = (column: number, label: string, ticked: boolean) => {
+    const x = attachOptionsX + column * attachPitch;
+    drawTickBox(ctx, x, ctx.y - tickBoxSize + 0.6, tickBoxSize, ticked);
+    doc.text(label, x + labelOffset, ctx.y);
+  };
+
+  // Row 1: Yes / No.
+  drawOption(0, 'Yes', form.hasAttachments === 'yes');
+  drawOption(1, 'No', form.hasAttachments === 'no');
 
   ctx.y += 6.5;
 
-  // Row 2: the format, indented under the Yes/No pair, with the recorded file
-  // name on the right when a softcopy is attached.
-  const formatX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
-  let optionX = formatX;
-
-  ATTACHMENT_FORMATS.forEach((option) => {
-    drawTickBox(
-      ctx,
-      optionX,
-      ctx.y - tickBoxSize + 0.6,
-      tickBoxSize,
+  // Row 2: the format, with the recorded file names on the right when a
+  // softcopy is attached.
+  ATTACHMENT_FORMATS.forEach((option, i) => {
+    drawOption(
+      i,
+      option.label,
       form.hasAttachments === 'yes' && form.attachmentFormat === option.id
     );
-    doc.text(option.label, optionX + labelOffset, ctx.y);
-    optionX += labelOffset + doc.getTextWidth(option.label) + 10;
   });
+
+  const optionX = attachOptionsX + ATTACHMENT_FORMATS.length * attachPitch;
 
   // Softcopies are provided separately, so the sheet records which files they
   // are. The first line sits beside the format ticks; any overflow continues

@@ -357,36 +357,39 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
               {ATTACHMENTS_LABEL.replace(/:$/, '')}
             </label>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.hasAttachments === 'yes'}
-                  onChange={(e) => setAttachments(e.target.checked ? 'yes' : '')}
-                  className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                />
-                <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">Yes</span>
-              </label>
+            {/* Both rows live in one padded container so they share a left
+                origin and column widths - Hardcopy under Yes, Softcopy under No. */}
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3 py-2.5 space-y-2.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 max-w-[280px]">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.hasAttachments === 'yes'}
+                    onChange={(e) => setAttachments(e.target.checked ? 'yes' : '')}
+                    className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                  />
+                  <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">Yes</span>
+                </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.hasAttachments === 'no'}
-                  onChange={(e) => setAttachments(e.target.checked ? 'no' : '')}
-                  className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                />
-                <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">No</span>
-              </label>
-            </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.hasAttachments === 'no'}
+                    onChange={(e) => setAttachments(e.target.checked ? 'no' : '')}
+                    className="w-4 h-4 shrink-0 rounded-sm border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                  />
+                  <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">No</span>
+                </label>
+              </div>
 
             {/* Format, plus the attach control on the right */}
             <div
-              className={`mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3 py-2.5 transition ${
+              className={`flex flex-wrap items-center justify-between gap-x-5 gap-y-3 transition ${
                 form.hasAttachments === 'yes' ? '' : 'opacity-50 pointer-events-none'
               }`}
               aria-disabled={form.hasAttachments !== 'yes'}
             >
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 max-w-[280px]">
                 {ATTACHMENT_FORMATS.map((option) => (
                   <label key={option.id} className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -430,7 +433,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
 
             {/* Attached files */}
             {form.attachmentFormat === 'softcopy' && form.attachmentFileNames.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {form.attachmentFileNames.map((name) => (
                   <span
                     key={name}
@@ -458,6 +461,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
                 </button>
               </div>
             )}
+            </div>
 
             <p className="mt-3 text-[10px] sm:text-xs italic text-slate-500 dark:text-slate-400 leading-relaxed">
               {ATTACHMENTS_NOTE}
