@@ -64,8 +64,11 @@ export const REMARKS_PLACEHOLDER = 'e.g. Function / Grouping';
 
 export const ATTACHMENTS_LABEL = 'Attachments:';
 
-/** Options for the attachment type shown beside the "Yes" tick. */
-export const ATTACHMENT_OPTIONS = ['1. Hardcopy/Softcopy Attachment'];
+/** How the attachment is provided. Only a softcopy can carry a file name. */
+export const ATTACHMENT_FORMATS: { id: 'hardcopy' | 'softcopy'; label: string }[] = [
+  { id: 'hardcopy', label: 'Hardcopy' },
+  { id: 'softcopy', label: 'Softcopy' },
+];
 
 export const ATTACHMENTS_NOTE =
   '*Note: HR to route this form to Document Controller when there is a staff movement or new staff onboard and provide the related attachment.';
@@ -165,24 +168,46 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   doc.text(ATTACHMENTS_LABEL, margin, ctx.y);
 
   doc.setFont('helvetica', 'normal');
-  let attachX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
 
-  // Yes, then the chosen attachment type, then No.
+  // Row 1: Yes / No.
+  let attachX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
   drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'yes');
   doc.text('Yes', attachX + labelOffset, ctx.y);
-  attachX += labelOffset + doc.getTextWidth('Yes') + 6;
-
-  const attachmentType = form.attachmentType || ATTACHMENT_OPTIONS[0];
-  const typeWidth = 62;
-  doc.rect(attachX, ctx.y - 4, typeWidth, 5.5);
-  if (form.hasAttachments === 'yes') {
-    const fitted = doc.splitTextToSize(attachmentType, typeWidth - 3)[0];
-    doc.text(fitted, attachX + 1.5, ctx.y);
-  }
-  attachX += typeWidth + 8;
+  attachX += labelOffset + doc.getTextWidth('Yes') + 10;
 
   drawTickBox(ctx, attachX, ctx.y - tickBoxSize + 0.6, tickBoxSize, form.hasAttachments === 'no');
   doc.text('No', attachX + labelOffset, ctx.y);
+
+  ctx.y += 6.5;
+
+  // Row 2: the format, indented under the Yes/No pair, with the recorded file
+  // name on the right when a softcopy is attached.
+  const formatX = margin + doc.getTextWidth(ATTACHMENTS_LABEL) + 6;
+  let optionX = formatX;
+
+  ATTACHMENT_FORMATS.forEach((option) => {
+    drawTickBox(
+      ctx,
+      optionX,
+      ctx.y - tickBoxSize + 0.6,
+      tickBoxSize,
+      form.hasAttachments === 'yes' && form.attachmentFormat === option.id
+    );
+    doc.text(option.label, optionX + labelOffset, ctx.y);
+    optionX += labelOffset + doc.getTextWidth(option.label) + 10;
+  });
+
+  // A softcopy is provided separately, so the sheet records which file it is.
+  if (form.hasAttachments === 'yes' && form.attachmentFormat === 'softcopy' && form.attachmentFileName.trim()) {
+    const fileLabel = 'File:';
+    doc.setFont('helvetica', 'bold');
+    doc.text(fileLabel, optionX, ctx.y);
+    doc.setFont('helvetica', 'normal');
+    const nameX = optionX + doc.getTextWidth(fileLabel) + 2;
+    const available = margin + contentWidth - nameX;
+    const fitted = doc.splitTextToSize(form.attachmentFileName.trim(), available)[0];
+    doc.text(fitted, nameX, ctx.y);
+  }
 
   ctx.y += 7;
 
