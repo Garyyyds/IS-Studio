@@ -163,7 +163,7 @@ export interface StorageStatusInfo {
   lastSaved: string | null;
 }
 
-export interface DisposalItem {
+export interface AssetFormItem {
   id: string;
   description: string;
   specModel: string;
@@ -172,12 +172,12 @@ export interface DisposalItem {
   remarks: string;
 }
 
-export interface DisposalFormData {
+export interface AssetFormData {
   employeeId: string;
   referenceNo: string;
   submittedBy: string;
   requestDate: string;
   department: string;
   location: string;
-  items: DisposalItem[];
+  items: AssetFormItem[];
 }

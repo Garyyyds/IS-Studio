@@ -22,10 +22,12 @@ import {
   FilePlus2,
   Recycle,
   ClipboardList,
+  PackageCheck,
   Lock
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
-import { DisposalFormView } from './DisposalFormView';
+import { AssetFormView } from './AssetFormView';
+import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
   currentUser: AppUser;
@@ -46,7 +48,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'create-form' | 'help'>('submit');
   // null shows the picker; a value opens that form.
-  const [selectedForm, setSelectedForm] = useState<'request' | 'disposal' | null>(null);
+  const [selectedForm, setSelectedForm] = useState<'request' | 'disposal' | 'allocation' | null>(null);
   
   // Submit Form State
   const [title, setTitle] = useState('');
@@ -596,8 +598,12 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       {/* CREATE FORM TAB */}
       {activeTab === 'create-form' && (
         <div>
-          {selectedForm === 'disposal' ? (
-            <DisposalFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
+          {selectedForm === 'disposal' || selectedForm === 'allocation' ? (
+            <AssetFormView
+              config={selectedForm === 'disposal' ? DISPOSAL_FORM : ALLOCATION_FORM}
+              currentUser={currentUser}
+              onBack={() => setSelectedForm(null)}
+            />
           ) : (
             <div className="space-y-5">
               <div>
@@ -632,6 +638,26 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   </p>
                 </div>
 
+                {/* Allocation form */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm('allocation')}
+                  className="text-left p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900">
+                      <PackageCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    {ALLOCATION_FORM.pickerTitle}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    {ALLOCATION_FORM.pickerBlurb}
+                  </p>
+                </button>
+
                 {/* Disposal form */}
                 <button
                   type="button"
@@ -645,10 +671,10 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                    IT Fixed Asset Disposal Request
+                    {DISPOSAL_FORM.pickerTitle}
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
-                    List faulty or obsolete IT assets for withdrawal from service, then export the signed-off PDF.
+                    {DISPOSAL_FORM.pickerBlurb}
                   </p>
                 </button>
               </div>

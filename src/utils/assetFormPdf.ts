@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { DisposalFormData } from '../types';
+import { AssetFormData } from '../types';
 import companyLogo from '../assets/company-logo.webp';
 
 // Column widths follow the source spreadsheet (Excel units 8.78 / 46.89 /
@@ -9,13 +9,6 @@ import companyLogo from '../assets/company-logo.webp';
 // width is taken proportionally from the three widest columns.
 const COL_RATIOS = [0.0527, 0.2593, 0.2047, 0.174, 0.095, 0.2144];
 
-export const DISPOSAL_NOTES = [
-  '1. Covers IT assets are withdrawn from service — system units, monitors, keyboards, mice, and attached peripherals that are faulty or obsolete.',
-  '2. Check the unit cannot be repaired, upgraded, or redeployed to another user or department before listing it for disposal.',
-  '3. Hand over each item as listed — no swapping, cannibalising, or taking parts home. Any missing component must be noted before collection.',
-  '4. Cross-check every item against Section B before release and record the actual quantity handed over.',
-];
-
 // Uniform vertical gap between the form's sections.
 const SECTION_GAP = 5;
 
@@ -23,6 +16,77 @@ const COMPANY_ADDRESS = [
   'Lot 55992, Batu 5 Off Jalan Tunku Abdul Rahman',
   '31200 Ipoh, Perak Malaysia.',
 ];
+
+// Everything that differs between the asset forms. The layout itself is shared,
+// so both sheets stay visually identical and a fix to one fixes both.
+export interface AssetFormConfig {
+  key: 'disposal' | 'allocation';
+  /** Title bar on the printed form. */
+  pdfTitle: string;
+  sectionATitle: string;
+  sectionBTitle: string;
+  /** Second table column - what the listed asset is. */
+  descriptionHeader: string;
+  notes: string[];
+  /** Leading part of the downloaded file name. */
+  fileStem: string;
+  /** Heading shown above the on-screen form. */
+  screenTitle: string;
+  /** Label for the description field on screen. */
+  descriptionPlaceholder: string;
+  remarksPlaceholder: string;
+  /** Card shown in the "Create Form" picker. */
+  pickerTitle: string;
+  pickerBlurb: string;
+  /** Message when Section B is empty on export. */
+  emptyItemsError: string;
+}
+
+export const DISPOSAL_FORM: AssetFormConfig = {
+  key: 'disposal',
+  pdfTitle: 'IT FIXED ASSET DISPOSAL REQUEST FORM',
+  sectionATitle: 'A. DISPOSAL APPLICATION INFORMATION',
+  sectionBTitle: 'B. INVENTORY LIST FOR DISPOSAL',
+  descriptionHeader: 'Disposal Description',
+  notes: [
+    '1. Covers IT assets are withdrawn from service — system units, monitors, keyboards, mice, and attached peripherals that are faulty or obsolete.',
+    '2. Check the unit cannot be repaired, upgraded, or redeployed to another user or department before listing it for disposal.',
+    '3. Hand over each item as listed — no swapping, cannibalising, or taking parts home. Any missing component must be noted before collection.',
+    '4. Cross-check every item against Section B before release and record the actual quantity handed over.',
+  ],
+  fileStem: 'IT_Asset_Disposal',
+  screenTitle: 'IT Fixed Asset Disposal Request',
+  descriptionPlaceholder: 'e.g. Desktop system unit',
+  remarksPlaceholder: 'e.g. Faulty PSU',
+  pickerTitle: 'IT Fixed Asset Disposal Request',
+  pickerBlurb:
+    'List faulty or obsolete IT assets for withdrawal from service, then export the signed-off PDF.',
+  emptyItemsError: 'Add at least one item under Section B before exporting.',
+};
+
+export const ALLOCATION_FORM: AssetFormConfig = {
+  key: 'allocation',
+  pdfTitle: 'IT FIXED ASSET ALLOCATION FORM',
+  sectionATitle: 'A. ALLOCATION APPLICATION INFORMATION',
+  sectionBTitle: 'B. INVENTORY LIST FOR ALLOCATION',
+  descriptionHeader: 'Asset Description',
+  // Drafted to mirror the disposal wording - replace with the official policy
+  // text when it is available.
+  notes: [
+    '1. Covers IT assets issued for work use — system units, monitors, keyboards, mice, and attached peripherals.',
+    '2. Check each item against Section B on collection. Report any damage, missing component, or wrong specification before signing.',
+    '3. The asset remains company property. Do not swap, modify, or transfer it to another user or department without IT approval.',
+    '4. Return the asset to IT on resignation, transfer, or when it is no longer required for the assigned role.',
+  ],
+  fileStem: 'IT_Asset_Allocation',
+  screenTitle: 'IT Fixed Asset Allocation',
+  descriptionPlaceholder: 'e.g. Laptop',
+  remarksPlaceholder: 'e.g. New joiner issue',
+  pickerTitle: 'IT Fixed Asset Allocation',
+  pickerBlurb:
+    'Record IT assets issued to an employee, then export the signed-off PDF for handover.',
+  emptyItemsError: 'Add at least one item under Section B before exporting.',
+};
 
 // jsPDF cannot embed WebP. Browsers decode it natively, so round-trip the logo
 // through a canvas to get PNG bytes. Returns null rather than throwing - a
@@ -53,7 +117,7 @@ async function loadLogoAsPng(): Promise<{ data: string; width: number; height: n
   }
 }
 
-export async function exportDisposalFormPdf(form: DisposalFormData) {
+export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormConfig) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -124,7 +188,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   doc.rect(margin, y, contentWidth, titleHeight, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('IT FIXED ASSET DISPOSAL REQUEST FORM', pageWidth / 2, y + 4.8, { align: 'center' });
+  doc.text(config.pdfTitle, pageWidth / 2, y + 4.8, { align: 'center' });
   // Title sits flush on Section A, as it does in the source spreadsheet.
   y += titleHeight;
 
@@ -141,7 +205,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   };
 
   // --- Section A: application information ---
-  sectionHeader('A. DISPOSAL APPLICATION INFORMATION');
+  sectionHeader(config.sectionATitle);
 
   const infoRowHeight = 7;
   const infoRows: [string, string, string, string][] = [
@@ -171,9 +235,16 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   y += SECTION_GAP;
 
   // --- Section B: inventory list ---
-  sectionHeader('B. INVENTORY LIST FOR DISPOSAL');
+  sectionHeader(config.sectionBTitle);
 
-  const tableHeaders = ['No.', 'Disposal Description', 'Spec / Model', 'Serial Number', 'Quantity', 'Remarks'];
+  const tableHeaders = [
+    'No.',
+    config.descriptionHeader,
+    'Spec / Model',
+    'Serial Number',
+    'Quantity',
+    'Remarks',
+  ];
   const headerRowHeight = 7;
 
   tableHeaders.forEach((label, i) => {
@@ -265,7 +336,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  DISPOSAL_NOTES.forEach((note) => {
+  config.notes.forEach((note) => {
     const lines = doc.splitTextToSize(note, contentWidth - 4);
     const h = Math.max(6, lines.length * 4 + 2);
     doc.rect(margin, y, contentWidth, h);
@@ -316,5 +387,5 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   signatureRow(['Date', 'Date', 'Date'], y);
 
   const safeRef = (form.referenceNo || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
-  doc.save(`IT_Asset_Disposal_${safeRef}.pdf`);
+  doc.save(`${config.fileStem}_${safeRef}.pdf`);
 }

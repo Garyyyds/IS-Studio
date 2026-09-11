@@ -5,14 +5,16 @@ import {
   Plus,
   Trash2,
   Recycle,
+  PackageCheck,
   Info,
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
-import { AppUser, DisposalFormData, DisposalItem } from '../types';
-import { exportDisposalFormPdf, DISPOSAL_NOTES } from '../utils/disposalFormPdf';
+import { AppUser, AssetFormData, AssetFormItem } from '../types';
+import { exportAssetFormPdf, AssetFormConfig } from '../utils/assetFormPdf';
 
-interface DisposalFormViewProps {
+interface AssetFormViewProps {
+  config: AssetFormConfig;
   currentUser: AppUser;
   onBack: () => void;
 }
@@ -21,7 +23,7 @@ interface DisposalFormViewProps {
 // exactly the rows they filled in.
 const STARTING_ROWS = 1;
 
-const blankItem = (): DisposalItem => ({
+const blankItem = (): AssetFormItem => ({
   id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   description: '',
   specModel: '',
@@ -39,8 +41,8 @@ const autoGrow = (el: HTMLTextAreaElement) => {
   el.style.height = `${el.scrollHeight}px`;
 };
 
-export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser, onBack }) => {
-  const [form, setForm] = useState<DisposalFormData>(() => ({
+export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUser, onBack }) => {
+  const [form, setForm] = useState<AssetFormData>(() => ({
     employeeId: '',
     referenceNo: '',
     submittedBy: currentUser.name || '',
@@ -53,11 +55,11 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (field: keyof Omit<DisposalFormData, 'items'>, value: string) => {
+  const setField = (field: keyof Omit<AssetFormData, 'items'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const setItem = (id: string, field: keyof Omit<DisposalItem, 'id'>, value: string) => {
+  const setItem = (id: string, field: keyof Omit<AssetFormItem, 'id'>, value: string) => {
     setForm((prev) => ({
       ...prev,
       items: prev.items.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
@@ -78,7 +80,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
   const handleExport = async () => {
     const hasItem = form.items.some((item) => item.description.trim());
     if (!hasItem) {
-      setError('Add at least one item under Section B before exporting.');
+      setError(config.emptyItemsError);
       return;
     }
     if (!form.submittedBy.trim()) {
@@ -90,14 +92,17 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
     setIsExporting(true);
     try {
       // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
-      await exportDisposalFormPdf({
-        ...form,
-        items: form.items.filter((item) =>
-          [item.description, item.specModel, item.serialNumber, item.quantity, item.remarks].some((v) =>
-            v.trim()
-          )
-        ),
-      });
+      await exportAssetFormPdf(
+        {
+          ...form,
+          items: form.items.filter((item) =>
+            [item.description, item.specModel, item.serialNumber, item.quantity, item.remarks].some(
+              (v) => v.trim()
+            )
+          ),
+        },
+        config
+      );
     } catch (err: any) {
       setError(err?.message || 'Could not generate the PDF. Please try again.');
     } finally {
@@ -111,14 +116,16 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
   const cellClass =
     'w-full px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition resize-y min-h-[30px] leading-snug';
 
+  const HeadingIcon = config.key === 'allocation' ? PackageCheck : Recycle;
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Recycle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <span>IT Fixed Asset Disposal Request</span>
+            <HeadingIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <span>{config.screenTitle}</span>
           </h2>
           <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
             Fill in and export as PDF for signing
@@ -158,7 +165,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
         <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-            A. Disposal Application Information
+            {config.sectionATitle.replace(/^A\.\s*/, 'A. ')}
           </h3>
         </div>
         <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,7 +249,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
         <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-            B. Inventory List for Disposal
+            {config.sectionBTitle}
           </h3>
           <button
             type="button"
@@ -260,7 +267,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
               <tr className="bg-slate-50 dark:bg-slate-800/40 text-left">
                 <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-12">No.</th>
                 <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Disposal Description
+                  {config.descriptionHeader}
                 </th>
                 <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   Spec / Model
@@ -278,7 +285,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {form.items.map((item, index) => (
                 <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="py-2 px-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 text-center">
+                  <td className="py-2 px-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 text-center align-top">
                     {index + 1}
                   </td>
                   <td className="py-2 px-3 align-top">
@@ -289,7 +296,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
                         setItem(item.id, 'description', e.target.value);
                         autoGrow(e.target);
                       }}
-                      placeholder="e.g. Desktop system unit"
+                      placeholder={config.descriptionPlaceholder}
                       className={cellClass}
                     />
                   </td>
@@ -335,11 +342,11 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
                         setItem(item.id, 'remarks', e.target.value);
                         autoGrow(e.target);
                       }}
-                      placeholder="e.g. Faulty PSU"
+                      placeholder={config.remarksPlaceholder}
                       className={cellClass}
                     />
                   </td>
-                  <td className="py-2 px-3 text-center">
+                  <td className="py-2 px-3 text-center align-top">
                     <button
                       type="button"
                       onClick={() => removeRow(item.id)}
@@ -369,7 +376,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
             <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Note</span>
           </div>
           <ul className="space-y-2">
-            {DISPOSAL_NOTES.map((note) => (
+            {config.notes.map((note) => (
               <li
                 key={note}
                 className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
