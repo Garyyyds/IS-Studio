@@ -283,7 +283,12 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveTab('create-form')}
+            onClick={() => {
+              // Always land on the picker, the same place Back returns to,
+              // rather than reopening whichever form was last left open.
+              setSelectedForm(null);
+              setActiveTab('create-form');
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
               activeTab === 'create-form'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
