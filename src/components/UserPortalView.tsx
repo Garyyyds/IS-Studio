@@ -24,11 +24,11 @@ import {
   ClipboardList,
   PackageCheck,
   KeyRound,
-  Lock
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
 import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
+import { RequisitionFormView } from './RequisitionFormView';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
@@ -51,7 +51,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'create-form' | 'help'>('submit');
   // null shows the picker; a value opens that form.
   const [selectedForm, setSelectedForm] = useState<
-    'request' | 'disposal' | 'allocation' | 'user-id' | null
+    'requisition' | 'disposal' | 'allocation' | 'user-id' | null
   >(null);
   
   // Submit Form State
@@ -609,6 +609,8 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         <div>
           {selectedForm === 'user-id' ? (
             <UserIdFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
+          ) : selectedForm === 'requisition' ? (
+            <RequisitionFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
           ) : selectedForm === 'disposal' || selectedForm === 'allocation' ? (
             <AssetFormView
               config={selectedForm === 'disposal' ? DISPOSAL_FORM : ALLOCATION_FORM}
@@ -627,27 +629,26 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Request form - not built yet */}
-                <div
-                  aria-disabled="true"
-                  className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 opacity-70 cursor-not-allowed"
+                {/* Hardware, software and peripherals requisition */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm('requisition')}
+                  className="text-left p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                      <ClipboardList className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900">
+                      <ClipboardList className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
                     </div>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                      <Lock className="w-3 h-3" />
-                      <span>Coming soon</span>
-                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                    IT Request Form
+                    IT Hardware, Software &amp; Peripherals Requisition
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
-                    Request new hardware, software or access. Not available yet.
+                    Request new hardware, software or peripherals with the purpose, cost breakdown
+                    and item list.
                   </p>
-                </div>
+                </button>
 
                 {/* User ID requisition */}
                 <button

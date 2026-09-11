@@ -210,3 +210,40 @@ export interface UserIdFormData {
    * separately, the form only records which ones accompany it. */
   attachmentFileNames: string[];
 }
+
+export interface RequisitionItem {
+  id: string;
+  description: string;
+  quantity: string;
+  /** Estimated unit price in RM, kept as typed so partial input is not lost. */
+  price: string;
+}
+
+export interface RequisitionFormData {
+  /** The IT/IR/__/__/__ reference on the paper form. */
+  refNo: string;
+  requestDate: string;
+  requestorName: string;
+  phoneExt: string;
+  designation: string;
+  department: string;
+  company: string;
+  location: string;
+  /** Whether supporting documents accompany the request. */
+  hasAttachments: 'yes' | 'no' | '';
+  attachmentFormat: 'hardcopy' | 'softcopy' | '';
+  /** Write-in beside the attachment format, e.g. a quotation reference. */
+  attachmentDetail: string;
+  /** Whether the spend was budgeted for. */
+  budgeted: 'yes' | 'no' | '';
+  budgetedAmount: string;
+  utilisedAmount: string;
+  proposedCapex: string;
+  balanceAmount: string;
+  /** Free text explaining why the request is being raised. */
+  purpose: string;
+  items: RequisitionItem[];
+  /** Section E, completed by IT rather than the requestor. */
+  itRemarks: string;
+  itItems: RequisitionItem[];
+}

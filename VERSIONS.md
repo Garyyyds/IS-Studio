@@ -64,3 +64,4 @@ away later work permanently.
 | `11092026ver035` | 2026-09-11 | Add Section D, FOR IT DEPARTMENT USE, to the User ID Requisition Form with Processed By and Approved By signing columns, each above a signing line with a Date beneath, and a Completed by IT badge on the on-screen card. Gave the shared signature block an optional stacked layout so these shorter labels match Section C above rather than sitting inline. Also cleared the User/Requestor Name prefill in Section A so it starts empty. |
 | `11092026ver036` | 2026-09-11 | Section C and D on screen: drop the label/date rule previews, keep only the hint line |
 | `11092026ver037` | 2026-09-11 | Rename to New User ID Requisition Form; remove Nature of Request and the COO acknowledgement column |
+| `11092026ver038` | 2026-09-11 | Add the IT Hardware, Software & Peripherals Requisition Form, Sections A to F, with item tables, live totals and a two-page PDF |

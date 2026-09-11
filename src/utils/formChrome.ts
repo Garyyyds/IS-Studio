@@ -318,3 +318,166 @@ export function drawSignatureBlock(
     ctx.y = top + 11;
   }
 }
+
+/** Start a new page when `height` would not fit below the cursor. */
+export function ensureRoom(ctx: FormDoc, height: number): void {
+  if (ctx.y + height > ctx.pageHeight - ctx.margin) {
+    ctx.doc.addPage();
+    ctx.y = ctx.margin;
+  }
+}
+
+export interface TableColumn {
+  header: string;
+  /** Share of the content width. Shares are normalised, so they need not sum to 1. */
+  width: number;
+  align?: 'left' | 'center' | 'right';
+}
+
+/**
+ * A bordered item table with a grey header row, cells that grow to fit wrapped
+ * or multi-line text, and an optional total strip. Rows that would cross the
+ * bottom margin move to a new page, which repeats the header so the columns
+ * stay readable.
+ */
+export function drawItemTable(
+  ctx: FormDoc,
+  columns: TableColumn[],
+  rows: string[][],
+  options: { totalLabel?: string; totalValue?: string } = {}
+): void {
+  const { doc, margin, contentWidth } = ctx;
+
+  const totalShare = columns.reduce((sum, c) => sum + c.width, 0);
+  const colWidths = columns.map((c) => (c.width / totalShare) * contentWidth);
+  const colX: number[] = [margin];
+  colWidths.forEach((w, i) => colX.push(colX[i] + w));
+
+  const headerHeight = 7;
+  const lineHeight = 3.6;
+  const padX = 1.5;
+  const firstBaseline = 4.6;
+
+  const drawHeaderRow = () => {
+    columns.forEach((col, i) => {
+      // doc.text() sets the non-stroking colour, so the fill has to be re-set
+      // before every filled rect - otherwise each cell after the first inherits
+      // the text colour and paints over its own label.
+      doc.setFillColor(242, 242, 242);
+      doc.rect(colX[i], ctx.y, colWidths[i], headerHeight, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(0, 0, 0);
+      doc.text(col.header, colX[i] + colWidths[i] / 2, ctx.y + firstBaseline, { align: 'center' });
+    });
+    ctx.y += headerHeight;
+  };
+
+  drawHeaderRow();
+
+  rows.forEach((cells) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    // splitTextToSize honours typed newlines as well as wrapping anything too
+    // long, so a cell holding two lines comes back as two.
+    const wrapped = cells.map((text, c) =>
+      text ? (doc.splitTextToSize(text, colWidths[c] - padX * 2) as string[]) : []
+    );
+    const maxLines = Math.max(1, ...wrapped.map((lines) => lines.length));
+    const rowHeight = Math.max(7, maxLines * lineHeight + 3);
+
+    if (ctx.y + rowHeight > ctx.pageHeight - margin) {
+      doc.addPage();
+      ctx.y = margin;
+      drawHeaderRow();
+    }
+
+    wrapped.forEach((lines, c) => {
+      doc.rect(colX[c], ctx.y, colWidths[c], rowHeight);
+      if (!lines.length) return;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const align = columns[c].align ?? 'left';
+      const x =
+        align === 'center'
+          ? colX[c] + colWidths[c] / 2
+          : align === 'right'
+            ? colX[c] + colWidths[c] - padX
+            : colX[c] + padX;
+      doc.text(lines, x, ctx.y + firstBaseline, align === 'left' ? undefined : { align });
+    });
+
+    ctx.y += rowHeight;
+  });
+
+  if (options.totalLabel === undefined) return;
+
+  // The total spans everything left of the final column, so the figure lands
+  // under the prices it adds up.
+  const lastIndex = columns.length - 1;
+  const totalRowHeight = 7;
+  ensureRoom(ctx, totalRowHeight);
+
+  doc.setFillColor(242, 242, 242);
+  doc.rect(colX[0], ctx.y, colX[lastIndex] - colX[0], totalRowHeight, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(options.totalLabel, colX[lastIndex] - padX, ctx.y + firstBaseline, { align: 'right' });
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(colX[lastIndex], ctx.y, colWidths[lastIndex], totalRowHeight, 'FD');
+  doc.setTextColor(0, 0, 0);
+  doc.text(options.totalValue ?? '', colX[lastIndex] + colWidths[lastIndex] - padX, ctx.y + firstBaseline, {
+    align: 'right',
+  });
+
+  ctx.y += totalRowHeight;
+}
+
+/** Small grey italic footnote, e.g. the estimated-price caveat. */
+export function drawFootnote(ctx: FormDoc, text: string): void {
+  const { doc, margin, contentWidth } = ctx;
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(70, 70, 70);
+  const lines = doc.splitTextToSize(text, contentWidth) as string[];
+  ctx.y += 3.6;
+  doc.text(lines, margin, ctx.y);
+  ctx.y += (lines.length - 1) * 3.6;
+  doc.setTextColor(0, 0, 0);
+}
+
+/**
+ * A row of tick-box options on one baseline, all sharing a column pitch wide
+ * enough for the longest label so stacked rows line up under each other.
+ */
+export function drawTickOptions(
+  ctx: FormDoc,
+  startX: number,
+  pitch: number,
+  options: { label: string; ticked: boolean }[]
+): void {
+  const { doc } = ctx;
+  const size = 3.6;
+  const labelOffset = size + 2.5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+
+  options.forEach((option, i) => {
+    const x = startX + i * pitch;
+    drawTickBox(ctx, x, ctx.y - size + 0.6, size, option.ticked);
+    doc.text(option.label, x + labelOffset, ctx.y);
+  });
+}
+
+/** Pitch wide enough for the longest of `labels` plus its tick box. */
+export function tickOptionPitch(ctx: FormDoc, labels: string[]): number {
+  const { doc } = ctx;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  return 3.6 + 2.5 + Math.max(...labels.map((l) => doc.getTextWidth(l))) + 10;
+}
