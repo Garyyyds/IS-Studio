@@ -49,11 +49,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const totalTasks = tasks.length || 1;
   const completionRate = Math.round((resolvedCount / totalTasks) * 100);
 
-  // Priority counts
-  const p1Count = tasks.filter((t) => t.priority === 'P1').length;
-  const p2Count = tasks.filter((t) => t.priority === 'P2').length;
-  const p3Count = tasks.filter((t) => t.priority === 'P3').length;
-  const p4Count = tasks.filter((t) => t.priority === 'P4').length;
+  const blockedCount = tasks.filter((t) => t.status === 'blocked').length;
 
   // Status breakdown
   const statusCounts = {
@@ -93,7 +89,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Symmetrical overview of task resolution velocity, priority distribution, handbook coverage, and domain allocations.
+            Symmetrical overview of task resolution velocity, workflow status, handbook coverage, and domain allocations.
           </p>
         </div>
 
@@ -129,22 +125,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </div>
         </div>
 
-        {/* Metric 2: Urgent Workload (P1 / P2) */}
+        {/* Metric 2: Blocked Workload */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4.5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                High Priority (P1/P2)
+                Blocked Tickets
               </span>
-              <AlertTriangle className={`w-4 h-4 ${p1Count > 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} />
+              <AlertTriangle className={`w-4 h-4 ${blockedCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'}`} />
             </div>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-mono font-extrabold text-slate-900 dark:text-slate-100">{p1Count + p2Count}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">({p1Count} P1, {p2Count} P2)</span>
+              <span className="text-3xl font-mono font-extrabold text-slate-900 dark:text-slate-100">{blockedCount}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">of {totalActive} active</span>
             </div>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3">
-            <div className="bg-red-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${((p1Count + p2Count) / totalTasks) * 100}%` }} />
+            <div className="bg-rose-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${(blockedCount / totalTasks) * 100}%` }} />
           </div>
         </div>
 
@@ -191,86 +187,17 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
       {/* Symmetrical Dual Panel Layout (Both sides have balanced structure and equal visual weight) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        {/* Left Panel: Priority Distribution & Workflow Status */}
+        {/* Left Panel: Workflow Status */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between space-y-5">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
               <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Priority Distribution</span>
+                <span>Workflow Status</span>
               </h3>
               <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-medium">Total: {tasks.length} Tasks</span>
             </div>
 
-            <div className="space-y-3.5">
-              {/* P1 Bar */}
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-red-700 dark:text-red-400 font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-600 dark:bg-red-500" />
-                    <span>P1 · Critical Outage</span>
-                  </span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100 font-semibold">{p1Count}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${tasks.length ? (p1Count / tasks.length) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* P2 Bar */}
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span>P2 · High Impact</span>
-                  </span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100 font-semibold">{p2Count}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${tasks.length ? (p2Count / tasks.length) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* P3 Bar */}
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-indigo-700 dark:text-indigo-400 font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-500" />
-                    <span>P3 · Standard / Normal</span>
-                  </span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100 font-semibold">{p3Count}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${tasks.length ? (p3Count / tasks.length) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* P4 Bar */}
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 dark:text-slate-400 font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500" />
-                    <span>P4 · Routine / Backlog</span>
-                  </span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100 font-semibold">{p4Count}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-slate-400 dark:bg-slate-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${tasks.length ? (p4Count / tasks.length) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Workflow Stage Balanced Summary Footer */}

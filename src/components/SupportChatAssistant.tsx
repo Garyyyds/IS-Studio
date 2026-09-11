@@ -97,7 +97,6 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
             ticketNumber: t.ticketNumber,
             title: t.title,
             status: t.status,
-            priority: t.priority,
           })),
           runbooks: runbooks.map((r) => ({
             code: r.code,

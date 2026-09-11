@@ -17,7 +17,7 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
-import { TaggingRule, PriorityLevel, ITCategory } from '../types';
+import { TaggingRule, ITCategory } from '../types';
 import { evaluateTaskPriorityWithRules } from '../utils/priorityEngine';
 
 interface PriorityRulesManagerProps {
@@ -29,32 +29,32 @@ interface PriorityRulesManagerProps {
 
 const PRESET_TEST_CASES = [
   {
-    label: 'P1 Outage: DB Connection Exhaustion',
-    badge: 'P1 Outage',
+    label: 'Outage: DB Connection Exhaustion',
+    badge: 'Outage',
     badgeClass: 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900',
     text: 'FATAL: remaining connection slots are reserved for non-replication superuser connections in production billing cluster',
     env: 'Production' as const,
     affected: 15000,
   },
   {
-    label: 'P2 High: Memory Spike / OOM Warning',
-    badge: 'P2 High',
+    label: 'Memory Spike / OOM Warning',
+    badge: 'Degraded',
     badgeClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900',
     text: 'WARN [WorkerPool]: Container memory usage exceeded 92% threshold; potential OOM crash loop impending',
     env: 'Production' as const,
     affected: 3500,
   },
   {
-    label: 'P3 Medium: Expiring TLS Certificate',
-    badge: 'P3 Medium',
+    label: 'Expiring TLS Certificate',
+    badge: 'Certificate',
     badgeClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900',
     text: 'Notice: SSL certificate for api.internal.infra expires in 5 days. Renewal needed before Friday.',
     env: 'Staging' as const,
     affected: 0,
   },
   {
-    label: 'P4 Low: Minor Staging CSS Typo',
-    badge: 'P4 Low',
+    label: 'Minor Staging CSS Typo',
+    badge: 'Cosmetic',
     badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     text: 'Minor typo in staging admin navigation banner. Please fix before next weekly release.',
     env: 'Staging' as const,
@@ -81,7 +81,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
     name: '',
     matchType: 'keyword',
     pattern: '',
-    targetPriority: 'P2',
     tagsToApply: ['auto-triage'],
     category: 'DevOps & SRE',
     enabled: true,
@@ -166,8 +165,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
       name: '',
       matchType: 'keyword',
       pattern: '',
-      targetPriority: 'P2',
-      tagsToApply: ['auto-triage'],
+        tagsToApply: ['auto-triage'],
         category: 'DevOps & SRE',
       enabled: true,
       description: '',
@@ -185,7 +183,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               <Zap className="w-4 h-4" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Automated Priority Tagging Rules Engine
+              Automated Tagging Rules Engine
             </h2>
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-mono font-bold">
               {rules.filter((r) => r.enabled).length} Active Rules
@@ -368,23 +366,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Calculated Priority:</span>
-                <span
-                  className={`px-3 py-1 rounded-md text-xs font-bold border shadow-xs ${
-                    testResult.priority === 'P1'
-                      ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900 animate-pulse'
-                      : testResult.priority === 'P2'
-                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-                      : testResult.priority === 'P3'
-                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                  }`}
-                >
-                  {testResult.priority} Severity
-                </span>
-              </div>
-
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-600 dark:text-slate-300 font-medium">Category:</span>
                 <span className="text-slate-800 dark:text-slate-200 font-medium">{testResult.category}</span>
@@ -420,9 +401,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
                           <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <span className="truncate">{rule.name}</span>
                         </span>
-                        <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 font-bold shrink-0">
-                          {rule.targetPriority}
-                        </span>
                       </div>
                     ))}
                   </div>
@@ -435,14 +413,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">
-                Evaluation Rationale:
-              </span>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                {testResult.priorityRationale}
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -461,17 +431,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               <div className="space-y-1.5 flex-1 min-w-[300px]">
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{rule.name}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      rule.targetPriority === 'P1'
-                        ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
-                        : rule.targetPriority === 'P2'
-                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-                        : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900'
-                    }`}
-                  >
-                    Sets {rule.targetPriority}
-                  </span>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-300">{rule.description}</p>
@@ -521,7 +480,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Create Automated Priority Rule</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Create Automated Tagging Rule</h3>
 
             <form onSubmit={handleAddRule} className="space-y-4">
               <div>
@@ -532,25 +491,11 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
                   value={newRule.name}
                   onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
-                  placeholder="e.g., Redis Connection Refused Auto-P2"
+                  placeholder="e.g., Redis Connection Refused Auto-Tag"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Target Priority</label>
-                  <select
-                    value={newRule.targetPriority}
-                    onChange={(e) => setNewRule({ ...newRule, targetPriority: e.target.value as PriorityLevel })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="P1">P1 - Critical (Outage)</option>
-                    <option value="P2">P2 - High (Degraded)</option>
-                    <option value="P3">P3 - Medium (Minor)</option>
-                    <option value="P4">P4 - Low (Routine)</option>
-                  </select>
-                </div>
-
               </div>
 
               <div>

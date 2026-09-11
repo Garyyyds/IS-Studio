@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { Task, PriorityLevel, EnvironmentType, ITCategory, UserSettings } from '../types';
+import { Task, EnvironmentType, ITCategory, UserSettings } from '../types';
 import {
   isTaskRecentlyCompleted,
   isTaskArchived,
@@ -50,11 +50,10 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
   onNavigateToBoard,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | 'ALL'>('ALL');
   const [selectedEnv, setSelectedEnv] = useState<EnvironmentType | 'ALL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
   const [retentionFilter, setRetentionFilter] = useState<'all' | 'archived' | 'recent'>('all');
-  const [sortBy, setSortBy] = useState<'resolved_desc' | 'resolved_asc' | 'priority' | 'duration'>('resolved_desc');
+  const [sortBy, setSortBy] = useState<'resolved_desc' | 'resolved_asc' | 'duration'>('resolved_desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
@@ -104,11 +103,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         return false;
       }
 
-      // Priority
-      if (selectedPriority !== 'ALL' && task.priority !== selectedPriority) {
-        return false;
-      }
-
       // Environment
       if (selectedEnv !== 'ALL' && task.environment !== selectedEnv) {
         return false;
@@ -137,7 +131,7 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
 
       return true;
     });
-  }, [allResolvedTasks, retentionFilter, selectedPriority, selectedEnv, selectedCategory, search, retentionMinutes]);
+  }, [allResolvedTasks, retentionFilter, selectedEnv, selectedCategory, search, retentionMinutes]);
 
   // Sorted tasks
   const sortedTasks = useMemo(() => {
@@ -151,10 +145,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         const timeA = a.resolvedAt ? new Date(a.resolvedAt).getTime() : new Date(a.updatedAt).getTime();
         const timeB = b.resolvedAt ? new Date(b.resolvedAt).getTime() : new Date(b.updatedAt).getTime();
         return timeA - timeB;
-      }
-      if (sortBy === 'priority') {
-        const pWeights = { P1: 4, P2: 3, P3: 2, P4: 1 };
-        return pWeights[b.priority] - pWeights[a.priority];
       }
       if (sortBy === 'duration') {
         const durA = getTimeToResolve(a).durationMs;
@@ -184,7 +174,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
     const headers = [
       'Ticket Number',
       'Title',
-      'Priority',
       'Category',
       'Environment',
       'Assignee',
@@ -199,7 +188,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
       return [
         `"${t.ticketNumber}"`,
         `"${t.title.replace(/"/g, '""')}"`,
-        `"${t.priority}"`,
         `"${t.category}"`,
         `"${t.environment}"`,
         `"${t.assignee.name}"`,
@@ -390,7 +378,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             >
               <option value="resolved_desc">Recently Resolved</option>
               <option value="resolved_asc">Oldest Resolved</option>
-              <option value="priority">Priority (P1 → P4)</option>
               <option value="duration">MTTR (Longest First)</option>
             </select>
           </div>
@@ -402,19 +389,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             <Filter className="w-3.5 h-3.5" />
             <span>Filter:</span>
           </div>
-
-          {/* Priority */}
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="P1">P1 Critical</option>
-            <option value="P2">P2 High</option>
-            <option value="P3">P3 Medium</option>
-            <option value="P4">P4 Low</option>
-          </select>
 
           {/* Environment */}
           <select
@@ -447,10 +421,9 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             <option value="SysAdmin">SysAdmin</option>
           </select>
 
-          {(selectedPriority !== 'ALL' || selectedEnv !== 'ALL' || selectedCategory !== 'ALL' || search.trim()) && (
+          {(selectedEnv !== 'ALL' || selectedCategory !== 'ALL' || search.trim()) && (
             <button
               onClick={() => {
-                setSelectedPriority('ALL');
                 setSelectedEnv('ALL');
                 setSelectedCategory('ALL');
                 setSearch('');
@@ -533,7 +506,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
               <button
                 onClick={() => {
                   setRetentionFilter('all');
-                  setSelectedPriority('ALL');
                   setSelectedEnv('ALL');
                   setSelectedCategory('ALL');
                   setSearch('');
@@ -565,14 +537,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
                     minute: '2-digit',
                   });
 
-              // Priority pill styling
-              const priorityColors: Record<PriorityLevel, string> = {
-                P1: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900 font-bold',
-                P2: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900',
-                P3: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900',
-                P4: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
-              };
-
               return (
                 <div
                   key={task.id}
@@ -581,7 +545,7 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
                     isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : ''
                   }`}
                 >
-                  {/* Ticket # & Priority */}
+                  {/* Ticket # */}
                   <div
                     className="col-span-1 flex items-center gap-2"
                     onClick={(e) => e.stopPropagation()}
@@ -595,11 +559,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
                     <div className="flex flex-col">
                       <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         {task.ticketNumber}
-                      </span>
-                      <span
-                        className={`inline-block px-1.5 py-0.2 rounded text-[10px] border mt-0.5 text-center ${priorityColors[task.priority]}`}
-                      >
-                        {task.priority}
                       </span>
                     </div>
                   </div>

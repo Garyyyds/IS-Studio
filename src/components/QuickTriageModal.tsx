@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { Task, Runbook, PriorityLevel, ITCategory, EnvironmentType } from '../types';
+import { Task, Runbook, ITCategory, EnvironmentType } from '../types';
 
 interface QuickTriageModalProps {
   isOpen: boolean;
@@ -91,14 +91,10 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
       description: rawText,
       rawLogs: rawText,
       status: 'investigating',
-      priority: (result.priority as PriorityLevel) || 'P2',
-      priorityRationale: result.priorityRationale || 'AI Auto-Triage based on error log patterns.',
       automatedTags: result.automatedTags || ['ai-triage'],
       manualTags: [],
       category: (result.category as ITCategory) || 'DevOps & SRE',
       environment,
-      impactScore: result.impactScore || 7,
-      urgencyScore: result.urgencyScore || 7,
       affectedUsersEstimate: affectedEstimate,
       assignee: {
         name: 'On-Call SRE',
@@ -132,10 +128,10 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                AI Fast Incident Triage & Priority Classifier
+                AI Fast Incident Triage & Classifier
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Paste error logs, Prometheus alert JSON, or stack trace for instant priority tagging and SOP recommendation.
+                Paste error logs, Prometheus alert JSON, or stack trace for instant tagging and SOP recommendation.
               </p>
             </div>
           </div>
@@ -214,35 +210,11 @@ at pool.getConnection (/app/node_modules/pg-pool/index.js:52)`}
             <div className="bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 rounded-xl p-5 space-y-4 shadow-xs animate-in fade-in">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 dark:border-indigo-900/60 pb-3">
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`px-3 py-1 rounded-md text-xs font-bold border ${
-                      result.priority === 'P1'
-                        ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 animate-pulse'
-                        : result.priority === 'P2'
-                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                        : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-                    }`}
-                  >
-                    {result.priority}
-                  </span>
                   <span className="text-xs text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     {result.category}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400">
-                  <span>Impact: {result.impactScore}/10</span>
-                  <span>•</span>
-                  <span>Urgency: {result.urgencyScore}/10</span>
-                </div>
-              </div>
-
-              {/* Rationale */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  ITIL / SRE Triage Rationale:
-                </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">{result.priorityRationale}</p>
               </div>
 
               {/* Potential Root Cause Hint */}

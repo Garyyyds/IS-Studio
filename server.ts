@@ -941,7 +941,7 @@ app.post('/api/auth/profile', async (req, res) => {
   }
 });
 
-// API: Automated Priority Tagging & Triage
+// API: Automated tagging & triage
 app.post('/api/ai/classify-priority', async (req, res) => {
   try {
     const { title, description, rawLogs, environment, affectedUsers } = req.body;
@@ -952,7 +952,7 @@ app.post('/api/ai/classify-priority', async (req, res) => {
 
     const ai = getAi();
     
-    const prompt = `Analyze this IT operational task/incident and perform automated priority classification and triage tagging.
+    const prompt = `Analyze this IT operational task/incident and perform automated categorisation and triage tagging.
 
 Task Title: ${title}
 Environment: ${environment || 'Production'}
@@ -960,11 +960,8 @@ Estimated Affected Users: ${affectedUsers || 'Unknown'}
 Description: ${description || 'N/A'}
 System Logs / Stack Trace / Error Payload: ${rawLogs || 'None provided'}
 
-Provide a strict, professional IT triage assessment following ITIL/SRE incident severity guidelines:
-- P1 (Critical): Total outage of core service, data corruption, severe security breach, widespread customer impact.
-- P2 (High): Major feature impaired, failover degraded, high user impact without full outage, time-sensitive security patch.
-- P3 (Medium): Minor bug, non-critical service degradation, internal tool issue, standard change.
-- P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance.`;
+Provide a strict, professional IT triage assessment: pick the best-fitting category,
+extract useful operational tags, and suggest a short remediation checklist.`;
 
     const response = await generateWithRetry(ai, {
       contents: prompt,
@@ -973,14 +970,6 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            priority: {
-              type: Type.STRING,
-              description: 'One of P1, P2, P3, P4',
-            },
-            priorityRationale: {
-              type: Type.STRING,
-              description: 'Clear ITIL/SRE technical justification for this priority level.',
-            },
             category: {
               type: Type.STRING,
               description: 'Best matching category: DevOps & SRE, Security & IAM, Database, Cloud Infra, Networking, Application, SysAdmin',
@@ -988,15 +977,7 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
             automatedTags: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: 'Extracted automated tags (e.g. ["k8s", "prod-outage", "postgres", "cve-high", "p1-critical"])',
-            },
-            impactScore: {
-              type: Type.NUMBER,
-              description: 'Impact score from 1 (minimal) to 10 (catastrophic business halt)',
-            },
-            urgencyScore: {
-              type: Type.NUMBER,
-              description: 'Urgency score from 1 (can wait) to 10 (immediate fire-fighting required)',
+              description: 'Extracted automated tags (e.g. ["k8s", "prod-outage", "postgres", "cve-high", "critical"])',
             },
             suggestedChecklist: {
               type: Type.ARRAY,
@@ -1016,12 +997,8 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
             },
           },
           required: [
-            'priority',
-            'priorityRationale',
             'category',
             'automatedTags',
-            'impactScore',
-            'urgencyScore',
             'suggestedChecklist',
           ],
         },
@@ -1031,8 +1008,8 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
     const result = JSON.parse(response.text?.trim() || '{}');
     res.json(result);
   } catch (error: any) {
-    console.error('Priority classification error:', error);
-    sendAiError(res, error, 'Failed to classify priority');
+    console.error('Triage classification error:', error);
+    sendAiError(res, error, 'Failed to classify the ticket');
   }
 });
 
@@ -1044,7 +1021,6 @@ app.post('/api/ai/generate-runbook', async (req, res) => {
     const environment = req.body.environment || 'Production';
     const category = req.body.category || 'Networking';
     const systemContext = req.body.systemContext || req.body.incidentDescription || req.body.description || '';
-    const targetSeverity = req.body.targetSeverity || 'P3';
 
     if (!problemTitle) {
       return res.status(400).json({ error: 'Problem title is required' });
@@ -1059,7 +1035,6 @@ Problem: ${problemTitle}
 Environment: ${environment}
 Category: ${category}
 System Context: ${systemContext}
-Severity: ${targetSeverity}
 Error Output / Logs: ${errorLogs || 'None provided'}
 
 Provide real, production-tested diagnostic and remediation CLI commands (Bash, PowerShell, cmd, kubectl, docker, SQL, systemctl, netsh, ping).
@@ -1075,7 +1050,6 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
             title: { type: Type.STRING, description: 'Descriptive, professional SOP title' },
             code: { type: Type.STRING, description: 'Standard code like SOP-OPS-042 or RUN-DB-019' },
             category: { type: Type.STRING },
-            severityTarget: { type: Type.STRING, description: 'P1, P2, P3, P4, or ALL' },
             environment: { type: Type.STRING },
             symptom: { type: Type.STRING, description: 'Observable behavior, alert triggers, metrics deviation' },
             triggerAlertPatterns: {
@@ -1133,7 +1107,6 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
             'title',
             'code',
             'category',
-            'severityTarget',
             'symptom',
             'triggerAlertPatterns',
             'rootCauseAnalysis',
@@ -1183,8 +1156,7 @@ app.post('/api/ai/chat', async (req, res) => {
       ? tickets
           .slice(0, 15)
           .map((t: any) =>
-            '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status +
-            ' | priority ' + t.priority
+            '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status
           )
           .join('\n')
       : 'None open.';

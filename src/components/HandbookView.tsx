@@ -22,7 +22,7 @@ import {
   Eye,
   Lock
 } from 'lucide-react';
-import { Runbook, PriorityLevel, ITCategory, UserRole } from '../types';
+import { Runbook, ITCategory, UserRole } from '../types';
 import { exportRunbookToPdf } from '../utils/pdfExport';
 
 interface HandbookViewProps {
@@ -45,7 +45,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
   const isReadOnly = userRole === 'user';
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
   const [expandedRunbookId, setExpandedRunbookId] = useState<string | null>(null);
   const [copiedCli, setCopiedCli] = useState<string | null>(null);
   const [runbookToDelete, setRunbookToDelete] = useState<Runbook | null>(null);
@@ -79,11 +78,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
 
     // Category
     if (selectedCategory !== 'ALL' && rb.category !== selectedCategory) {
-      return false;
-    }
-
-    // Severity
-    if (selectedSeverity !== 'ALL' && rb.severityTarget !== selectedSeverity && rb.severityTarget !== 'ALL') {
       return false;
     }
 
@@ -192,27 +186,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
             </button>
           ))}
         </div>
-
-        {/* Severity Filter */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 text-xs">
-          {['ALL', 'P1', 'P2', 'P3', 'P4'].map((sev) => (
-            <button
-              key={sev}
-              onClick={() => setSelectedSeverity(sev)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
-                selectedSeverity === sev
-                  ? sev === 'P1'
-                    ? 'bg-red-600 text-white'
-                    : sev === 'P2'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-indigo-600 text-white'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {sev}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Runbook Items List */}
@@ -244,17 +217,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">{rb.title}</h3>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            rb.severityTarget === 'P1'
-                              ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                              : rb.severityTarget === 'P2'
-                              ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                              : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-                          }`}
-                        >
-                          SEV: {rb.severityTarget}
-                        </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">

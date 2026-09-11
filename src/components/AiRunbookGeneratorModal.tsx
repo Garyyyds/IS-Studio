@@ -9,7 +9,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
-import { Runbook, Task, ITCategory, EnvironmentType, PriorityLevel } from '../types';
+import { Runbook, Task, ITCategory, EnvironmentType } from '../types';
 
 interface AiRunbookGeneratorModalProps {
   isOpen: boolean;
@@ -23,7 +23,6 @@ const QUICK_PROMPT_PRESETS = [
     title: 'Connection failure to fileshare (\\\\hq-file01)',
     category: 'Networking' as ITCategory,
     environment: 'Corporate LAN' as EnvironmentType,
-    severity: 'P3' as PriorityLevel,
     description: 'Workstation cannot connect to \\\\hq-file01 fileshare or map drive Z:. Need DNS verification and adapter DHCP reset.',
     logs: 'ping: could not find host hq-file01\nError 0x80070035: The network path was not found.',
   },
@@ -31,7 +30,6 @@ const QUICK_PROMPT_PRESETS = [
     title: 'PostgreSQL Connection Pool Exhaustion & Deadlocks',
     category: 'Database' as ITCategory,
     environment: 'Production' as EnvironmentType,
-    severity: 'P1' as PriorityLevel,
     description: 'PgBouncer connection queue full, pg_stat_activity shows idle in transaction queries blocking table locks.',
     logs: 'FATAL: remaining connection slots are reserved for non-replication superuser connections',
   },
@@ -39,7 +37,6 @@ const QUICK_PROMPT_PRESETS = [
     title: 'Kubernetes Pod CrashLoopBackOff & Exit 137 OOMKilled',
     category: 'DevOps & SRE' as ITCategory,
     environment: 'Production' as EnvironmentType,
-    severity: 'P2' as PriorityLevel,
     description: 'Container killed by Linux cgroup OOM killer due to memory spikes during load.',
     logs: 'Last State: Terminated, Reason: OOMKilled, Exit Code: 137',
   },
@@ -56,7 +53,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
   const [rawLogs, setRawLogs] = useState(initialTask?.rawLogs || '');
   const [category, setCategory] = useState<ITCategory>(initialTask?.category || 'Networking');
   const [environment, setEnvironment] = useState<EnvironmentType>(initialTask?.environment || 'Corporate LAN');
-  const [targetSeverity, setTargetSeverity] = useState<PriorityLevel | 'ALL'>(initialTask?.priority || 'P3');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +64,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
       setRawLogs(initialTask?.rawLogs || '');
       setCategory(initialTask?.category || 'Networking');
       setEnvironment(initialTask?.environment || 'Corporate LAN');
-      setTargetSeverity(initialTask?.priority || 'P3');
       setError(null);
     }
   }, [initialTask, isOpen]);
@@ -79,7 +74,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
     setIncidentTitle(p.title);
     setCategory(p.category);
     setEnvironment(p.environment);
-    setTargetSeverity(p.severity);
     setIncidentDescription(p.description);
     setRawLogs(p.logs);
   };
@@ -101,7 +95,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
           rawLogs,
           category,
           environment,
-          targetSeverity,
         }),
       });
 
@@ -116,7 +109,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
         code: generatedData.code || `SOP-${category.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
         title: generatedData.title || incidentTitle,
         category: (generatedData.category as ITCategory) || category,
-        severityTarget: (generatedData.severityTarget as PriorityLevel) || targetSeverity,
         environment,
         lastUpdated: new Date().toISOString().slice(0, 10),
         author: 'AI SRE Assistant (Reviewed by Lead)',
@@ -242,19 +234,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
               </select>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Severity Target</label>
-              <select
-                value={targetSeverity}
-                onChange={(e) => setTargetSeverity(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800"
-              >
-                <option value="P1">P1 - Critical Outage</option>
-                <option value="P2">P2 - High Degraded</option>
-                <option value="P3">P3 - Medium Minor</option>
-                <option value="P4">P4 - Low / Routine</option>
-              </select>
-            </div>
           </div>
 
           <div>

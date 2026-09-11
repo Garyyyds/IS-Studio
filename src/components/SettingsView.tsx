@@ -6,7 +6,6 @@ import {
   TaggingRule, 
   EnvironmentType, 
   ITCategory, 
-  PriorityLevel,
   StorageStatusInfo,
   AppUser
 } from '../types';
@@ -231,7 +230,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     {
       id: 'list',
       title: 'Dense Task List View',
-      description: 'Tabular overview with batch priority updates, multi-column sorting, environment filters, and quick status toggles.',
+      description: 'Tabular overview with multi-column sorting, environment filters, and quick status toggles.',
       icon: <List className="w-5 h-5 text-sky-600 dark:text-sky-400" />,
       category: 'Task Workflow',
     },
@@ -251,8 +250,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     },
     {
       id: 'rules',
-      title: 'Automated Priority & Tagging Rules',
-      description: 'Keyword and regex pattern engine that auto-classifies incoming logs and error traces into P1-P4 priority levels.',
+      title: 'Automated Tagging Rules',
+      description: 'Keyword and regex pattern engine that auto-tags and categorises incoming logs and error traces.',
       icon: <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
       category: 'Automation',
     },
@@ -1060,7 +1059,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Surfaces incident escalation workflows and high-visibility priority badges for a shared support queue.
+                      Surfaces incident escalation workflows and richer ticket detail for a shared support queue.
                     </p>
                   </div>
                 </div>
@@ -1070,34 +1069,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                     Display Preferences
                   </h4>
-
-                  {/* P1 Top Alert Banner */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Top P1 Critical Outage Badge</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Display persistent inline rose notification pill next to brand title when a P1 task is active.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateSettings({
-                          ...settings,
-                          showP1Banner: !settings.showP1Banner,
-                        })
-                      }
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.showP1Banner ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          settings.showP1Banner ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
 
                   {/* Show Automated Tags */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
@@ -1269,26 +1240,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Default Initial Priority
-                    </label>
-                    <select
-                      value={settings.defaultPriority}
-                      onChange={(e) =>
-                        onUpdateSettings({
-                          ...settings,
-                          defaultPriority: e.target.value as PriorityLevel,
-                        })
-                      }
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
-                    >
-                      <option value="P1">P1 - Critical Outage</option>
-                      <option value="P2">P2 - High Priority</option>
-                      <option value="P3">P3 - Standard / Normal</option>
-                      <option value="P4">P4 - Low / Backlog</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             </div>

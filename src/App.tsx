@@ -4,7 +4,6 @@ import {
   Runbook, 
   TaggingRule, 
   TaskStatus, 
-  PriorityLevel, 
   EnvironmentType, 
   ITCategory,
   UserSettings,
@@ -494,14 +493,10 @@ export default function App() {
       title: '',
       description: '',
       status,
-      priority: settings.defaultPriority || 'P3',
-      priorityRationale: 'Direct ticket creation',
       automatedTags: [],
       manualTags: [],
       category: settings.defaultCategory || 'Application',
       environment: settings.defaultEnvironment || 'Corporate LAN',
-      impactScore: 5,
-      urgencyScore: 5,
       requesterName: currentUser?.name || 'Employee Requester',
       requesterEmail: currentUser?.email || 'employee@company.com',
       requesterDepartment: currentUser?.department || 'General',
@@ -527,24 +522,7 @@ export default function App() {
     setIsTaskModalOpen(true);
   };
 
-  const handleBatchPriority = (taskIds: string[], priority: PriorityLevel) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (taskIds.includes(t.id)) {
-          return {
-            ...t,
-            priority,
-            priorityRationale: `Manually set to ${priority} in batch action`,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return t;
-      })
-    );
-    showToast(`Updated ${taskIds.length} tasks to ${priority}`);
-  };
-
-  // Automated Priority Tagging Batch Scan
+  // Automated tagging batch scan
   const handleAutoScanAll = () => {
     setIsScanning(true);
     let taggedCount = 0;
@@ -561,18 +539,14 @@ export default function App() {
         rules
       );
 
-      if (evaluation.priority !== task.priority || evaluation.automatedTags.length > 0) {
+      if (evaluation.automatedTags.length > 0) {
         taggedCount++;
       }
 
       return {
         ...task,
-        priority: evaluation.priority,
-        priorityRationale: evaluation.priorityRationale,
         automatedTags: evaluation.automatedTags,
         category: evaluation.category,
-        impactScore: evaluation.impactScore,
-        urgencyScore: evaluation.urgencyScore,
         isAutoTagged: true,
         updatedAt: new Date().toISOString(),
       };
@@ -699,14 +673,10 @@ export default function App() {
       description: ticketData.description || '',
       rawLogs: ticketData.rawLogs,
       status: 'backlog',
-      priority: ticketData.priority || 'P3',
-      priorityRationale: ticketData.priorityRationale || 'User submitted request via Employee Portal.',
       automatedTags: ticketData.automatedTags || ['User Request', 'PORTAL'],
       manualTags: ticketData.manualTags || ['Portal Submission'],
       category: ticketData.category || 'Application',
       environment: ticketData.environment || 'Corporate LAN',
-      impactScore: ticketData.impactScore || 5,
-      urgencyScore: ticketData.urgencyScore || 5,
       affectedUsersEstimate: 1,
       assignee: ticketData.assignee || {
         name: 'IT Helpdesk Queue',
@@ -804,7 +774,6 @@ export default function App() {
                 onSelectTask={handleSelectTask}
                 onStatusChange={handleStatusChange}
                 onOpenRunbook={handleOpenRunbookFromAnywhere}
-                onBatchPriority={handleBatchPriority}
                 onOpenQuickTriage={() => setIsQuickTriageOpen(true)}
                 onDeleteTask={handleDeleteTask}
                 onBatchDelete={handleBatchDeleteTasks}

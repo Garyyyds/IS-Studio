@@ -20,7 +20,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { Task, Runbook, AppUser, PriorityLevel, ITCategory, EnvironmentType, TaskStatus } from '../types';
+import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
 
 interface UserPortalViewProps {
   currentUser: AppUser;
@@ -86,12 +86,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
     setIsSubmitting(true);
 
-    // Submitted tickets land at the neutral default; IT triages from there,
-    // either by hand or via the automated tagging rules.
-    const mappedPriority: PriorityLevel = 'P3';
-    const impactScore = 5;
-    const urgencyScore = 5;
-
     const ticketNumber = `REQ-${1000 + tasks.length + 1}`;
 
     const newTicket: Partial<Task> = {
@@ -101,11 +95,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       rawLogs: rawLogs.trim() || undefined,
       category,
       environment: 'Corporate LAN',
-      priority: mappedPriority,
-      priorityRationale: 'User submitted request via Employee Portal. Awaiting IT triage.',
       status: 'backlog',
-      impactScore,
-      urgencyScore,
       automatedTags: ['User Request', category],
       manualTags: ['Portal Submission'],
       isAutoTagged: false,
@@ -539,15 +529,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
                     <div className="flex items-center gap-2">
                       {getStatusBadge(ticket.status)}
-                      <span className={`text-[11px] px-2 py-0.5 rounded font-bold ${
-                        ticket.priority === 'P1'
-                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-                          : ticket.priority === 'P2'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300'
-                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                      }`}>
-                        {ticket.priority} Priority
-                      </span>
                     </div>
                   </div>
 

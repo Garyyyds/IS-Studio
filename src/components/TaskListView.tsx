@@ -17,7 +17,7 @@ import {
   ExternalLink,
   CheckCircle2
 } from 'lucide-react';
-import { Task, Runbook, TaskStatus, PriorityLevel, UserSettings } from '../types';
+import { Task, Runbook, TaskStatus, UserSettings } from '../types';
 import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
 import { isTaskRecentlyCompleted, getTaskRetentionInfo, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
@@ -28,7 +28,6 @@ interface TaskListViewProps {
   onSelectTask: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onOpenRunbook: (runbookId: string) => void;
-  onBatchPriority: (taskIds: string[], priority: PriorityLevel) => void;
   onOpenQuickTriage: () => void;
   onDeleteTask?: (taskId: string) => void;
   onBatchDelete?: (taskIds: string[]) => void;
@@ -42,7 +41,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   onSelectTask,
   onStatusChange,
   onOpenRunbook,
-  onBatchPriority,
   onOpenQuickTriage,
   onDeleteTask,
   onBatchDelete,
@@ -50,7 +48,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'priority' | 'created'>('priority');
+  const [sortBy, setSortBy] = useState<'created'>('created');
   const [showAllDone, setShowAllDone] = useState(false);
 
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
@@ -78,10 +76,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    if (sortBy === 'priority') {
-      const pWeights = { P1: 4, P2: 3, P3: 2, P4: 1 };
-      return pWeights[b.priority] - pWeights[a.priority];
-    }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
@@ -133,7 +127,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           <button
             onClick={onOpenQuickTriage}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 text-xs font-semibold transition cursor-pointer shadow-xs shrink-0"
-            title="Paste an IT log or alert to auto-classify priority"
+            title="Paste an IT log or alert to auto-classify and tag it"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>AI Triage</span>
@@ -149,7 +143,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
             >
-              <option value="priority">Priority (P1 → P4)</option>
               <option value="created">Created Date</option>
             </select>
           </div>
@@ -160,17 +153,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               <span className="text-xs text-indigo-600 dark:text-indigo-400 font-mono font-bold whitespace-nowrap">
                 {selectedIds.length} sel
               </span>
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
-                {(['P1', 'P2', 'P3', 'P4'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => onBatchPriority(selectedIds, p)}
-                    className="px-1.5 sm:px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
               {onBatchDelete && (
                 <button
                   onClick={() => {
@@ -234,7 +216,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                     className="rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-0"
                   />
                 </th>
-                <th className="py-3 px-3">Ticket / Priority</th>
+                <th className="py-3 px-3">Ticket</th>
                 <th className="py-3 px-4">Title & Context</th>
                 <th className="py-3 px-3">Environment</th>
                 <th className="py-3 px-3">Status</th>
@@ -276,19 +258,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900">{task.ticketNumber}</span>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                              task.priority === 'P1'
-                                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
-                                : task.priority === 'P2'
-                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-                                : task.priority === 'P3'
-                                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                            }`}
-                          >
-                            {task.priority}
-                          </span>
                         </div>
                       </td>
 

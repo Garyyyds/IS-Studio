@@ -1,5 +1,3 @@
-export type PriorityLevel = 'P1' | 'P2' | 'P3' | 'P4';
-
 export type TaskStatus = 
   | 'backlog' 
   | 'investigating' 
@@ -52,14 +50,10 @@ export interface Task {
   rawLogs?: string;
   errorSignature?: string;
   status: TaskStatus;
-  priority: PriorityLevel;
-  priorityRationale: string;
   automatedTags: string[];
   manualTags: string[];
   category: ITCategory;
   environment: EnvironmentType;
-  impactScore: number; // 1-10
-  urgencyScore: number; // 1-10
   affectedUsersEstimate?: number;
   assignee: {
     name: string;
@@ -105,7 +99,6 @@ export interface Runbook {
   code: string; // e.g. "SOP-SEC-042"
   title: string;
   category: ITCategory | string;
-  severityTarget: PriorityLevel | 'ALL';
   environment: EnvironmentType | string;
   lastUpdated: string;
   author: string;
@@ -128,7 +121,6 @@ export interface TaggingRule {
   name: string;
   matchType: 'keyword' | 'regex' | 'environment' | 'impact_high';
   pattern: string; // keyword or regex pattern
-  targetPriority: PriorityLevel;
   tagsToApply: string[];
   category?: ITCategory;
   enabled: boolean;
@@ -148,14 +140,12 @@ export interface UserSettings {
   themeMode: 'light' | 'dark' | 'system';
   workstationMode: 'personal' | 'team';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
-  showP1Banner: boolean;
   showAutomatedTagsOnCards: boolean;
   showChecklistProgressOnCards: boolean;
   compactCards: boolean;
   operatorName: string;
   defaultEnvironment: EnvironmentType;
   defaultCategory: ITCategory;
-  defaultPriority: PriorityLevel;
 }
 
 export type ActiveTab = 'kanban' | 'list' | 'history' | 'handbook' | 'rules' | 'analytics' | 'settings';

@@ -55,15 +55,6 @@ export function exportRunbookToPdf(runbook: Runbook, options: PdfExportOptions =
   doc.setTextColor(203, 213, 225); // slate-300
   doc.text(`${dept} | Standard Operating Procedure (SOP)`, margin + 6, y + 13);
 
-  // Badge for Severity
-  const sevColor = runbook.severityTarget === 'P1' ? [239, 68, 68] : runbook.severityTarget === 'P2' ? [249, 115, 22] : [59, 130, 246];
-  doc.setFillColor(sevColor[0], sevColor[1], sevColor[2]);
-  doc.rect(pageWidth - margin - 28, y + 5, 22, 7, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.text(`SEV: ${runbook.severityTarget}`, pageWidth - margin - 17, y + 9.5, { align: 'center' });
-
   // Code & Version
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
@@ -380,7 +371,7 @@ export function exportAllHandbookToPdf(runbooks: Runbook[], companyName = 'ENTER
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${rb.category} | ${rb.environment} | Severity: ${rb.severityTarget}`, margin + 6, y + 4.5);
+    doc.text(`${rb.category} | ${rb.environment}`, margin + 6, y + 4.5);
 
     y += 12;
     if (y > pageHeight - 20) {
@@ -438,16 +429,14 @@ export function exportIncidentPostMortemPdf(task: Task, companyName = 'ENTERPRIS
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(100, 116, 139);
-  doc.text('PRIORITY:', margin + 4, y + 6);
-  doc.text('ENVIRONMENT:', margin + 45, y + 6);
-  doc.text('CATEGORY:', margin + 95, y + 6);
+  doc.text('ENVIRONMENT:', margin + 4, y + 6);
+  doc.text('CATEGORY:', margin + 55, y + 6);
   doc.text('AFFECTED USERS:', margin + 145, y + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(`${task.priority} (Impact: ${task.impactScore}/10, Urgency: ${task.urgencyScore}/10)`, margin + 4, y + 13);
-  doc.text(task.environment, margin + 45, y + 13);
-  doc.text(task.category, margin + 95, y + 13);
+  doc.text(task.environment, margin + 4, y + 13);
+  doc.text(task.category, margin + 55, y + 13);
   doc.text(`${task.affectedUsersEstimate ? task.affectedUsersEstimate.toLocaleString() : 'N/A'} users`, margin + 145, y + 13);
 
   y += 28;
@@ -465,20 +454,6 @@ export function exportIncidentPostMortemPdf(task: Task, companyName = 'ENTERPRIS
   const descLines = doc.splitTextToSize(task.description, contentWidth);
   doc.text(descLines, margin, y);
   y += descLines.length * 4.5 + 6;
-
-  // Priority Rationale
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(30, 41, 59);
-  doc.text('2. AUTOMATED TRIAGE & SEVERITY RATIONALE', margin, y);
-  y += 5;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  const ratLines = doc.splitTextToSize(task.priorityRationale, contentWidth);
-  doc.text(ratLines, margin, y);
-  y += ratLines.length * 4.2 + 6;
 
   // Checklist of actions performed
   if (task.checklist && task.checklist.length > 0) {

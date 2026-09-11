@@ -7,7 +7,6 @@ import {
   Zap, 
   BarChart3, 
   Plus, 
-  ShieldAlert,
   TerminalSquare,
   Settings2,
   Sun,
@@ -60,7 +59,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const activeP1Tasks = tasks.filter(t => t.priority === 'P1' && t.status !== 'done');
   const activeTasksCount = tasks.filter(t => t.status !== 'done').length;
   const resolvedTasksCount = tasks.filter(t => t.status === 'done').length;
 
@@ -158,17 +156,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* Stable Inline P1 Alert Chip if any (Admin mode only) */}
-            {currentUser?.role === 'admin' && settings.showP1Banner && activeP1Tasks.length > 0 && (
-              <button
-                onClick={() => setActiveTab('kanban')}
-                className="hidden xl:flex items-center gap-1.5 h-8 px-2 ml-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold hover:bg-rose-100 transition shrink-0"
-                title="Active Critical Task"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>{activeP1Tasks.length}</span>
-              </button>
-            )}
           </div>
 
           {/* Navigation Dropdown - Centered View Switcher (Mathematically Centered) */}

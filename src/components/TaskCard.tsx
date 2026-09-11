@@ -62,35 +62,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
   const retentionInfo = task.status === 'done' ? getTaskRetentionInfo(task, retentionMinutes) : null;
 
-  const getPriorityStyle = (priority: string) => {
-    switch (priority) {
-      case 'P1':
-        return {
-          badge: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900 ring-1 ring-rose-200 dark:ring-rose-900/50',
-          dot: 'bg-rose-600 dark:bg-rose-500',
-          border: 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900',
-        };
-      case 'P2':
-        return {
-          badge: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900',
-          dot: 'bg-amber-600 dark:bg-amber-500',
-          border: 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900',
-        };
-      case 'P3':
-        return {
-          badge: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900',
-          dot: 'bg-indigo-600 dark:bg-indigo-400',
-          border: 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900',
-        };
-      default:
-        return {
-          badge: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-          dot: 'bg-slate-500 dark:bg-slate-400',
-          border: 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900',
-        };
-    }
-  };
-
   const getEnvBadge = (env: string) => {
     switch (env) {
       case 'Production':
@@ -104,29 +75,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const priorityTheme = getPriorityStyle(task.priority);
-
   return (
     <div 
-      className={`group relative rounded-xl border p-3.5 shadow-xs transition-all hover:shadow-md cursor-pointer bg-white dark:bg-slate-900 overflow-hidden ${priorityTheme.border}`}
+      className={`group relative rounded-xl border p-3.5 shadow-xs transition-all hover:shadow-md cursor-pointer bg-white dark:bg-slate-900 overflow-hidden`}
       onClick={() => onSelect(task)}
     >
-      {/* Top Accent Stripe for P1 and P2 */}
-      {task.priority === 'P1' && <div className="absolute top-0 left-0 right-0 h-1 bg-rose-600" />}
-      {task.priority === 'P2' && <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />}
-
-      {/* Top Row: ticket ID, priority and due info */}
+      {/* Top Row: ticket ID and due info */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900 group-hover:text-indigo-800 dark:group-hover:text-indigo-200 transition">
             {task.ticketNumber}
           </span>
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${priorityTheme.badge}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${priorityTheme.dot}`} />
-            {task.priority}
-          </span>
           {task.isAutoTagged && (
-            <span className="inline-flex items-center text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900" title="Automated Priority Tagging Rule Applied">
+            <span className="inline-flex items-center text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900" title="Automated Tagging Rule Applied">
               <Zap className="w-2.5 h-2.5 mr-0.5 text-indigo-600 dark:text-indigo-400" /> Auto
             </span>
           )}

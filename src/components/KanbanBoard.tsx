@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
-import { Task, Runbook, TaskStatus, PriorityLevel, EnvironmentType, ITCategory, UserSettings } from '../types';
+import { Task, Runbook, TaskStatus, EnvironmentType, ITCategory, UserSettings } from '../types';
 import { TaskCard } from './TaskCard';
 import { isTaskRecentlyCompleted, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
@@ -104,7 +104,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   isScanning = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | 'ALL'>('ALL');
   const [selectedEnv, setSelectedEnv] = useState<EnvironmentType | 'ALL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
   const [showAllDone, setShowAllDone] = useState(false);
@@ -125,11 +124,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (!matchTitle && !matchNumber && !matchDesc && !matchTags && !matchLogs) {
         return false;
       }
-    }
-
-    // Priority filter
-    if (selectedPriority !== 'ALL' && task.priority !== selectedPriority) {
-      return false;
     }
 
     // Environment filter
@@ -192,27 +186,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {/* Quick Filters */}
           <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0 snap-x">
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 shrink-0 snap-start">
-              {(['ALL', 'P1', 'P2', 'P3', 'P4'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSelectedPriority(p)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
-                    selectedPriority === p
-                      ? p === 'P1'
-                        ? 'bg-rose-600 text-white shadow-xs'
-                        : p === 'P2'
-                        ? 'bg-amber-600 text-white shadow-xs'
-                        : p === 'P3'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-700 dark:bg-slate-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
 
             {/* Environment Filter */}
             <select
@@ -250,7 +223,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <button
               onClick={onOpenQuickTriage}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 text-xs font-semibold transition cursor-pointer shadow-xs shrink-0 snap-start"
-              title="Paste an IT log or alert to auto-classify priority"
+              title="Paste an IT log or alert to auto-classify and tag it"
             >
               <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span className="hidden sm:inline">AI Triage</span>
@@ -262,7 +235,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onClick={onAutoScanAll}
               disabled={isScanning}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold transition disabled:opacity-50 cursor-pointer shadow-xs shrink-0 snap-start"
-              title="Re-run Automated Priority Tagging Rules engine across all tasks"
+              title="Re-run the Automated Tagging Rules engine across all tasks"
             >
               <Zap className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : 'text-slate-400'}`} />
               <span className="hidden sm:inline">{isScanning ? 'Scanning...' : 'Scan & Tag'}</span>
@@ -318,7 +291,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               const recentDoneTasks = allColTasks.filter((t) => isTaskRecentlyCompleted(t, retentionMinutes));
               const archivedDoneCount = isDoneCol ? allColTasks.length - recentDoneTasks.length : 0;
               const columnTasks = isDoneCol && !showAllDone ? recentDoneTasks : allColTasks;
-              const p1Count = columnTasks.filter((t) => t.priority === 'P1').length;
               const colSubtitle = isDoneCol
                 ? showAllDone
                   ? 'All resolved tickets'
@@ -342,11 +314,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${col.badgeBg}`}>
                           {columnTasks.length}
                         </span>
-                        {p1Count > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[10px] font-bold">
-                            {p1Count} P1
-                          </span>
-                        )}
                       </div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{colSubtitle}</p>
                     </div>

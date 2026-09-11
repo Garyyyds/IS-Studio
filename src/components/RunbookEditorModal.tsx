@@ -19,7 +19,7 @@ import {
   RotateCcw,
   Lock
 } from 'lucide-react';
-import { Runbook, PriorityLevel, EnvironmentType, ITCategory, DiagnosticStep, RemediationStep, UserRole } from '../types';
+import { Runbook, EnvironmentType, ITCategory, DiagnosticStep, RemediationStep, UserRole } from '../types';
 
 interface RunbookEditorModalProps {
   runbook: Runbook | null;
@@ -38,7 +38,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-NET-004',
       title: 'Windows SMB Fileshare Connection Failure & Network Drive Mapping (\\\\hq-file01)',
       category: 'Networking',
-      severityTarget: 'P3' as const,
       environment: 'Corporate LAN',
       author: 'Senior Systems Administrator',
       authorRole: 'Infrastructure Support Lead',
@@ -126,7 +125,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-DB-002',
       title: 'PostgreSQL Connection Exhaustion & Deadlock Kill Protocol',
       category: 'Database',
-      severityTarget: 'P1' as const,
       environment: 'Production',
       author: 'Principal Database Reliability Engineer',
       authorRole: 'Database Team Lead',
@@ -166,7 +164,7 @@ const PRESET_TEMPLATES = [
       postMortemChecklist: [
         'Configure idle_in_transaction_session_timeout = 60000 in postgresql.conf',
       ],
-      tags: ['postgresql', 'database', 'deadlock', 'p1-outage'],
+      tags: ['postgresql', 'database', 'deadlock', 'outage'],
     },
   },
   {
@@ -176,7 +174,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-K8S-015',
       title: 'Kubernetes Pod CrashLoopBackOff & OOMKilled Emergency Protocol',
       category: 'DevOps & SRE',
-      severityTarget: 'P2' as const,
       environment: 'Production',
       author: 'Staff SRE',
       authorRole: 'Infrastructure Engineer',
@@ -226,7 +223,6 @@ const buildDefaultRunbook = (rb?: Runbook | null): Runbook => ({
   code: rb?.code || `SOP-OPS-${Math.floor(100 + Math.random() * 900)}`,
   title: rb?.title || '',
   category: rb?.category || 'Networking',
-  severityTarget: rb?.severityTarget || 'P3',
   environment: rb?.environment || 'Corporate LAN',
   lastUpdated: new Date().toISOString().slice(0, 10),
   author: rb?.author || 'Alex Rivera',
@@ -379,7 +375,6 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
       code: tpl.runbook.code,
       title: tpl.runbook.title,
       category: tpl.runbook.category,
-      severityTarget: tpl.runbook.severityTarget,
       environment: tpl.runbook.environment,
       symptom: tpl.runbook.symptom,
       triggerAlertPatterns: tpl.runbook.triggerAlertPatterns,
@@ -637,22 +632,6 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
                 <option value="Cloud Infra">Cloud Infra</option>
                 <option value="Security & IAM">Security & IAM</option>
                 <option value="Application">Application</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Target Severity</label>
-              <select
-                value={formData.severityTarget}
-                disabled={isReadOnly}
-                onChange={(e) => setFormData({ ...formData, severityTarget: e.target.value as any })}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
-              >
-                <option value="P1">P1 - Critical Outage</option>
-                <option value="P2">P2 - High Degraded</option>
-                <option value="P3">P3 - Medium Minor</option>
-                <option value="P4">P4 - Low / Routine</option>
-                <option value="ALL">ALL Severities</option>
               </select>
             </div>
 
