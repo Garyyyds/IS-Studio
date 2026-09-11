@@ -159,6 +159,40 @@ export function drawSectionHeader(ctx: FormDoc, label: string) {
   ctx.y += height;
 }
 
+/** One row of the applicant block: a labelled value on each half of the page. */
+export type InfoRow = [leftLabel: string, leftValue: string, rightLabel: string, rightValue: string];
+
+/**
+ * The two-column applicant block shared by every form. `splitAt` is the x of
+ * the right-hand cell; it defaults to the middle of the content area, and the
+ * asset forms pass their table's column boundary so the cells line up with the
+ * inventory grid beneath.
+ */
+export function drawInfoRows(ctx: FormDoc, rows: InfoRow[], splitAt?: number) {
+  const { doc, margin, contentWidth } = ctx;
+  const rightX = splitAt ?? margin + contentWidth / 2;
+  const leftWidth = rightX - margin;
+  const rightWidth = margin + contentWidth - rightX;
+  const rowHeight = 7;
+
+  rows.forEach(([leftLabel, leftValue, rightLabel, rightValue]) => {
+    doc.rect(margin, ctx.y, leftWidth, rowHeight);
+    doc.rect(rightX, ctx.y, rightWidth, rowHeight);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(leftLabel, margin + 2, ctx.y + 4.6);
+    doc.text(rightLabel, rightX + 2, ctx.y + 4.6);
+
+    doc.setFont('helvetica', 'normal');
+    if (leftValue) doc.text(leftValue, margin + 4 + doc.getTextWidth(leftLabel), ctx.y + 4.6);
+    if (rightValue) doc.text(rightValue, rightX + 4 + doc.getTextWidth(rightLabel), ctx.y + 4.6);
+
+    ctx.y += rowHeight;
+  });
+}
+
 /** A tick box, optionally ticked, drawn with its top-left at (x, y). */
 export function drawTickBox(ctx: FormDoc, x: number, y: number, size: number, ticked?: boolean) {
   const { doc } = ctx;

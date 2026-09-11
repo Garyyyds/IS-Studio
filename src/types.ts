@@ -187,8 +187,13 @@ export interface AssetFormData {
 }
 
 export interface UserIdFormData {
-  referenceNo: string;
+  employeeId: string;
+  /** Replaces the other forms' Reference No. on this sheet. */
+  phoneExt: string;
   submittedBy: string;
+  requestDate: string;
+  department: string;
+  location: string;
   /** Ticked systems from Section A, keyed by the row entry id. */
   systems: Record<string, boolean>;
   /** Write-in value for the "Others:" entry. */

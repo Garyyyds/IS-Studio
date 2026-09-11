@@ -4,6 +4,7 @@ import {
   drawHeaderBand,
   drawTitleBar,
   drawSectionHeader,
+  drawInfoRows,
   drawSignatureBlock,
   drawTickBox,
   SECTION_GAP,
@@ -12,7 +13,7 @@ import {
 export const USER_ID_FORM_TITLE = 'USER ID REQUISITION FORM';
 
 /**
- * Section A is a three-column grid of systems the requester can tick. The
+ * Section B is a three-column grid of systems the requester can tick. The
  * layout below reproduces the paper form row by row; `freeText: true` marks the
  * entry that is followed by a write-in rule rather than just a label.
  */
@@ -59,7 +60,8 @@ export const NATURE_OF_REQUEST_ROWS: { id: string; label: string }[][] = [
 
 export const USER_ID_SIGNATURE_LABELS = ['Requestor', 'HOD', 'IT'];
 
-export const USER_ID_SECTION_A_TITLE = 'A. SERVER REQUEST';
+export const USER_ID_SECTION_A_TITLE = 'A. USER ID APPLICATION INFORMATION';
+export const USER_ID_SECTION_B_TITLE = 'B. SERVER REQUEST';
 
 export async function exportUserIdFormPdf(form: UserIdFormData) {
   const ctx = createFormDoc();
@@ -68,8 +70,19 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   await drawHeaderBand(ctx);
   drawTitleBar(ctx, USER_ID_FORM_TITLE);
 
-  // --- Section A: server request tick grid ---
+  // --- Section A: applicant information ---
   drawSectionHeader(ctx, USER_ID_SECTION_A_TITLE);
+
+  drawInfoRows(ctx, [
+    ['Employee ID:', form.employeeId, 'Phone/Ext:', form.phoneExt],
+    ['Submitted By:', form.submittedBy, 'Request Date:', form.requestDate],
+    ['Department:', form.department, 'Location:', form.location],
+  ]);
+
+  ctx.y += SECTION_GAP;
+
+  // --- Section B: server request tick grid ---
+  drawSectionHeader(ctx, USER_ID_SECTION_B_TITLE);
 
   const colWidth = contentWidth / 3;
   const rowHeight = 9;
@@ -129,6 +142,6 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
 
   drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: true });
 
-  const safeRef = (form.referenceNo || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
+  const safeRef = (form.employeeId || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`User_ID_Requisition_${safeRef}.pdf`);
 }
