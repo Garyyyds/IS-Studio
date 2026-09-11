@@ -35,7 +35,7 @@ export const SERVER_REQUEST_ROWS: { id: string; label: string; freeText?: boolea
   ],
   [
     { id: 'printer', label: 'Printer' },
-    { id: 'hris-2', label: 'HRIS' },
+    { id: 'database', label: 'Database' },
     { id: 'others', label: 'Others:', freeText: true },
   ],
 ];
