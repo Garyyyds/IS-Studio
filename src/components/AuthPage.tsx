@@ -651,7 +651,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         <span className="text-xs font-bold text-slate-900 dark:text-white">IT Desk Console</span>
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                        Full incident triage, Kanban, SLA automation, runbooks, and database sync.
+                        Full incident triage, Kanban, runbooks, and database sync.
                       </p>
                     </div>
                   </div>

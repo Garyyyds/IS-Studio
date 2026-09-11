@@ -18,7 +18,6 @@ import {
   Terminal
 } from 'lucide-react';
 import { Task, Runbook, TaggingRule, ITCategory } from '../types';
-import { calculateSlaStatus } from '../utils/priorityEngine';
 
 interface AnalyticsDashboardProps {
   tasks: Task[];
@@ -43,29 +42,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   rules,
   onOpenRunbook,
 }) => {
-  // Compute SLA & Status stats
-  let breachedCount = 0;
-  let warningCount = 0;
-  let onTrackCount = 0;
-  let resolvedCount = 0;
-
-  tasks.forEach((t) => {
-    const sla = calculateSlaStatus(t.createdAt, t.slaDeadline, t.status, t.resolvedAt);
-    if (t.status === 'done') {
-      resolvedCount++;
-    } else if (sla.status === 'breached') {
-      breachedCount++;
-    } else if (sla.status === 'warning') {
-      warningCount++;
-    } else {
-      onTrackCount++;
-    }
-  });
+  // Status stats
+  const resolvedCount = tasks.filter((t) => t.status === 'done').length;
 
   const totalActive = tasks.filter((t) => t.status !== 'done').length;
   const totalTasks = tasks.length || 1;
   const completionRate = Math.round((resolvedCount / totalTasks) * 100);
-  const slaComplianceRate = totalActive > 0 ? Math.round(((totalActive - breachedCount) / totalActive) * 100) : 100;
 
   // Priority counts
   const p1Count = tasks.filter((t) => t.priority === 'P1').length;

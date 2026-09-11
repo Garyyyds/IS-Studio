@@ -83,7 +83,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
     pattern: '',
     targetPriority: 'P2',
     tagsToApply: ['auto-triage'],
-    slaHours: 4,
     category: 'DevOps & SRE',
     enabled: true,
     description: '',
@@ -169,8 +168,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
       pattern: '',
       targetPriority: 'P2',
       tagsToApply: ['auto-triage'],
-      slaHours: 4,
-      category: 'DevOps & SRE',
+        category: 'DevOps & SRE',
       enabled: true,
       description: '',
     });
@@ -187,14 +185,14 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               <Zap className="w-4 h-4" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Automated Priority Tagging & SLA Rules Engine
+              Automated Priority Tagging Rules Engine
             </h2>
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-mono font-bold">
               {rules.filter((r) => r.enabled).length} Active Rules
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
-            Automatically evaluates incoming tickets and logs for severity keywords, CVE patterns, cluster health deviations, and SLA response targets.
+            Automatically evaluates incoming tickets and logs for severity keywords, CVE patterns, cluster health deviations.
           </p>
         </div>
 
@@ -388,13 +386,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600 dark:text-slate-300 font-medium">Target SLA:</span>
-                <span className="font-mono text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900">
-                  {testResult.slaHours} Hours
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-600 dark:text-slate-300 font-medium">Category:</span>
                 <span className="text-slate-800 dark:text-slate-200 font-medium">{testResult.category}</span>
               </div>
@@ -481,9 +472,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
                   >
                     Sets {rule.targetPriority}
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                    SLA: {rule.slaHours}h
-                  </span>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-300">{rule.description}</p>
@@ -563,15 +551,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">SLA Target (Hours)</label>
-                  <input
-                    type="number"
-                    value={newRule.slaHours}
-                    onChange={(e) => setNewRule({ ...newRule, slaHours: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-100 font-mono focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
-                  />
-                </div>
               </div>
 
               <div>

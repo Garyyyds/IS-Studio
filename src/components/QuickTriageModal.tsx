@@ -108,8 +108,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      slaDeadline: new Date(Date.now() + (result.recommendedSlaHours || 4) * 60 * 60 * 1000).toISOString(),
-      slaHours: result.recommendedSlaHours || 4,
       checklist: (result.suggestedChecklist || []).map((item: any, i: number) => ({
         id: `chk-${Date.now()}-${i}`,
         text: item.text,
@@ -226,9 +224,6 @@ at pool.getConnection (/app/node_modules/pg-pool/index.js:52)`}
                     }`}
                   >
                     {result.priority}
-                  </span>
-                  <span className="text-xs font-mono text-indigo-700 dark:text-indigo-300 font-bold">
-                    SLA Target: {result.recommendedSlaHours} Hours
                   </span>
                   <span className="text-xs text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     {result.category}

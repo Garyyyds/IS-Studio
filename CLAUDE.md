@@ -10,7 +10,7 @@ spacing, radii and component patterns defined there.
 
 Specifically:
 
-- **Never** invent a colour. Use the documented semantic tokens (priority, SLA,
+- **Never** invent a colour. Use the documented semantic tokens (priority, status,
   environment, surface). If a needed token is missing, ask rather than improvise.
 - **Never** substitute a different icon library or animation library.
   `lucide-react` for icons, `motion/react` for animation.

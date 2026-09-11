@@ -77,8 +77,6 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
-  slaDeadline: string; // ISO date string
-  slaHours: number;
   checklist: ChecklistItem[];
   linkedRunbookId?: string;
   incidentSummary?: string;
@@ -133,18 +131,9 @@ export interface TaggingRule {
   pattern: string; // keyword or regex pattern
   targetPriority: PriorityLevel;
   tagsToApply: string[];
-  slaHours: number;
   category?: ITCategory;
   enabled: boolean;
   description: string;
-}
-
-export interface SlaStatusResult {
-  status: 'normal' | 'warning' | 'breached' | 'met';
-  hoursRemaining: number;
-  minutesRemaining: number;
-  formattedTime: string;
-  percentageUsed: number;
 }
 
 export interface UserSettings {
@@ -160,7 +149,6 @@ export interface UserSettings {
   themeMode: 'light' | 'dark' | 'system';
   workstationMode: 'personal' | 'team';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
-  showSlaCountdown: boolean;
   showP1Banner: boolean;
   showAutomatedTagsOnCards: boolean;
   showChecklistProgressOnCards: boolean;

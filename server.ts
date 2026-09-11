@@ -489,7 +489,7 @@ app.get('/api/data/status', async (req, res) => {
         connected: supabaseConnected,
         error: supabaseError,
         urlPreview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/^(https?:\/\/)([^.]+).*/, '$1$2.supabase.co') : null,
-        sqlSetup: `-- 1. Workspace operational data (Tickets, SOP Runbooks, SLA Rules, Settings)
+        sqlSetup: `-- 1. Workspace operational data (Tickets, SOP Runbooks, Tagging Rules, Settings)
 CREATE TABLE IF NOT EXISTS workspace_data (
   id TEXT PRIMARY KEY DEFAULT 'default',
   tasks JSONB DEFAULT '[]'::jsonb,
@@ -952,7 +952,7 @@ app.post('/api/ai/classify-priority', async (req, res) => {
 
     const ai = getAi();
     
-    const prompt = `Analyze this IT operational task/incident and perform automated priority classification, triage tagging, and SLA calculation.
+    const prompt = `Analyze this IT operational task/incident and perform automated priority classification and triage tagging.
 
 Task Title: ${title}
 Environment: ${environment || 'Production'}
@@ -961,10 +961,10 @@ Description: ${description || 'N/A'}
 System Logs / Stack Trace / Error Payload: ${rawLogs || 'None provided'}
 
 Provide a strict, professional IT triage assessment following ITIL/SRE incident severity guidelines:
-- P1 (Critical): Total outage of core service, data corruption, severe security breach, widespread customer impact. SLA: 1-2 hours.
-- P2 (High): Major feature impaired, failover degraded, high user impact without full outage, time-sensitive security patch. SLA: 4-8 hours.
-- P3 (Medium): Minor bug, non-critical service degradation, internal tool issue, standard change. SLA: 24-48 hours.
-- P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance. SLA: 72+ hours.`;
+- P1 (Critical): Total outage of core service, data corruption, severe security breach, widespread customer impact.
+- P2 (High): Major feature impaired, failover degraded, high user impact without full outage, time-sensitive security patch.
+- P3 (Medium): Minor bug, non-critical service degradation, internal tool issue, standard change.
+- P4 (Low): Cosmetic issue, documentation request, low-priority routine maintenance.`;
 
     const response = await generateWithRetry(ai, {
       contents: prompt,
@@ -988,7 +988,7 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
             automatedTags: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: 'Extracted automated tags (e.g. ["k8s", "prod-outage", "postgres", "cve-high", "p1-sla-1h"])',
+              description: 'Extracted automated tags (e.g. ["k8s", "prod-outage", "postgres", "cve-high", "p1-critical"])',
             },
             impactScore: {
               type: Type.NUMBER,
@@ -997,10 +997,6 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
             urgencyScore: {
               type: Type.NUMBER,
               description: 'Urgency score from 1 (can wait) to 10 (immediate fire-fighting required)',
-            },
-            recommendedSlaHours: {
-              type: Type.NUMBER,
-              description: 'Recommended SLA response/resolution target hours',
             },
             suggestedChecklist: {
               type: Type.ARRAY,
@@ -1026,7 +1022,6 @@ Provide a strict, professional IT triage assessment following ITIL/SRE incident 
             'automatedTags',
             'impactScore',
             'urgencyScore',
-            'recommendedSlaHours',
             'suggestedChecklist',
           ],
         },
@@ -1189,8 +1184,7 @@ app.post('/api/ai/chat', async (req, res) => {
           .slice(0, 15)
           .map((t: any) =>
             '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status +
-            ' | priority ' + t.priority +
-            (t.slaDeadline ? ' | SLA due ' + t.slaDeadline : '')
+            ' | priority ' + t.priority
           )
           .join('\n')
       : 'None open.';

@@ -516,8 +516,6 @@ export default function App() {
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      slaHours: 24,
       checklist: [
         { id: `chk-${Date.now()}-1`, text: 'Acknowledge request & verify symptoms', done: false },
         { id: `chk-${Date.now()}-2`, text: 'Investigate issue and apply fix', done: false },
@@ -531,17 +529,12 @@ export default function App() {
   };
 
   const handleBatchPriority = (taskIds: string[], priority: PriorityLevel) => {
-    const slaHoursMap: Record<PriorityLevel, number> = { P1: 2, P2: 4, P3: 24, P4: 72 };
-    const hours = slaHoursMap[priority];
-
     setTasks((prev) =>
       prev.map((t) => {
         if (taskIds.includes(t.id)) {
           return {
             ...t,
             priority,
-            slaHours: hours,
-            slaDeadline: new Date(new Date(t.createdAt).getTime() + hours * 60 * 60 * 1000).toISOString(),
             priorityRationale: `Manually set to ${priority} in batch action`,
             updatedAt: new Date().toISOString(),
           };
@@ -569,8 +562,6 @@ export default function App() {
         rules
       );
 
-      const deadline = new Date(new Date(task.createdAt).getTime() + evaluation.slaHours * 60 * 60 * 1000).toISOString();
-
       if (evaluation.priority !== task.priority || evaluation.automatedTags.length > 0) {
         taggedCount++;
       }
@@ -581,8 +572,6 @@ export default function App() {
         priorityRationale: evaluation.priorityRationale,
         automatedTags: evaluation.automatedTags,
         category: evaluation.category,
-        slaHours: evaluation.slaHours,
-        slaDeadline: deadline,
         impactScore: evaluation.impactScore,
         urgencyScore: evaluation.urgencyScore,
         isAutoTagged: true,
@@ -735,8 +724,6 @@ export default function App() {
       urgencyLevel: ticketData.urgencyLevel || 'medium',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      slaDeadline: ticketData.slaDeadline || new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
-      slaHours: ticketData.slaHours || 8,
       checklist: ticketData.checklist || [
         { id: 'chk-1', text: 'Review user submitted request & assess impact', done: false },
         { id: 'chk-2', text: 'Reach out to employee or apply remediation runbook', done: false },

@@ -14,7 +14,7 @@ This document defines the visual design system, UI components, typography, layou
 ## 2. Typography & Fonts
 Imported via Google Fonts in `index.html`:
 - **UI / Headings / Body (`font-sans`)**: `Plus Jakarta Sans` (`400`, `500`, `600`, `700`, `800`)
-- **Code / Ticket IDs / SLAs / Telemetry (`font-mono`)**: `JetBrains Mono` (`400`, `500`, `600`, `700`)
+- **Code / Ticket IDs / Telemetry (`font-mono`)**: `JetBrains Mono` (`400`, `500`, `600`, `700`)
 
 ### Typographic Hierarchy
 | Level | Font Size & Weight | Tailwind Classes | Example Usage |
@@ -23,7 +23,7 @@ Imported via Google Fonts in `index.html`:
 | **Section Title** | 16–18px SemiBold | `text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100` | Modal titles, column headers, analytics charts |
 | **Card / Task Title** | 14px SemiBold | `text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug` | Kanban ticket titles, runbook titles |
 | **Body Text** | 13–14px Regular | `text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed` | Descriptions, logs, changelog, steps |
-| **Micro Badges / Meta** | 10–11px Bold | `text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500` | SLA tags, category chips, status pills |
+| **Micro Badges / Meta** | 10–11px Bold | `text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500` | Status tags, category chips, priority pills |
 | **Ticket Codes & Numbers** | 11–12px Bold Mono | `font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300` | `INC-1042`, `PR-01`, timestamps |
 
 ---
@@ -54,10 +54,10 @@ Imported via Google Fonts in `index.html`:
   - Light: `bg-slate-100 text-slate-700 border-slate-200`
   - Dark: `dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700`
 
-### SLA & Health Status
-- **Breached**: `bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900 font-bold`
-- **Warning (< 1h)**: `bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900`
-- **Met / Healthy**: `bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900`
+### Health Status
+- **Critical / Error**: `bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900 font-bold`
+- **Warning**: `bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900`
+- **Healthy / Resolved**: `bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900`
 
 ### Environment Tags
 - **Production (`prod`)**: `bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200`

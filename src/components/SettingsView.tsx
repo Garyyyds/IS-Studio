@@ -259,7 +259,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     {
       id: 'analytics',
       title: 'Performance & Metrics Dashboard',
-      description: 'Resolution velocity, SLA compliance metrics, category breakdown charts, and frequent issue root-cause analysis.',
+      description: 'Resolution velocity, category breakdown charts, and frequent issue root-cause analysis.',
       icon: <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
       category: 'Insights',
     },
@@ -451,7 +451,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
           >
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>SLA & Workstation Style</span>
+            <span>Workstation Style</span>
           </button>
 
           <button
@@ -1000,17 +1000,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* SECTION 2: Workstation & SLA Mode */}
+          {/* SECTION 2: Workstation mode */}
           {activeSection === 'workstation' && (
             <div className="space-y-5 animate-in fade-in duration-150">
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-5">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span>Personal Workstation vs Corporate SLA Mode</span>
+                    <span>Personal Workstation vs Team Mode</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Configure whether to show commercial SLA countdown timers or relaxed personal due dates.
+                    Configure how much operational detail the board surfaces on each ticket.
                   </p>
                 </div>
 
@@ -1021,7 +1021,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onUpdateSettings({
                         ...settings,
                         workstationMode: 'personal',
-                        showSlaCountdown: false,
                       })
                     }
                     className={`p-4 rounded-xl border cursor-pointer transition ${
@@ -1037,7 +1036,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Optimized for self-directed engineering, personal homelabs, and internal tools. Hides aggressive SLA timers to eliminate countdown stress.
+                      Optimized for self-directed engineering, personal homelabs, and internal tools. Keeps ticket cards clean and low-noise.
                     </p>
                   </div>
 
@@ -1046,7 +1045,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onUpdateSettings({
                         ...settings,
                         workstationMode: 'team',
-                        showSlaCountdown: true,
                       })
                     }
                     className={`p-4 rounded-xl border cursor-pointer transition ${
@@ -1056,13 +1054,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Team SRE / Corporate SLA</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Team SRE / Shared Queue</div>
                       {settings.workstationMode === 'team' && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">Active</span>
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Enforces strict SLA target countdowns (2h for P1, 8h for P2), incident escalation workflows, and high-visibility breach badges.
+                      Surfaces incident escalation workflows and high-visibility priority badges for a shared support queue.
                     </p>
                   </div>
                 </div>
@@ -1072,34 +1070,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                     Display Preferences
                   </h4>
-
-                  {/* SLA Countdown Timer */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Show SLA Countdown Timers</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Display ticking countdown badges (e.g. 1h 45m left) on task cards.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateSettings({
-                          ...settings,
-                          showSlaCountdown: !settings.showSlaCountdown,
-                        })
-                      }
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.showSlaCountdown ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          settings.showSlaCountdown ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
 
                   {/* P1 Top Alert Banner */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">

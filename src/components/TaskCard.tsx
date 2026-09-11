@@ -17,7 +17,6 @@ import {
   User
 } from 'lucide-react';
 import { Task, Runbook, TaskStatus, UserSettings } from '../types';
-import { calculateSlaStatus } from '../utils/priorityEngine';
 import { getTaskRetentionInfo, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
 interface TaskCardProps {
@@ -49,7 +48,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDelete,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const sla = calculateSlaStatus(task.createdAt, task.slaDeadline, task.status, task.resolvedAt);
 
   const completedChecklist = task.checklist.filter(c => c.done).length;
   const totalChecklist = task.checklist.length;
@@ -59,7 +57,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const canMoveLeft = currentStatusIndex > 0;
   const canMoveRight = currentStatusIndex < STATUS_ORDER.length - 1;
 
-  const showSla = settings?.showSlaCountdown ?? false;
   const showTags = settings?.showAutomatedTagsOnCards ?? true;
   const showChecklist = settings?.showChecklistProgressOnCards ?? true;
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
@@ -94,19 +91,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const getSlaBadgeStyle = (status: string) => {
-    switch (status) {
-      case 'breached':
-        return 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900 font-bold';
-      case 'warning':
-        return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900';
-      case 'met':
-        return 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900';
-      default:
-        return 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700';
-    }
-  };
-
   const getEnvBadge = (env: string) => {
     switch (env) {
       case 'Production':
@@ -131,7 +115,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {task.priority === 'P1' && <div className="absolute top-0 left-0 right-0 h-1 bg-rose-600" />}
       {task.priority === 'P2' && <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />}
 
-      {/* Top Row: Ticket ID, Priority & SLA / Due Info */}
+      {/* Top Row: ticket ID, priority and due info */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900 group-hover:text-indigo-800 dark:group-hover:text-indigo-200 transition">
@@ -154,16 +138,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
 
-        {/* SLA status badge OR clean Due info based on user setting */}
-        {showSla ? (
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium border shrink-0 ${getSlaBadgeStyle(sla.status)}`}>
-            <Clock className="w-3 h-3" />
-            <span>{sla.formattedTime}</span>
-          </div>
-        ) : (
+        {/* Completion state, or the due date when one is set */}
+        {(task.status === 'done' || task.dueDate) && (
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
             <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-            <span>{task.status === 'done' ? 'Completed' : `${task.slaHours}h target`}</span>
+            <span>
+              {task.status === 'done'
+                ? 'Completed'
+                : `Due ${new Date(task.dueDate!).toLocaleDateString()}`}
+            </span>
           </div>
         )}
       </div>

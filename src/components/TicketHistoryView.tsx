@@ -26,7 +26,6 @@ import {
   getTimeToResolve,
   DEFAULT_COMPLETED_RETENTION_MINUTES,
 } from '../utils/ticketRetention';
-import { calculateSlaStatus } from '../utils/priorityEngine';
 import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
 
 interface TicketHistoryViewProps {
@@ -72,19 +71,13 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
     const recent = allResolvedTasks.filter((t) => isTaskRecentlyCompleted(t, retentionMinutes)).length;
     const archived = allResolvedTasks.filter((t) => isTaskArchived(t, retentionMinutes)).length;
 
-    let slaMetCount = 0;
     let totalDurationMs = 0;
 
     allResolvedTasks.forEach((t) => {
-      const sla = calculateSlaStatus(t.createdAt, t.slaDeadline, t.status, t.resolvedAt);
-      if (sla.status !== 'breached') {
-        slaMetCount++;
-      }
       const duration = getTimeToResolve(t);
       totalDurationMs += duration.durationMs;
     });
 
-    const slaMetRate = total > 0 ? Math.round((slaMetCount / total) * 100) : 100;
     const avgDurationMs = total > 0 ? totalDurationMs / total : 0;
     const avgDurationMinutes = Math.round(avgDurationMs / (1000 * 60));
     const avgDurationFormatted =
@@ -96,7 +89,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
       total,
       recent,
       archived,
-      slaMetRate,
       avgDurationFormatted,
     };
   }, [allResolvedTasks, retentionMinutes]);
@@ -199,13 +191,10 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
       'Created At',
       'Resolved At',
       'Resolution Duration',
-      'SLA Deadline',
-      'SLA Status',
       'Resolution Notes',
     ];
 
     const rows = sortedTasks.map((t) => {
-      const sla = calculateSlaStatus(t.createdAt, t.slaDeadline, t.status, t.resolvedAt);
       const duration = getTimeToResolve(t);
       return [
         `"${t.ticketNumber}"`,
@@ -217,8 +206,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         `"${t.createdAt}"`,
         `"${t.resolvedAt || t.updatedAt}"`,
         `"${duration.formatted}"`,
-        `"${t.slaDeadline}"`,
-        `"${sla.status.toUpperCase()}"`,
         `"${(t.resolutionNotes || '').replace(/"/g, '""')}"`,
       ].join(',');
     });
@@ -332,12 +319,12 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200/60 dark:border-slate-700/60">
-            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">SLA Met Compliance</div>
+            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Avg Resolution Time</div>
             <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-              {metrics.slaMetRate}%
+              {metrics.avgDurationFormatted}
             </div>
             <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Avg MTTR: {metrics.avgDurationFormatted}
+              Across all resolved tickets
             </div>
           </div>
         </div>
@@ -563,7 +550,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
               const isSelected = selectedIds.includes(task.id);
               const retentionInfo = getTaskRetentionInfo(task, retentionMinutes);
               const duration = getTimeToResolve(task);
-              const sla = calculateSlaStatus(task.createdAt, task.slaDeadline, task.status, task.resolvedAt);
 
               const resolvedDateStr = task.resolvedAt
                 ? new Date(task.resolvedAt).toLocaleString(undefined, {

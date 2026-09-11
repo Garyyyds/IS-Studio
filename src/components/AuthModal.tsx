@@ -378,7 +378,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <span className="text-xs font-bold text-slate-900 dark:text-white">IT Dept / Admin</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      Full Kanban triage, diagnostics, runbook editor, SLA policies, and settings.
+                      Full Kanban triage, diagnostics, runbook editor, and settings.
                     </p>
                   </div>
                 </div>

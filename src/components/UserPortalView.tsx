@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
   LifeBuoy, 
   Send, 
-  Clock, 
   CheckCircle2, 
   AlertTriangle, 
   FileText, 
@@ -92,26 +91,21 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     let mappedPriority: PriorityLevel = 'P3';
     let impactScore = 5;
     let urgencyScore = 5;
-    let slaHours = 8;
 
     if (urgency === 'critical') {
       mappedPriority = 'P1';
       impactScore = 9;
       urgencyScore = 9;
-      slaHours = 2;
     } else if (urgency === 'high') {
       mappedPriority = 'P2';
       impactScore = 7;
       urgencyScore = 8;
-      slaHours = 4;
     } else if (urgency === 'low') {
       mappedPriority = 'P4';
       impactScore = 3;
       urgencyScore = 3;
-      slaHours = 24;
     }
 
-    const slaDeadline = new Date(Date.now() + slaHours * 3600 * 1000).toISOString();
     const ticketNumber = `REQ-${1000 + tasks.length + 1}`;
 
     const newTicket: Partial<Task> = {
@@ -126,8 +120,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       status: 'backlog',
       impactScore,
       urgencyScore,
-      slaHours,
-      slaDeadline,
       automatedTags: ['User Request', urgency.toUpperCase(), category],
       manualTags: ['Portal Submission'],
       isAutoTagged: false,
@@ -508,36 +500,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
           {/* Right Sidebar: Guidelines & Quick Help */}
           <div className="space-y-4">
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-600" />
-                <span>Target SLA Response Times</span>
-              </h3>
-              <ul className="text-xs space-y-2 text-slate-600 dark:text-slate-400">
-                <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    <strong>Critical Blocker:</strong>
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-white">&lt; 2 Hours</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    <strong>Medium Urgency:</strong>
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-white">&lt; 4 Hours</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <strong>Standard Request:</strong>
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-white">&lt; 24 Hours</span>
-                </li>
-              </ul>
-            </div>
-
             <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-900/50 shadow-xs space-y-3">
               <h3 className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />

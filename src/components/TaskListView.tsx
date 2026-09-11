@@ -18,7 +18,6 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { Task, Runbook, TaskStatus, PriorityLevel, UserSettings } from '../types';
-import { calculateSlaStatus } from '../utils/priorityEngine';
 import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
 import { isTaskRecentlyCompleted, getTaskRetentionInfo, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
@@ -51,7 +50,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'priority' | 'sla' | 'created'>('priority');
+  const [sortBy, setSortBy] = useState<'priority' | 'created'>('priority');
   const [showAllDone, setShowAllDone] = useState(false);
 
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
@@ -82,9 +81,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     if (sortBy === 'priority') {
       const pWeights = { P1: 4, P2: 3, P3: 2, P4: 1 };
       return pWeights[b.priority] - pWeights[a.priority];
-    }
-    if (sortBy === 'sla') {
-      return new Date(a.slaDeadline).getTime() - new Date(b.slaDeadline).getTime();
     }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
@@ -154,7 +150,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
             >
               <option value="priority">Priority (P1 → P4)</option>
-              <option value="sla">SLA Urgency</option>
               <option value="created">Created Date</option>
             </select>
           </div>
@@ -243,7 +238,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 <th className="py-3 px-4">Title & Context</th>
                 <th className="py-3 px-3">Environment</th>
                 <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3">SLA Countdown</th>
                 <th className="py-3 px-3">Checklist</th>
                 <th className="py-3 px-3">Assignee</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -252,13 +246,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {sortedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     No matching IT tasks found.
                   </td>
                 </tr>
               ) : (
                 sortedTasks.map((task) => {
-                  const sla = calculateSlaStatus(task.createdAt, task.slaDeadline, task.status, task.resolvedAt);
                   const isSelected = selectedIds.includes(task.id);
                   const linkedRunbook = runbooks.find((r) => r.id === task.linkedRunbookId);
                   const completedCheck = task.checklist.filter((c) => c.done).length;
@@ -349,20 +342,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             </div>
                           );
                         })()}
-                      </td>
-
-                      <td className="py-3.5 px-3 font-mono">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                            sla.status === 'breached'
-                              ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900 font-bold'
-                              : sla.status === 'warning'
-                              ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                          }`}
-                        >
-                          {sla.formattedTime}
-                        </span>
                       </td>
 
                       <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400">

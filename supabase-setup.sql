@@ -1,4 +1,4 @@
--- 1. Workspace operational data (Tickets, SOP Runbooks, SLA Rules, Settings)
+-- 1. Workspace operational data (Tickets, SOP Runbooks, Tagging Rules, Settings)
 CREATE TABLE IF NOT EXISTS workspace_data (
   id TEXT PRIMARY KEY DEFAULT 'default',
   tasks JSONB DEFAULT '[]'::jsonb,

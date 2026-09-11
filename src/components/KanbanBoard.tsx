@@ -82,7 +82,7 @@ const COLUMNS: ColumnDef[] = [
   {
     id: 'done',
     title: 'Resolved / Closed',
-    subtitle: 'Post-mortem ready & SLA recorded',
+    subtitle: 'Post-mortem ready',
     color: 'text-emerald-900 dark:text-emerald-300',
     borderColor: 'border-slate-200 dark:border-slate-800',
     badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
