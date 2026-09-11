@@ -206,7 +206,7 @@ export interface UserIdFormData {
   hasAttachments: 'yes' | 'no' | '';
   /** Hardcopy or softcopy; empty until Yes is chosen. */
   attachmentFormat: 'hardcopy' | 'softcopy' | '';
-  /** Name of the attached file. Softcopy only; the file itself travels
-   * separately, the form only records which one accompanies it. */
-  attachmentFileName: string;
+  /** Names of the attached files. Softcopy only; the files themselves travel
+   * separately, the form only records which ones accompany it. */
+  attachmentFileNames: string[];
 }

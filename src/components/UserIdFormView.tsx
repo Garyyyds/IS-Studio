@@ -38,7 +38,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     remarks: '',
     hasAttachments: '',
     attachmentFormat: '',
-    attachmentFileName: '',
+    attachmentFileNames: [],
   };
 
   const [form, setForm] = useState(initialForm);
@@ -61,7 +61,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     setForm((prev) =>
       value === 'yes'
         ? { ...prev, hasAttachments: value }
-        : { ...prev, hasAttachments: value, attachmentFormat: '', attachmentFileName: '' }
+        : { ...prev, hasAttachments: value, attachmentFormat: '', attachmentFileNames: [] }
     );
   };
 
@@ -71,19 +71,39 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     setForm((prev) => ({
       ...prev,
       attachmentFormat: checked ? id : '',
-      attachmentFileName: checked && id === 'softcopy' ? prev.attachmentFileName : '',
+      attachmentFileNames: checked && id === 'softcopy' ? prev.attachmentFileNames : [],
     }));
   };
 
-  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setForm((prev) => ({ ...prev, attachmentFileName: file.name }));
-    // Reset the input so picking the same file twice still fires a change.
+  // Picked files are appended, so the button can be used repeatedly. Names are
+  // de-duplicated because the same file adds nothing the second time.
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Annotated because the event type resolves to any without React's types,
+    // which would otherwise leave each entry as unknown.
+    const list: FileList | null = e.target.files;
+    const picked: string[] = list ? Array.from(list).map((file) => file.name) : [];
+    if (picked.length) {
+      setForm((prev) => ({
+        ...prev,
+        attachmentFileNames: [
+          ...prev.attachmentFileNames,
+          ...picked.filter((name) => !prev.attachmentFileNames.includes(name)),
+        ],
+      }));
+    }
+    // Reset the input so picking the same file again still fires a change.
     e.target.value = '';
   };
 
-  const clearFile = () => {
-    setForm((prev) => ({ ...prev, attachmentFileName: '' }));
+  const removeFile = (name: string) => {
+    setForm((prev) => ({
+      ...prev,
+      attachmentFileNames: prev.attachmentFileNames.filter((n) => n !== name),
+    }));
+  };
+
+  const clearFiles = () => {
+    setForm((prev) => ({ ...prev, attachmentFileNames: [] }));
   };
 
   // Grow the remarks box to fit however many lines it holds.
@@ -383,28 +403,13 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
               </div>
 
               {/* Attach is only meaningful for a softcopy */}
-              <div className="flex items-center gap-2 min-w-0">
-                {form.attachmentFileName && (
-                  <span className="inline-flex items-center gap-1.5 max-w-[220px] px-2 py-1 rounded-md text-[11px] font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
-                    <span className="truncate" title={form.attachmentFileName}>
-                      {form.attachmentFileName}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={clearFile}
-                      aria-label="Remove attached file"
-                      className="shrink-0 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
+              <div className="flex items-center gap-2 shrink-0">
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
                   className="hidden"
-                  onChange={handleFilePicked}
+                  onChange={handleFilesPicked}
                 />
                 <button
                   type="button"
@@ -412,16 +417,47 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
                   disabled={form.attachmentFormat !== 'softcopy'}
                   title={
                     form.attachmentFormat === 'softcopy'
-                      ? 'Attach a file'
-                      : 'Select Softcopy to attach a file'
+                      ? 'Attach one or more files'
+                      : 'Select Softcopy to attach files'
                   }
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   <Paperclip className="w-3.5 h-3.5" />
-                  <span>{form.attachmentFileName ? 'Replace' : 'Attach'}</span>
+                  <span>{form.attachmentFileNames.length ? 'Add more' : 'Attach'}</span>
                 </button>
               </div>
             </div>
+
+            {/* Attached files */}
+            {form.attachmentFormat === 'softcopy' && form.attachmentFileNames.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {form.attachmentFileNames.map((name) => (
+                  <span
+                    key={name}
+                    className="inline-flex items-center gap-1.5 max-w-[240px] px-2 py-1 rounded-md text-[11px] font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                  >
+                    <span className="truncate" title={name}>
+                      {name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(name)}
+                      aria-label={`Remove ${name}`}
+                      className="shrink-0 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={clearFiles}
+                  className="text-[11px] font-medium text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
             <p className="mt-3 text-[10px] sm:text-xs italic text-slate-500 dark:text-slate-400 leading-relaxed">
               {ATTACHMENTS_NOTE}

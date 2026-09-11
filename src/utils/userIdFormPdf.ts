@@ -197,16 +197,36 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
     optionX += labelOffset + doc.getTextWidth(option.label) + 10;
   });
 
-  // A softcopy is provided separately, so the sheet records which file it is.
-  if (form.hasAttachments === 'yes' && form.attachmentFormat === 'softcopy' && form.attachmentFileName.trim()) {
-    const fileLabel = 'File:';
+  // Softcopies are provided separately, so the sheet records which files they
+  // are. The first line sits beside the format ticks; any overflow continues
+  // underneath at the same indent.
+  const attachedNames =
+    form.hasAttachments === 'yes' && form.attachmentFormat === 'softcopy'
+      ? form.attachmentFileNames.map((n) => n.trim()).filter(Boolean)
+      : [];
+
+  if (attachedNames.length) {
+    const fileLabel = attachedNames.length > 1 ? 'Files:' : 'File:';
     doc.setFont('helvetica', 'bold');
     doc.text(fileLabel, optionX, ctx.y);
     doc.setFont('helvetica', 'normal');
+
     const nameX = optionX + doc.getTextWidth(fileLabel) + 2;
-    const available = margin + contentWidth - nameX;
-    const fitted = doc.splitTextToSize(form.attachmentFileName.trim(), available)[0];
-    doc.text(fitted, nameX, ctx.y);
+    const firstLineWidth = margin + contentWidth - nameX;
+    const joined = attachedNames.join(', ');
+
+    const firstLine = doc.splitTextToSize(joined, firstLineWidth)[0] as string;
+    doc.text(firstLine, nameX, ctx.y);
+
+    // Anything that did not fit wraps to full-width lines below.
+    const remainder = joined.slice(firstLine.length).trim();
+    if (remainder) {
+      const rest = doc.splitTextToSize(remainder, contentWidth) as string[];
+      rest.forEach((line) => {
+        ctx.y += 5;
+        doc.text(line, margin, ctx.y);
+      });
+    }
   }
 
   ctx.y += 7;
