@@ -23,10 +23,12 @@ import {
   Recycle,
   ClipboardList,
   PackageCheck,
+  KeyRound,
   Lock
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
 import { AssetFormView } from './AssetFormView';
+import { UserIdFormView } from './UserIdFormView';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
@@ -48,7 +50,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'create-form' | 'help'>('submit');
   // null shows the picker; a value opens that form.
-  const [selectedForm, setSelectedForm] = useState<'request' | 'disposal' | 'allocation' | null>(null);
+  const [selectedForm, setSelectedForm] = useState<
+    'request' | 'disposal' | 'allocation' | 'user-id' | null
+  >(null);
   
   // Submit Form State
   const [title, setTitle] = useState('');
@@ -598,7 +602,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       {/* CREATE FORM TAB */}
       {activeTab === 'create-form' && (
         <div>
-          {selectedForm === 'disposal' || selectedForm === 'allocation' ? (
+          {selectedForm === 'user-id' ? (
+            <UserIdFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
+          ) : selectedForm === 'disposal' || selectedForm === 'allocation' ? (
             <AssetFormView
               config={selectedForm === 'disposal' ? DISPOSAL_FORM : ALLOCATION_FORM}
               currentUser={currentUser}
@@ -637,6 +643,26 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     Request new hardware, software or access. Not available yet.
                   </p>
                 </div>
+
+                {/* User ID requisition */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm('user-id')}
+                  className="text-left p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900">
+                      <KeyRound className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    User ID Requisition
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    Request access to company systems such as email, file server, NAV or HRIS.
+                  </p>
+                </button>
 
                 {/* Allocation form */}
                 <button

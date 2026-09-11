@@ -185,3 +185,12 @@ export interface AssetFormData {
   /** Section D free-text remarks. */
   itRemarks?: string;
 }
+
+export interface UserIdFormData {
+  referenceNo: string;
+  submittedBy: string;
+  /** Ticked systems from Section A, keyed by the row entry id. */
+  systems: Record<string, boolean>;
+  /** Write-in value for the "Others:" entry. */
+  othersDetail: string;
+}
