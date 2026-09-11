@@ -301,7 +301,7 @@ export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser,
                         setItem(item.id, 'specModel', e.target.value);
                         autoGrow(e.target);
                       }}
-                      placeholder={'e.g. Dell OptiPlex 7090\nos: win 11'}
+                      placeholder="e.g. Dell OptiPlex 7090"
                       className={cellClass}
                     />
                   </td>
