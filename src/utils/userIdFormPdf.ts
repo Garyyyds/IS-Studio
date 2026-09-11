@@ -189,22 +189,20 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
     doc.text(fileLabel, optionX, ctx.y);
     doc.setFont('helvetica', 'normal');
 
+    // One file per line, every line starting at the same indent. Running the
+    // names together and wrapping them sent the overflow back to the left
+    // margin and could split a single file name across two different columns.
     const nameX = optionX + doc.getTextWidth(fileLabel) + 2;
-    const firstLineWidth = margin + contentWidth - nameX;
-    const joined = attachedNames.join(', ');
+    const nameWidth = margin + contentWidth - nameX;
 
-    const firstLine = doc.splitTextToSize(joined, firstLineWidth)[0] as string;
-    doc.text(firstLine, nameX, ctx.y);
-
-    // Anything that did not fit wraps to full-width lines below.
-    const remainder = joined.slice(firstLine.length).trim();
-    if (remainder) {
-      const rest = doc.splitTextToSize(remainder, contentWidth) as string[];
-      rest.forEach((line) => {
-        ctx.y += 5;
-        doc.text(line, margin, ctx.y);
+    attachedNames.forEach((name, nameIndex) => {
+      const lines = doc.splitTextToSize(name, nameWidth) as string[];
+      lines.forEach((line, lineIndex) => {
+        // The first line sits beside the label; everything after it steps down.
+        if (nameIndex > 0 || lineIndex > 0) ctx.y += 5;
+        doc.text(line, nameX, ctx.y);
       });
-    }
+    });
   }
 
   ctx.y += 7;
