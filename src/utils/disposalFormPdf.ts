@@ -15,6 +15,9 @@ export const DISPOSAL_NOTES = [
   '4. Cross-check every item against Section B before release and record the actual quantity handed over.',
 ];
 
+// Uniform vertical gap between the form's sections.
+const SECTION_GAP = 5;
+
 const COMPANY_ADDRESS = [
   'Lot 55992, Batu 5 Off Jalan Tunku Abdul Rahman',
   '31200 Ipoh, Perak Malaysia.',
@@ -70,13 +73,14 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.2);
 
-  // --- Header band: logo (A:B), address (C:D), empty box (E:F) ---
+  // --- Header band: logo (A:B) and the address filling the rest (C:F) ---
+  // The spreadsheet left an empty third box; the divider is dropped here so the
+  // address block runs to the right edge instead.
   const headerHeight = 18;
   const logo = await loadLogoAsPng();
 
   doc.rect(colX[0], y, span(0, 1), headerHeight);
-  doc.rect(colX[2], y, span(2, 3), headerHeight);
-  doc.rect(colX[4], y, span(4, 5), headerHeight);
+  doc.rect(colX[2], y, span(2, 5), headerHeight);
 
   if (logo) {
     // Fit inside the logo cell while preserving the source aspect ratio.
@@ -111,6 +115,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('IT FIXED ASSET DISPOSAL REQUEST FORM', pageWidth / 2, y + 4.8, { align: 'center' });
+  // Title sits flush on Section A, as it does in the source spreadsheet.
   y += titleHeight;
 
   // Shared renderer for the three pale-blue section headers.
@@ -153,7 +158,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
     y += infoRowHeight;
   });
 
-  y += 4;
+  y += SECTION_GAP;
 
   // --- Section B: inventory list ---
   sectionHeader('B. INVENTORY LIST FOR DISPOSAL');
@@ -216,7 +221,7 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
     y += bodyRowHeight;
   }
 
-  y += 4;
+  y += SECTION_GAP;
 
   // --- Section C: acknowledgement ---
   if (y + 60 > pageHeight - margin) {
@@ -243,30 +248,34 @@ export async function exportDisposalFormPdf(form: DisposalFormData) {
     y += h;
   });
 
-  y += 12;
+  y += SECTION_GAP * 2;
 
-  // --- Signature block: Requestor (A:B), HOD (C:D), IT (E:F) ---
-  const sigColumns: [string, number, number][] = [
-    ['Requestor:', 0, 1],
-    ['HOD:', 2, 3],
-    ['IT:', 4, 5],
-  ];
+  // --- Signature block ---
+  // Three equal columns rather than the spreadsheet's uneven merges, so the
+  // signing lines are the same length. Within a column the colon sits at a
+  // fixed offset, which lines "Requestor :" up with "Date :" beneath it.
+  const sigLabels = ['Requestor', 'HOD', 'IT'];
+  const sigColWidth = contentWidth / 3;
+  const sigGutter = 8;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
 
-  sigColumns.forEach(([label, from, to]) => {
-    doc.text(label, colX[from], y);
-    // Signing line, inset so it does not butt against the next column.
-    doc.line(colX[from] + doc.getTextWidth(label) + 2, y + 1, colX[from] + span(from, to) - 4, y + 1);
-  });
+  // Widest label decides where every colon sits, in every column.
+  const labelColWidth = Math.max(...[...sigLabels, 'Date'].map((l) => doc.getTextWidth(l))) + 2;
 
+  const signatureRow = (labels: string[], rowY: number) => {
+    labels.forEach((label, i) => {
+      const x = margin + i * sigColWidth;
+      doc.text(label, x, rowY);
+      doc.text(':', x + labelColWidth, rowY);
+      doc.line(x + labelColWidth + 3, rowY + 1, x + sigColWidth - sigGutter, rowY + 1);
+    });
+  };
+
+  signatureRow(sigLabels, y);
   y += 10;
-
-  sigColumns.forEach(([, from, to]) => {
-    doc.text('Date:', colX[from], y);
-    doc.line(colX[from] + doc.getTextWidth('Date:') + 2, y + 1, colX[from] + span(from, to) - 4, y + 1);
-  });
+  signatureRow(['Date', 'Date', 'Date'], y);
 
   const safeRef = (form.referenceNo || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`IT_Asset_Disposal_${safeRef}.pdf`);
