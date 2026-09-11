@@ -2,11 +2,12 @@ import jsPDF from 'jspdf';
 import { DisposalFormData } from '../types';
 import companyLogo from '../assets/company-logo.webp';
 
-// Column widths are taken from the source spreadsheet (Excel units 8.78 / 46.89 /
-// 35.78 / 30.66 / 8.78 / 35.78, totalling 166.67) and scaled to the 190mm of
-// printable width on A4 portrait, so the PDF keeps the proportions of the
-// original form.
-const COL_RATIOS = [0.0527, 0.2813, 0.2147, 0.184, 0.0527, 0.2147];
+// Column widths follow the source spreadsheet (Excel units 8.78 / 46.89 /
+// 35.78 / 30.66 / 8.78 / 35.78) scaled to the 190mm of printable width on A4
+// portrait, with one deviation: Quantity is widened from 10.0mm to 18.1mm
+// because its header label measures 12.1mm and was being clipped. The extra
+// width is taken proportionally from the three widest columns.
+const COL_RATIOS = [0.0527, 0.2593, 0.2047, 0.174, 0.095, 0.2144];
 
 export const DISPOSAL_NOTES = [
   '1. Covers IT assets are withdrawn from service — system units, monitors, keyboards, mice, and attached peripherals that are faulty or obsolete.',
