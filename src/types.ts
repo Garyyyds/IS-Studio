@@ -247,6 +247,5 @@ export interface RequisitionFormData {
   purpose: string;
   items: RequisitionItem[];
   /** Section E, completed by IT rather than the requestor. */
-  itRemarks: string;
   itItems: RequisitionItem[];
 }

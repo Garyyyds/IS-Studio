@@ -68,3 +68,4 @@ away later work permanently.
 | `11092026ver039` | 2026-09-11 | Install @types/react and @types/react-dom, scope tsconfig to src so the editor stops loading dist, and fix the four type errors that surfaced |
 | `11092026ver040` | 2026-09-11 | Align every attachment file name under the first on the User ID form, one file per line |
 | `11092026ver041` | 2026-09-11 | Requisition form: Detail becomes Remark on its own ruled line, and attachments now take multiple files printed one per line at a shared indent |
+| `11092026ver042` | 2026-09-11 | Requisition form: one tick grid for all three checkbox pairs, no Remark placeholder, and Section E captions its table directly with the signature note moved to the foot |

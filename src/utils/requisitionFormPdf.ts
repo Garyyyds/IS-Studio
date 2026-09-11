@@ -32,7 +32,6 @@ export const REQ_ATTACHMENT_FORMATS: { id: 'hardcopy' | 'softcopy'; label: strin
   { id: 'softcopy', label: 'Softcopy' },
 ];
 export const REQ_ATTACHMENT_REMARK_LABEL = 'Remark:';
-export const REQ_ATTACHMENT_REMARK_PLACEHOLDER = 'e.g. Quotation QT-2026-0881';
 export const REQ_SUPPORTING_DOCS_NOTE =
   'Kindly attach supporting documents, i.e. quotation, proposal, drawings or specifications.';
 
@@ -50,7 +49,6 @@ export const REQ_PURPOSE_LABEL = 'Description of Purpose / Reason:';
 export const REQ_PURPOSE_PLACEHOLDER = 'e.g. Purchase of two (2) laptops';
 
 export const REQ_IT_REMARKS_LABEL = 'Remarks / Hardware & Software Required:';
-export const REQ_IT_REMARKS_PLACEHOLDER = 'e.g. Dell Latitude 5450, Windows 11 Pro, Office 365';
 
 export const REQ_PRICE_NOTE =
   '* Estimated price. The actual current market price is obtained from Procurement after negotiation and comparison.';
@@ -259,8 +257,13 @@ export async function exportRequisitionFormPdf(form: RequisitionFormData) {
   drawSectionHeader(ctx, REQ_SECTION_E_TITLE);
   ctx.y += 6;
 
-  drawRuledRemarks(ctx, REQ_IT_REMARKS_LABEL, form.itRemarks, 2);
-  ctx.y += 2;
+  // The label captions the table rather than heading a write-in block - the
+  // hardware and software required is the list itself, as on the spreadsheet.
+  doc.setFont('helvetica', 'bolditalic');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(REQ_IT_REMARKS_LABEL, margin, ctx.y);
+  ctx.y += 3;
 
   drawItemTable(ctx, REQ_ITEM_COLUMNS, itemRows(form.itItems), {
     totalLabel: 'Total',

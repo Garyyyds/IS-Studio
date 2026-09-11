@@ -24,14 +24,12 @@ import {
   REQ_ATTACHMENTS_LABEL,
   REQ_ATTACHMENT_FORMATS,
   REQ_ATTACHMENT_REMARK_LABEL,
-  REQ_ATTACHMENT_REMARK_PLACEHOLDER,
   REQ_SUPPORTING_DOCS_NOTE,
   REQ_BUDGETED_LABEL,
   REQ_COST_FIELDS,
   REQ_PURPOSE_LABEL,
   REQ_PURPOSE_PLACEHOLDER,
   REQ_IT_REMARKS_LABEL,
-  REQ_IT_REMARKS_PLACEHOLDER,
   REQ_PRICE_NOTE,
   REQ_SIGNATURE_LABELS,
   REQ_IT_SIGNATURE_LABELS,
@@ -90,7 +88,6 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
     balanceAmount: '',
     purpose: '',
     items: [blankItem()],
-    itRemarks: '',
     itItems: [blankItem()],
   };
 
@@ -247,6 +244,35 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
 
   const tickLabelClass =
     'text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer whitespace-nowrap';
+
+  const tickGrid = (
+    group: string,
+    options: { id: string; label: string }[],
+    isChecked: (id: string) => boolean,
+    onPick: (id: string) => void
+  ) => (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-[280px] max-w-full shrink-0">
+      {options.map((option) => (
+        <div key={option.id} className="flex items-center gap-2 min-w-0">
+          <input
+            id={`${group}-${option.id}`}
+            type="checkbox"
+            checked={isChecked(option.id)}
+            onChange={() => onPick(option.id)}
+            className={tickClass}
+          />
+          <label htmlFor={`${group}-${option.id}`} className={tickLabelClass}>
+            {option.label}
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+
+  const YES_NO = [
+    { id: 'yes', label: 'Yes' },
+    { id: 'no', label: 'No' },
+  ];
 
   const itBadge = (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
@@ -489,43 +515,23 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {(['yes', 'no'] as const).map((value) => (
-                <div key={value} className="flex items-center gap-2">
-                  <input
-                    id={`attach-${value}`}
-                    type="checkbox"
-                    checked={form.hasAttachments === value}
-                    onChange={() => setHasAttachments(value)}
-                    className={tickClass}
-                  />
-                  <label htmlFor={`attach-${value}`} className={tickLabelClass}>
-                    {value === 'yes' ? 'Yes' : 'No'}
-                  </label>
-                </div>
-              ))}
-            </div>
+            {tickGrid(
+              'attach',
+              YES_NO,
+              (id) => form.hasAttachments === id,
+              (id) => setHasAttachments(id as 'yes' | 'no')
+            )}
 
             {/* Format and reference only apply once Yes is chosen. */}
             {form.hasAttachments === 'yes' && (
-              <div className="mt-3 pl-1 space-y-3">
+              <div className="mt-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  {REQ_ATTACHMENT_FORMATS.map((option) => (
-                    <div key={option.id} className="flex items-center gap-2">
-                      <input
-                        id={`format-${option.id}`}
-                        type="checkbox"
-                        checked={form.attachmentFormat === option.id}
-                        onChange={() => setAttachmentFormat(option.id)}
-                        className={tickClass}
-                      />
-                      <label htmlFor={`format-${option.id}`} className={tickLabelClass}>
-                        {option.label}
-                      </label>
-                    </div>
-                  ))}
-                  </div>
+                  {tickGrid(
+                    'format',
+                    REQ_ATTACHMENT_FORMATS,
+                    (id) => form.attachmentFormat === id,
+                    (id) => setAttachmentFormat(id as 'hardcopy' | 'softcopy')
+                  )}
 
                   {/* Attaching is only meaningful for a softcopy. The files
                       themselves travel separately; the form records which ones
@@ -594,7 +600,6 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
                     type="text"
                     value={form.attachmentRemark}
                     onChange={(e) => setField('attachmentRemark', e.target.value)}
-                    placeholder={REQ_ATTACHMENT_REMARK_PLACEHOLDER}
                     className={inputClass}
                   />
                 </div>
@@ -613,22 +618,12 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {(['yes', 'no'] as const).map((value) => (
-                <div key={value} className="flex items-center gap-2">
-                  <input
-                    id={`budgeted-${value}`}
-                    type="checkbox"
-                    checked={form.budgeted === value}
-                    onChange={() => setBudgeted(value)}
-                    className={tickClass}
-                  />
-                  <label htmlFor={`budgeted-${value}`} className={tickLabelClass}>
-                    {value === 'yes' ? 'Yes' : 'No'}
-                  </label>
-                </div>
-              ))}
-            </div>
+            {tickGrid(
+              'budgeted',
+              YES_NO,
+              (id) => form.budgeted === id,
+              (id) => setBudgeted(id as 'yes' | 'no')
+            )}
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {REQ_COST_FIELDS.map((field) => amountField(field.label, field.id as string))}
@@ -685,26 +680,20 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
             {addRowButton('itItems')}
           </div>
         </div>
-        <div className="p-4 sm:p-6 pb-0">
-          <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+        {/* The label captions the table: the hardware and software required
+            is the list itself, so there is nothing to type above it. */}
+        <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
+          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
             {REQ_IT_REMARKS_LABEL.replace(/:$/, '')}
-          </label>
-          <textarea
-            rows={2}
-            value={form.itRemarks}
-            onChange={(e) => {
-              setField('itRemarks', e.target.value);
-              autoGrow(e.target);
-            }}
-            placeholder={REQ_IT_REMARKS_PLACEHOLDER}
-            className={`${inputClass} resize-y leading-relaxed`}
-          />
-          <p className={`${hintClass} mt-3`}>
+          </p>
+        </div>
+        {itemTable('itItems', itTotal)}
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 dark:border-slate-800">
+          <p className={hintClass}>
             Signature blocks for {REQ_IT_SIGNATURE_LABELS.join(', ')} are added to the exported PDF
             for wet signing.
           </p>
         </div>
-        <div className="mt-4">{itemTable('itItems', itTotal)}</div>
       </div>
 
       {/* SECTION F - signed on the printed sheet */}
