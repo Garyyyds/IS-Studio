@@ -70,13 +70,14 @@ export const ALLOCATION_FORM: AssetFormConfig = {
   sectionATitle: 'A. ALLOCATION APPLICATION INFORMATION',
   sectionBTitle: 'B. INVENTORY LIST FOR ALLOCATION',
   descriptionHeader: 'Asset Description',
-  // Official policy wording supplied by the company - reproduced verbatim.
+  // Official policy wording supplied by the company, with the spelling
+  // corrections the owner approved ("due to the", "observe", "referred").
   notes: [
     '1. Employee shall be solely or jointly responsible for the items listed above.',
-    '2. Should the item(s) be lost or damaged due the negligence under the care of employee the company shall reserves the rights to demand from the employee the replacement or payment for the items damaged or lost.',
+    '2. Should the item(s) be lost or damaged due to the negligence under the care of employee the company shall reserves the rights to demand from the employee the replacement or payment for the items damaged or lost.',
     '3. Employee shall not transfer the possession of the items without written approval from IT Department and The Management.',
     '4. Upon expiry of the loan/usage period, employee must return the items to IT Department without further delay.',
-    '5. Should the employee failed to observed the above guidelines, the matter might be reffered to The Management and disciplinary action may be imposed upon the employee.',
+    '5. Should the employee failed to observe the above guidelines, the matter might be referred to The Management and disciplinary action may be imposed upon the employee.',
   ],
   fileStem: 'IT_Asset_Allocation',
   screenTitle: 'IT Fixed Asset Allocation',
