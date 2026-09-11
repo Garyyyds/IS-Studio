@@ -13,6 +13,7 @@ import {
   ATTACHMENTS_NOTE,
   USER_ID_SECTION_A_TITLE,
   USER_ID_SECTION_B_TITLE,
+  USER_ID_SECTION_C_TITLE,
   USER_ID_SIGNATURE_LABELS,
 } from '../utils/userIdFormPdf';
 
@@ -474,12 +475,31 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
         </div>
       </div>
 
-      {/* Signing note */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs px-4 sm:px-6 py-4">
-        <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-          Signature blocks for {USER_ID_SIGNATURE_LABELS.join(', ')} are added to the exported PDF
-          for wet signing.
-        </p>
+      {/* SECTION C */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            {USER_ID_SECTION_C_TITLE}
+          </h3>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {USER_ID_SIGNATURE_LABELS.map((label) => (
+              <div key={label}>
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                  {label}
+                </p>
+                {/* Ruled lines stand in for the signing space on the PDF */}
+                <div className="mt-6 border-b border-slate-300 dark:border-slate-600" />
+                <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Date</p>
+                <div className="mt-1 border-b border-slate-300 dark:border-slate-600" />
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
+            These are printed on the exported PDF for wet signing.
+          </p>
+        </div>
       </div>
     </div>
   );

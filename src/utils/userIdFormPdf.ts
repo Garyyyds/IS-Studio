@@ -73,10 +73,15 @@ export const ATTACHMENT_FORMATS: { id: 'hardcopy' | 'softcopy'; label: string }[
 export const ATTACHMENTS_NOTE =
   '*Note: HR to route this form to Document Controller when there is a staff movement or new staff onboard and provide the related attachment.';
 
-export const USER_ID_SIGNATURE_LABELS = ['Requestor', 'HOD', 'IT'];
+export const USER_ID_SIGNATURE_LABELS = [
+  'User/Requestor Name',
+  'Authorized By (HOD)',
+  'Approved By (COO) *Optional',
+];
 
 export const USER_ID_SECTION_A_TITLE = 'A. USER ID APPLICATION INFORMATION';
 export const USER_ID_SECTION_B_TITLE = 'B. SERVER REQUEST';
+export const USER_ID_SECTION_C_TITLE = 'C. ACKNOWLEDGEMENT';
 
 export async function exportUserIdFormPdf(form: UserIdFormData) {
   const ctx = createFormDoc();
@@ -244,7 +249,12 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
 
   ctx.y += SECTION_GAP;
 
-  drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: true });
+  // --- Section C: acknowledgement ---
+  drawSectionHeader(ctx, USER_ID_SECTION_C_TITLE);
+
+  // Follows the header rather than dropping to the page foot, which would
+  // leave the section bar stranded above a gap.
+  drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: false });
 
   const safeRef = (form.requestorName || form.designation || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`User_ID_Requisition_${safeRef}.pdf`);
