@@ -187,10 +187,12 @@ export interface AssetFormData {
 }
 
 export interface UserIdFormData {
-  employeeId: string;
+  /** The person the user ID is for. */
+  requestorName: string;
   /** Replaces the other forms' Reference No. on this sheet. */
   phoneExt: string;
-  submittedBy: string;
+  /** The requestor's job title. */
+  designation: string;
   requestDate: string;
   department: string;
   location: string;

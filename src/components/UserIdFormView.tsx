@@ -26,9 +26,9 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
   // argument on useState widens the target to a union, which stops TypeScript
   // reporting missing or misspelled fields in this object.
   const initialForm: UserIdFormData = {
-    employeeId: '',
+    requestorName: currentUser.name || '',
     phoneExt: '',
-    submittedBy: currentUser.name || '',
+    designation: '',
     requestDate: new Date().toISOString().slice(0, 10),
     department: currentUser.department || '',
     location: '',
@@ -51,7 +51,10 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     setForm((prev) => ({ ...prev, systems: { ...prev.systems, [id]: checked } }));
   };
 
-  const setField = (field: 'employeeId' | 'phoneExt' | 'submittedBy' | 'requestDate' | 'department' | 'location', value: string) => {
+  const setField = (
+    field: 'requestorName' | 'phoneExt' | 'designation' | 'requestDate' | 'department' | 'location',
+    value: string
+  ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -192,12 +195,13 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
         <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-              Employee ID
+              User/Requestor Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              value={form.employeeId}
-              onChange={(e) => setField('employeeId', e.target.value)}
+              value={form.requestorName}
+              onChange={(e) => setField('requestorName', e.target.value)}
+              placeholder="Full name"
               className={inputClass}
             />
           </div>
@@ -216,13 +220,13 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
 
           <div>
             <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-              Submitted By <span className="text-rose-500">*</span>
+              Designation
             </label>
             <input
               type="text"
-              value={form.submittedBy}
-              onChange={(e) => setField('submittedBy', e.target.value)}
-              placeholder="Full name"
+              value={form.designation}
+              onChange={(e) => setField('designation', e.target.value)}
+              placeholder="e.g. Finance Executive"
               className={inputClass}
             />
           </div>

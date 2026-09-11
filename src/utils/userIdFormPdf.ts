@@ -89,8 +89,8 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
   drawSectionHeader(ctx, USER_ID_SECTION_A_TITLE);
 
   drawInfoRows(ctx, [
-    ['Employee ID:', form.employeeId, 'Phone/Ext:', form.phoneExt],
-    ['Submitted By:', form.submittedBy, 'Request Date:', form.requestDate],
+    ['User/Requestor Name:', form.requestorName, 'Phone/Ext:', form.phoneExt],
+    ['Designation:', form.designation, 'Request Date:', form.requestDate],
     ['Department:', form.department, 'Location:', form.location],
   ]);
 
@@ -246,6 +246,6 @@ export async function exportUserIdFormPdf(form: UserIdFormData) {
 
   drawSignatureBlock(ctx, USER_ID_SIGNATURE_LABELS, { anchorToFoot: true });
 
-  const safeRef = (form.employeeId || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
+  const safeRef = (form.requestorName || form.designation || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
   doc.save(`User_ID_Requisition_${safeRef}.pdf`);
 }
