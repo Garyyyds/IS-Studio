@@ -18,9 +18,14 @@ import {
   CheckCircle,
   XCircle,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  FilePlus2,
+  Recycle,
+  ClipboardList,
+  Lock
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
+import { DisposalFormView } from './DisposalFormView';
 
 interface UserPortalViewProps {
   currentUser: AppUser;
@@ -39,7 +44,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   onSelectTask,
   onOpenRunbook,
 }) => {
-  const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'help'>('submit');
+  const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'create-form' | 'help'>('submit');
+  // null shows the picker; a value opens that form.
+  const [selectedForm, setSelectedForm] = useState<'request' | 'disposal' | null>(null);
   
   // Submit Form State
   const [title, setTitle] = useState('');
@@ -266,6 +273,19 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Self-Service SOP Guides</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('create-form')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              activeTab === 'create-form'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FilePlus2 className="w-3.5 h-3.5" />
+            <span>Create Form</span>
           </button>
         </div>
       </div>
@@ -573,6 +593,70 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       )}
 
       {/* TAB 3: SELF-SERVICE HELP CENTER & SOP GUIDES */}
+      {/* CREATE FORM TAB */}
+      {activeTab === 'create-form' && (
+        <div>
+          {selectedForm === 'disposal' ? (
+            <DisposalFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100">
+                  Create a Form
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                  Choose the form you need. Fill it in here, then export a PDF to print and sign.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Request form - not built yet */}
+                <div
+                  aria-disabled="true"
+                  className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 opacity-70 cursor-not-allowed"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                      <ClipboardList className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      <Lock className="w-3 h-3" />
+                      <span>Coming soon</span>
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    IT Request Form
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    Request new hardware, software or access. Not available yet.
+                  </p>
+                </div>
+
+                {/* Disposal form */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm('disposal')}
+                  className="text-left p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900">
+                      <Recycle className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    IT Fixed Asset Disposal Request
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    List faulty or obsolete IT assets for withdrawal from service, then export the signed-off PDF.
+                  </p>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'help' && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">

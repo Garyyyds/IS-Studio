@@ -1,0 +1,374 @@
+import React, { useState } from 'react';
+import {
+  ArrowLeft,
+  FileDown,
+  Plus,
+  Trash2,
+  Recycle,
+  Info,
+  AlertTriangle,
+  Loader2,
+} from 'lucide-react';
+import { AppUser, DisposalFormData, DisposalItem } from '../types';
+import { exportDisposalFormPdf, DISPOSAL_NOTES } from '../utils/disposalFormPdf';
+
+interface DisposalFormViewProps {
+  currentUser: AppUser;
+  onBack: () => void;
+}
+
+// The printed form has six inventory rows, so the on-screen form opens with the
+// same six to keep the two recognisably the same document.
+const STARTING_ROWS = 6;
+
+const blankItem = (): DisposalItem => ({
+  id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  description: '',
+  specModel: '',
+  serialNumber: '',
+  quantity: '',
+  remarks: '',
+});
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+const suggestedReference = () =>
+  `DIS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
+
+export const DisposalFormView: React.FC<DisposalFormViewProps> = ({ currentUser, onBack }) => {
+  const [form, setForm] = useState<DisposalFormData>(() => ({
+    employeeId: currentUser.id || '',
+    referenceNo: suggestedReference(),
+    submittedBy: currentUser.name || '',
+    requestDate: todayIso(),
+    department: currentUser.department || '',
+    location: '',
+    items: Array.from({ length: STARTING_ROWS }, blankItem),
+  }));
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setField = (field: keyof Omit<DisposalFormData, 'items'>, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const setItem = (id: string, field: keyof Omit<DisposalItem, 'id'>, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    }));
+  };
+
+  const addRow = () => {
+    setForm((prev) => ({ ...prev, items: [...prev.items, blankItem()] }));
+  };
+
+  const removeRow = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.length > 1 ? prev.items.filter((item) => item.id !== id) : prev.items,
+    }));
+  };
+
+  const handleExport = async () => {
+    const hasItem = form.items.some((item) => item.description.trim());
+    if (!hasItem) {
+      setError('Add at least one item under Section B before exporting.');
+      return;
+    }
+    if (!form.submittedBy.trim()) {
+      setError('Submitted By is required.');
+      return;
+    }
+
+    setError(null);
+    setIsExporting(true);
+    try {
+      // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
+      await exportDisposalFormPdf({
+        ...form,
+        items: form.items.filter((item) =>
+          [item.description, item.specModel, item.serialNumber, item.quantity, item.remarks].some((v) =>
+            v.trim()
+          )
+        ),
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not generate the PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const inputClass =
+    'w-full px-3.5 py-2 rounded-lg text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition';
+
+  const cellClass =
+    'w-full px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition';
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+          <div>
+            <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Recycle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <span>IT Fixed Asset Disposal Request</span>
+            </h2>
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+              Fill in and export as PDF for signing
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
+        >
+          {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+          <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
+          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
+          <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{error}</p>
+        </div>
+      )}
+
+      {/* SECTION A */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            A. Disposal Application Information
+          </h3>
+        </div>
+        <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Employee ID
+            </label>
+            <input
+              type="text"
+              value={form.employeeId}
+              onChange={(e) => setField('employeeId', e.target.value)}
+              placeholder="e.g. EMP-1042"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Reference No.
+            </label>
+            <input
+              type="text"
+              value={form.referenceNo}
+              onChange={(e) => setField('referenceNo', e.target.value)}
+              placeholder="e.g. DIS-20260911-001"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Submitted By <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.submittedBy}
+              onChange={(e) => setField('submittedBy', e.target.value)}
+              placeholder="Full name"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Request Date
+            </label>
+            <input
+              type="date"
+              value={form.requestDate}
+              onChange={(e) => setField('requestDate', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Department
+            </label>
+            <input
+              type="text"
+              value={form.department}
+              onChange={(e) => setField('department', e.target.value)}
+              placeholder="e.g. Finance"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+              Location
+            </label>
+            <input
+              type="text"
+              value={form.location}
+              onChange={(e) => setField('location', e.target.value)}
+              placeholder="e.g. Ipoh HQ, Level 3"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION B */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            B. Inventory List for Disposal
+          </h3>
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Row</span>
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/40 text-left">
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-12">No.</th>
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Disposal Description
+                </th>
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Spec / Model
+                </th>
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Serial Number
+                </th>
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-20">
+                  Quantity
+                </th>
+                <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Remarks</th>
+                <th className="py-2 px-3 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {form.items.map((item, index) => (
+                <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2 px-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 text-center">
+                    {index + 1}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => setItem(item.id, 'description', e.target.value)}
+                      placeholder="e.g. Desktop system unit"
+                      className={cellClass}
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={item.specModel}
+                      onChange={(e) => setItem(item.id, 'specModel', e.target.value)}
+                      placeholder="e.g. Dell OptiPlex 7090"
+                      className={cellClass}
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={item.serialNumber}
+                      onChange={(e) => setItem(item.id, 'serialNumber', e.target.value)}
+                      placeholder="e.g. SN-88213"
+                      className={cellClass}
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.quantity}
+                      onChange={(e) => setItem(item.id, 'quantity', e.target.value)}
+                      placeholder="1"
+                      className={`${cellClass} text-center`}
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={item.remarks}
+                      onChange={(e) => setItem(item.id, 'remarks', e.target.value)}
+                      placeholder="e.g. Faulty PSU"
+                      className={cellClass}
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => removeRow(item.id)}
+                      aria-label={`Remove row ${index + 1}`}
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* SECTION C */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            C. Acknowledgement
+          </h3>
+        </div>
+        <div className="p-4 sm:p-6 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Note</span>
+          </div>
+          <ul className="space-y-2">
+            {DISPOSAL_NOTES.map((note) => (
+              <li
+                key={note}
+                className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
+              >
+                {note}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+            Signature blocks for Requestor, HOD and IT are added to the exported PDF for wet signing.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};

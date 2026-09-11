@@ -162,3 +162,22 @@ export interface StorageStatusInfo {
   filePath: string;
   lastSaved: string | null;
 }
+
+export interface DisposalItem {
+  id: string;
+  description: string;
+  specModel: string;
+  serialNumber: string;
+  quantity: string;
+  remarks: string;
+}
+
+export interface DisposalFormData {
+  employeeId: string;
+  referenceNo: string;
+  submittedBy: string;
+  requestDate: string;
+  department: string;
+  location: string;
+  items: DisposalItem[];
+}
