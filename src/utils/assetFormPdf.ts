@@ -42,6 +42,23 @@ export interface AssetFormConfig {
   emptyItemsError: string;
   /** Three signing columns at the foot of the printed form. */
   signatureLabels: [string, string, string];
+  /** Optional fourth section, completed by IT rather than the requester. */
+  sectionD?: SectionD;
+}
+
+/** A run of text within a tick-box line, so a single word can be emboldened. */
+export interface TextSegment {
+  text: string;
+  bold?: boolean;
+}
+
+export interface SectionD {
+  title: string;
+  subheading: string;
+  /** Each option prints as a line of text with a tick box at the right margin. */
+  options: TextSegment[][];
+  remarksLabel: string;
+  signatories: [string, string];
 }
 
 export const DISPOSAL_FORM: AssetFormConfig = {
@@ -91,6 +108,20 @@ export const ALLOCATION_FORM: AssetFormConfig = {
     'Record IT assets issued to an employee, then export the signed-off PDF for handover.',
   emptyItemsError: 'Add at least one item under Section B before exporting.',
   signatureLabels: ['Prepared/Installed By', 'Authorised By', 'Acknowledged/Accepted By'],
+  sectionD: {
+    title: 'D. FOR IT DEPARTMENT USE',
+    subheading: 'Allocated Unit Returned Acknowledgement:',
+    options: [
+      [{ text: '1. Allocated units returned as stated above in good condition.' }],
+      [
+        { text: '2. Allocated units returned as stated above ' },
+        { text: 'NOT', bold: true },
+        { text: ' in good condition.' },
+      ],
+    ],
+    remarksLabel: 'Remarks:',
+    signatories: ['Resources Returned By', 'Checked By'],
+  },
 };
 
 // jsPDF cannot embed WebP. Browsers decode it natively, so round-trip the logo
@@ -374,12 +405,14 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
   const naturalSignatureY = y + SECTION_GAP * 2;
   const anchoredSignatureY = pageHeight - margin - signatureBlockHeight - signatureFootRoom;
 
-  // A short form leaves the lower half of the page blank, so drop the
-  // signatures to the foot of the sheet when there is room. On a page that is
-  // already full they simply follow the notes, and overflow starts a new page.
+  // With a Section D to follow, the signatures stay where they fall so there is
+  // room beneath them. Otherwise a short form would leave the lower half of the
+  // page blank, so drop them to the foot of the sheet when there is room.
   if (naturalSignatureY + signatureBlockHeight > pageHeight - margin) {
     doc.addPage();
-    y = anchoredSignatureY;
+    y = config.sectionD ? margin : anchoredSignatureY;
+  } else if (config.sectionD) {
+    y = naturalSignatureY;
   } else {
     y = Math.max(naturalSignatureY, anchoredSignatureY);
   }
@@ -414,6 +447,64 @@ export async function exportAssetFormPdf(form: AssetFormData, config: AssetFormC
     signatureRow(sigLabels, y);
     y += 10;
     signatureRow(['Date', 'Date', 'Date'], y);
+  }
+
+  y += stacked ? 16 : 6;
+
+  // --- Section D: completed by IT when the asset comes back ---
+  if (config.sectionD) {
+    const d = config.sectionD;
+    const tickBoxSize = 4;
+    const tickBoxX = margin + contentWidth - tickBoxSize - 2;
+    const sectionDHeight = 60;
+
+    if (y + sectionDHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+
+    sectionHeader(d.title);
+    y += 6;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(d.subheading, margin, y);
+    y += 6;
+
+    doc.setFontSize(8);
+    d.options.forEach((segments) => {
+      // Draw the runs left to right so a single word can be bold mid-sentence.
+      let x = margin;
+      segments.forEach((segment) => {
+        doc.setFont('helvetica', segment.bold ? 'bold' : 'normal');
+        doc.text(segment.text, x, y);
+        x += doc.getTextWidth(segment.text);
+      });
+      doc.rect(tickBoxX, y - tickBoxSize + 1, tickBoxSize, tickBoxSize);
+      y += 6;
+    });
+
+    y += 2;
+
+    // Remarks rule runs to the right margin.
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(d.remarksLabel, margin, y);
+    const remarksLabelWidth = doc.getTextWidth(d.remarksLabel);
+    doc.line(margin + remarksLabelWidth + 2, y + 1, margin + contentWidth, y + 1);
+
+    y += 16;
+
+    // Two evenly spaced signing columns, label above a full-width line.
+    const dColWidth = contentWidth / 2;
+    const dGutter = 10;
+    doc.setFontSize(8);
+    d.signatories.forEach((label, i) => {
+      const x = margin + i * dColWidth;
+      doc.text(`${label}:`, x, y);
+      doc.line(x, y + 10, x + dColWidth - dGutter, y + 10);
+    });
   }
 
   const safeRef = (form.referenceNo || form.submittedBy || 'form').replace(/[^a-zA-Z0-9-_]/g, '_');
