@@ -360,7 +360,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
             {/* Both rows live in one padded container so they share a left
                 origin and column widths - Hardcopy under Yes, Softcopy under No. */}
             <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3 py-2.5 space-y-2.5">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 max-w-[280px]">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-[280px] max-w-full shrink-0">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -389,7 +389,7 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
               }`}
               aria-disabled={form.hasAttachments !== 'yes'}
             >
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 max-w-[280px]">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-[280px] max-w-full shrink-0">
                 {ATTACHMENT_FORMATS.map((option) => (
                   <label key={option.id} className="flex items-center gap-2 cursor-pointer">
                     <input
