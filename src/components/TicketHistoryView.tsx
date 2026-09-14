@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { Task, EnvironmentType, ITCategory, UserSettings } from '../types';
+import { Task, EnvironmentType, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
 import {
   isTaskRecentlyCompleted,
   isTaskArchived,
@@ -412,13 +412,11 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
             <option value="ALL">All Categories</option>
-            <option value="DevOps & SRE">DevOps & SRE</option>
-            <option value="Security & IAM">Security & IAM</option>
-            <option value="Database">Database</option>
-            <option value="Cloud Infra">Cloud Infra</option>
-            <option value="Networking">Networking</option>
-            <option value="Application">Application</option>
-            <option value="SysAdmin">SysAdmin</option>
+            {IT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
 
           {(selectedEnv !== 'ALL' || selectedCategory !== 'ALL' || search.trim()) && (

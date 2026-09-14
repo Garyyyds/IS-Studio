@@ -95,7 +95,7 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
       status: 'investigating',
       automatedTags: result.automatedTags || ['ai-triage'],
       manualTags: [],
-      category: (result.category as ITCategory) || 'DevOps & SRE',
+      category: (result.category as ITCategory) || 'Others',
       environment,
       affectedUsersEstimate: affectedEstimate,
       assignee: {

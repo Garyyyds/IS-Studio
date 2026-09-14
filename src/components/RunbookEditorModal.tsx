@@ -19,7 +19,7 @@ import {
   RotateCcw,
   Lock
 } from 'lucide-react';
-import { Runbook, EnvironmentType, ITCategory, DiagnosticStep, RemediationStep, UserRole } from '../types';
+import { Runbook, EnvironmentType, ITCategory, IT_CATEGORIES, DiagnosticStep, RemediationStep, UserRole } from '../types';
 
 interface RunbookEditorModalProps {
   runbook: Runbook | null;
@@ -33,11 +33,11 @@ interface RunbookEditorModalProps {
 const PRESET_TEMPLATES = [
   {
     name: 'Windows SMB Fileshare & Drive Mapping (\\\\hq-file01)',
-    category: 'Networking',
+    category: 'Network',
     runbook: {
       code: 'SOP-NET-004',
       title: 'Windows SMB Fileshare Connection Failure & Network Drive Mapping (\\\\hq-file01)',
-      category: 'Networking',
+      category: 'Network',
       environment: 'Corporate LAN',
       author: 'Senior Systems Administrator',
       authorRole: 'Infrastructure Support Lead',
@@ -169,11 +169,11 @@ const PRESET_TEMPLATES = [
   },
   {
     name: 'Kubernetes Pod CrashLoopBackOff & OOMKilled',
-    category: 'DevOps & SRE',
+    category: 'Others',
     runbook: {
       code: 'SOP-K8S-015',
       title: 'Kubernetes Pod CrashLoopBackOff & OOMKilled Emergency Protocol',
-      category: 'DevOps & SRE',
+      category: 'Others',
       environment: 'Production',
       author: 'Staff SRE',
       authorRole: 'Infrastructure Engineer',
@@ -222,7 +222,7 @@ const buildDefaultRunbook = (rb?: Runbook | null): Runbook => ({
   id: rb?.id || `runbook-${Date.now()}`,
   code: rb?.code || `SOP-OPS-${Math.floor(100 + Math.random() * 900)}`,
   title: rb?.title || '',
-  category: rb?.category || 'Networking',
+  category: rb?.category || 'Network',
   environment: rb?.environment || 'Corporate LAN',
   lastUpdated: new Date().toISOString().slice(0, 10),
   author: rb?.author || 'Alex Rivera',
@@ -625,13 +625,11 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
               >
-                <option value="Networking">Networking</option>
-                <option value="SysAdmin">SysAdmin</option>
-                <option value="DevOps & SRE">DevOps & SRE</option>
-                <option value="Database">Database</option>
-                <option value="Cloud Infra">Cloud Infra</option>
-                <option value="Security & IAM">Security & IAM</option>
-                <option value="Application">Application</option>
+                {IT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
               </select>
             </div>
 

@@ -22,7 +22,7 @@ import {
   Eye,
   Lock
 } from 'lucide-react';
-import { Runbook, ITCategory, UserRole } from '../types';
+import { Runbook, ITCategory, IT_CATEGORIES, UserRole } from '../types';
 import { exportRunbookToPdf } from '../utils/pdfExport';
 
 interface HandbookViewProps {
@@ -49,16 +49,7 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
   const [copiedCli, setCopiedCli] = useState<string | null>(null);
   const [runbookToDelete, setRunbookToDelete] = useState<Runbook | null>(null);
 
-  const categories = [
-    'ALL',
-    'Networking',
-    'SysAdmin',
-    'Database',
-    'DevOps & SRE',
-    'Cloud Infra',
-    'Security & IAM',
-    'Application',
-  ];
+  const categories = ['ALL', ...IT_CATEGORIES];
 
   const filteredRunbooks = runbooks.filter((rb) => {
     // Search

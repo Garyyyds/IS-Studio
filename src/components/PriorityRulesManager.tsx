@@ -82,7 +82,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
     matchType: 'keyword',
     pattern: '',
     tagsToApply: ['auto-triage'],
-    category: 'DevOps & SRE',
+    category: 'Others',
     enabled: true,
     description: '',
   });
@@ -166,7 +166,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
       matchType: 'keyword',
       pattern: '',
         tagsToApply: ['auto-triage'],
-        category: 'DevOps & SRE',
+        category: 'Others',
       enabled: true,
       description: '',
     });

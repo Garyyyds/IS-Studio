@@ -70,7 +70,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   // Submit Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<ITCategory>('Application');
   const [deviceInfo, setDeviceInfo] = useState('');
   const [systemRequested, setSystemRequested] = useState('');
   const [userLocation, setUserLocation] = useState('');
@@ -193,10 +192,10 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     const newTicket: Partial<Task> = {
       title: title.trim(),
       description: description.trim(),
-      category,
+      category: systemRequested as ITCategory,
       environment: 'Corporate LAN',
       status: 'backlog',
-      automatedTags: ['User Request', category],
+      automatedTags: ['User Request', systemRequested],
       manualTags: ['Portal Submission'],
       isAutoTagged: false,
       checklist: [

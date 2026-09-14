@@ -5,7 +5,8 @@ import {
   Runbook, 
   TaggingRule, 
   EnvironmentType, 
-  ITCategory, 
+  ITCategory,
+  IT_CATEGORIES,
   StorageStatusInfo,
   AppUser
 } from '../types';
@@ -1274,13 +1275,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       }
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
                     >
-                      <option value="DevOps & SRE">DevOps & SRE</option>
-                      <option value="Database">Database</option>
-                      <option value="Cloud Infra">Cloud Infra</option>
-                      <option value="Security & IAM">Security & IAM</option>
-                      <option value="Networking">Networking</option>
-                      <option value="Application">Application</option>
-                      <option value="SysAdmin">SysAdmin</option>
+                      {IT_CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

@@ -9,7 +9,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
-import { Runbook, Task, ITCategory, EnvironmentType } from '../types';
+import { Runbook, Task, ITCategory, IT_CATEGORIES, EnvironmentType } from '../types';
 
 interface AiRunbookGeneratorModalProps {
   isOpen: boolean;
@@ -21,7 +21,7 @@ interface AiRunbookGeneratorModalProps {
 const QUICK_PROMPT_PRESETS = [
   {
     title: 'Connection failure to fileshare (\\\\hq-file01)',
-    category: 'Networking' as ITCategory,
+    category: 'Network' as ITCategory,
     environment: 'Corporate LAN' as EnvironmentType,
     description: 'Workstation cannot connect to \\\\hq-file01 fileshare or map drive Z:. Need DNS verification and adapter DHCP reset.',
     logs: 'ping: could not find host hq-file01\nError 0x80070035: The network path was not found.',
@@ -35,7 +35,7 @@ const QUICK_PROMPT_PRESETS = [
   },
   {
     title: 'Kubernetes Pod CrashLoopBackOff & Exit 137 OOMKilled',
-    category: 'DevOps & SRE' as ITCategory,
+    category: 'Others' as ITCategory,
     environment: 'Production' as EnvironmentType,
     description: 'Container killed by Linux cgroup OOM killer due to memory spikes during load.',
     logs: 'Last State: Terminated, Reason: OOMKilled, Exit Code: 137',
@@ -51,7 +51,7 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
   const [incidentTitle, setIncidentTitle] = useState(initialTask?.title || '');
   const [incidentDescription, setIncidentDescription] = useState(initialTask?.description || '');
   const [rawLogs, setRawLogs] = useState(initialTask?.rawLogs || '');
-  const [category, setCategory] = useState<ITCategory>(initialTask?.category || 'Networking');
+  const [category, setCategory] = useState<ITCategory>(initialTask?.category || 'Network');
   const [environment, setEnvironment] = useState<EnvironmentType>(initialTask?.environment || 'Corporate LAN');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +62,7 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
       setIncidentTitle(initialTask?.title || '');
       setIncidentDescription(initialTask?.description || '');
       setRawLogs(initialTask?.rawLogs || '');
-      setCategory(initialTask?.category || 'Networking');
+      setCategory(initialTask?.category || 'Network');
       setEnvironment(initialTask?.environment || 'Corporate LAN');
       setError(null);
     }
@@ -210,13 +210,11 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
                 onChange={(e) => setCategory(e.target.value as ITCategory)}
                 className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800"
               >
-                <option value="Networking">Networking</option>
-                <option value="SysAdmin">SysAdmin</option>
-                <option value="DevOps & SRE">DevOps & SRE</option>
-                <option value="Database">Database</option>
-                <option value="Cloud Infra">Cloud Infra</option>
-                <option value="Security & IAM">Security & IAM</option>
-                <option value="Application">Application</option>
+                {IT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
               </select>
             </div>
 

@@ -34,6 +34,7 @@ import { UserPortalView } from './components/UserPortalView';
 import { SupportChatAssistant } from './components/SupportChatAssistant';
 import { evaluateTaskPriorityWithRules } from './utils/priorityEngine';
 import { formatTicketNumber, nextTicketSequence, sequenceOf } from './utils/ticketNumber';
+import { normalizeRules, normalizeRunbooks, normalizeSettings, normalizeTasks } from './utils/categories';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
 import { Check, Zap, Info } from 'lucide-react';
 
@@ -274,19 +275,19 @@ export default function App() {
           if (!isMounted) return;
 
           if (data.tasks && Array.isArray(data.tasks)) {
-            setTasks(data.tasks);
+            setTasks(normalizeTasks(data.tasks));
             localStorage.setItem('it_ops_tasks', JSON.stringify(data.tasks));
           }
           if (data.runbooks && Array.isArray(data.runbooks)) {
-            setRunbooks(data.runbooks);
+            setRunbooks(normalizeRunbooks(data.runbooks));
             localStorage.setItem('it_ops_runbooks', JSON.stringify(data.runbooks));
           }
           if (data.rules && Array.isArray(data.rules)) {
-            setRules(data.rules);
+            setRules(normalizeRules(data.rules));
             localStorage.setItem('it_ops_rules', JSON.stringify(data.rules));
           }
           if (data.settings && typeof data.settings === 'object') {
-            setSettings((prev) => ({ ...prev, ...data.settings }));
+            setSettings((prev) => ({ ...prev, ...normalizeSettings(data.settings) }));
             localStorage.setItem('it_ops_settings', JSON.stringify(data.settings));
           }
 
@@ -334,10 +335,10 @@ export default function App() {
             const dataRes = await fetch('/api/data');
             if (dataRes.ok && isMounted) {
               const latest = await dataRes.json();
-              if (latest.tasks) setTasks(latest.tasks);
-              if (latest.runbooks) setRunbooks(latest.runbooks);
-              if (latest.rules) setRules(latest.rules);
-              if (latest.settings) setSettings(latest.settings);
+              if (latest.tasks) setTasks(normalizeTasks(latest.tasks));
+              if (latest.runbooks) setRunbooks(normalizeRunbooks(latest.runbooks));
+              if (latest.rules) setRules(normalizeRules(latest.rules));
+              if (latest.settings) setSettings(normalizeSettings(latest.settings));
               setLastSavedToServer(latest.lastSaved);
               lastSavedToServerRef.current = latest.lastSaved;
               setServerSyncStatus('synced');
@@ -445,10 +446,10 @@ export default function App() {
       const res = await fetch('/api/data');
       if (res.ok) {
         const data = await res.json();
-        if (data.tasks) setTasks(data.tasks);
-        if (data.runbooks) setRunbooks(data.runbooks);
-        if (data.rules) setRules(data.rules);
-        if (data.settings) setSettings(data.settings);
+        if (data.tasks) setTasks(normalizeTasks(data.tasks));
+        if (data.runbooks) setRunbooks(normalizeRunbooks(data.runbooks));
+        if (data.rules) setRules(normalizeRules(data.rules));
+        if (data.settings) setSettings(normalizeSettings(data.settings));
         setServerSyncStatus('synced');
         const savedTime = data.lastSaved || new Date().toISOString();
         setLastSavedToServer(savedTime);
@@ -569,7 +570,7 @@ export default function App() {
       status,
       automatedTags: [],
       manualTags: [],
-      category: settings.defaultCategory || 'Application',
+      category: settings.defaultCategory || 'Others',
       environment: settings.defaultEnvironment || 'Corporate LAN',
       requesterName: currentUser?.name || 'Employee Requester',
       requesterEmail: currentUser?.email || 'employee@company.com',
@@ -688,16 +689,16 @@ export default function App() {
   // Data Management Handlers
   const handleImportData = (data: { tasks?: Task[]; runbooks?: Runbook[]; rules?: TaggingRule[]; settings?: UserSettings }) => {
     if (data.tasks && Array.isArray(data.tasks)) {
-      setTasks(data.tasks);
+      setTasks(normalizeTasks(data.tasks));
     }
     if (data.runbooks && Array.isArray(data.runbooks)) {
-      setRunbooks(data.runbooks);
+      setRunbooks(normalizeRunbooks(data.runbooks));
     }
     if (data.rules && Array.isArray(data.rules)) {
-      setRules(data.rules);
+      setRules(normalizeRules(data.rules));
     }
     if (data.settings) {
-      setSettings(data.settings);
+      setSettings(normalizeSettings(data.settings));
     }
     showToast('Workspace data successfully imported and synced.');
   };
@@ -749,7 +750,7 @@ export default function App() {
       status: 'backlog',
       automatedTags: ticketData.automatedTags || ['User Request', 'PORTAL'],
       manualTags: ticketData.manualTags || ['Portal Submission'],
-      category: ticketData.category || 'Application',
+      category: ticketData.category || 'Others',
       environment: ticketData.environment || 'Corporate LAN',
       affectedUsersEstimate: 1,
       assignee: ticketData.assignee || {

@@ -1010,7 +1010,7 @@ extract useful operational tags, and suggest a short remediation checklist.`;
           properties: {
             category: {
               type: Type.STRING,
-              description: 'Best matching category: DevOps & SRE, Security & IAM, Database, Cloud Infra, Networking, Application, SysAdmin',
+              description: 'Best matching category, exactly one of: E-mail, FTP, NAV, File Server, Internet, Advance Retails System, Network, HRIS, Ebuilder, Printer, Database, Others',
             },
             automatedTags: {
               type: Type.ARRAY,
@@ -1057,7 +1057,7 @@ app.post('/api/ai/generate-runbook', async (req, res) => {
     const problemTitle = req.body.problemTitle || req.body.incidentTitle || req.body.title;
     const errorLogs = req.body.errorLogs || req.body.rawLogs || '';
     const environment = req.body.environment || 'Production';
-    const category = req.body.category || 'Networking';
+    const category = req.body.category || 'Network';
     const systemContext = req.body.systemContext || req.body.incidentDescription || req.body.description || '';
 
     if (!problemTitle) {

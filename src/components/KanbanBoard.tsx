@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
-import { Task, Runbook, TaskStatus, EnvironmentType, ITCategory, UserSettings } from '../types';
+import { Task, Runbook, TaskStatus, EnvironmentType, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
 import { TaskCard } from './TaskCard';
 import { isTaskRecentlyCompleted, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
@@ -208,13 +208,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 shrink-0 snap-start"
             >
               <option value="ALL">All Categories</option>
-              <option value="DevOps & SRE">DevOps & SRE</option>
-              <option value="Database">Database</option>
-              <option value="Cloud Infra">Cloud Infra</option>
-              <option value="Security & IAM">Security & IAM</option>
-              <option value="Networking">Networking</option>
-              <option value="SysAdmin">SysAdmin</option>
-              <option value="Application">Application</option>
+              {IT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
 
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block"></div>

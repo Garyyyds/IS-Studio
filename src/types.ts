@@ -14,14 +14,26 @@ export type EnvironmentType =
   | 'Internal Tooling' 
   | 'Cloud Infrastructure';
 
-export type ITCategory = 
-  | 'DevOps & SRE' 
-  | 'Security & IAM' 
-  | 'Database' 
-  | 'Cloud Infra' 
-  | 'Networking' 
-  | 'Application' 
-  | 'SysAdmin';
+/**
+ * The one category list, shared by the request form, tickets, the board,
+ * analytics, the SOP handbook, tagging rules and settings.
+ */
+export const IT_CATEGORIES = [
+  'E-mail',
+  'FTP',
+  'NAV',
+  'File Server',
+  'Internet',
+  'Advance Retails System',
+  'Network',
+  'HRIS',
+  'Ebuilder',
+  'Printer',
+  'Database',
+  'Others',
+] as const;
+
+export type ITCategory = (typeof IT_CATEGORIES)[number];
 
 export type UserRole = 'admin' | 'user';
 

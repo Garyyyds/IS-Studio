@@ -16,7 +16,7 @@ export function evaluateTaskPriorityWithRules(
   const combinedText = `${taskData.title} ${taskData.description} ${taskData.rawLogs || ''}`.toLowerCase();
 
   const tagsSet = new Set<string>();
-  let category: ITCategory = 'DevOps & SRE';
+  let category: ITCategory = 'Others';
 
   // Add environment tag
   if (taskData.environment === 'Production') {

@@ -17,7 +17,7 @@ import {
   Cpu,
   Terminal
 } from 'lucide-react';
-import { Task, Runbook, TaggingRule, ITCategory } from '../types';
+import { Task, Runbook, TaggingRule, ITCategory, IT_CATEGORIES } from '../types';
 
 interface AnalyticsDashboardProps {
   tasks: Task[];
@@ -26,15 +26,7 @@ interface AnalyticsDashboardProps {
   onOpenRunbook: (id: string) => void;
 }
 
-const ALL_CATEGORIES: ITCategory[] = [
-  'DevOps & SRE',
-  'Database',
-  'Cloud Infra',
-  'Security & IAM',
-  'Networking',
-  'SysAdmin',
-  'Application'
-];
+const ALL_CATEGORIES: ITCategory[] = [...IT_CATEGORIES];
 
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   tasks,

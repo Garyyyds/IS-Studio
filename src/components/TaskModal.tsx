@@ -27,7 +27,7 @@ import {
   ClipboardList,
   UserCheck,
 } from 'lucide-react';
-import { Task, Runbook, EnvironmentType, ITCategory, TaskStatus, UserRole } from '../types';
+import { Task, Runbook, EnvironmentType, ITCategory, IT_CATEGORIES, TaskStatus, UserRole } from '../types';
 import { exportTicketPdf } from '../utils/supportRequestPdf';
 import { attachmentUrl, formatBytes } from '../utils/attachments';
 
@@ -49,7 +49,7 @@ const emptyTask: Task = {
   title: '',
   description: '',
   environment: 'Corporate LAN',
-  category: 'Application',
+  category: 'Others',
   status: 'backlog',
   createdAt: '',
   updatedAt: '',
@@ -69,15 +69,6 @@ const emptyTask: Task = {
   },
 };
 
-const CATEGORIES: { value: ITCategory; label: string; desc: string }[] = [
-  { value: 'Application', label: 'Software & Tool Access', desc: 'Figma, Slack, Jira, GitHub, Office 365' },
-  { value: 'Networking', label: 'Network, Wi-Fi & Corporate VPN', desc: 'Office Wi-Fi, WireGuard, Cisco AnyConnect' },
-  { value: 'SysAdmin', label: 'Hardware, Laptop & Peripherals', desc: 'MacBook, ThinkPad, external monitors, docks' },
-  { value: 'Security & IAM', label: 'Password, SSO, Okta 2FA & Accounts', desc: 'Password reset, MFA tokens, locked accounts' },
-  { value: 'Cloud Infra', label: 'Cloud, Server & Infrastructure', desc: 'AWS, GCP, Kubernetes, CI/CD runners' },
-  { value: 'Database', label: 'Database & Data Access', desc: 'PostgreSQL, Redis, analytics permissions' },
-  { value: 'DevOps & SRE', label: 'DevOps & Reliability', desc: 'Production incidents, alerts, pipelines' },
-];
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string; color: string }[] = [
   { value: 'backlog', label: 'Received / In Queue', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' },
@@ -335,9 +326,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                           onChange={(e) => setFormData({ ...formData, category: e.target.value as ITCategory })}
                           className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
                         >
-                          {CATEGORIES.map((cat) => (
-                            <option key={cat.value} value={cat.value}>
-                              {cat.label} ({cat.desc})
+                          {IT_CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
                             </option>
                           ))}
                         </select>
