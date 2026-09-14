@@ -76,3 +76,4 @@ away later work permanently.
 | `14092026ver003` | 2026-09-14 | Remove the Error Code, Log Output or URL field from the employee ticket form and the admin ticket modal |
 | `14092026ver004` | 2026-09-14 | Ticket form placeholders: Summary e.g. No Internet connection, Location e.g. HQ, KLO, Phone e.g. 1234, HOD Name reads Name |
 | `14092026ver005` | 2026-09-14 | Device field renamed Affected Device on both sides, no invented default, placeholder e.g. Laptop, Printer |
+| `14092026ver006` | 2026-09-14 | Ticket submission becomes the Request Form, first card in Create Form; Create Form is now the first portal tab and the default landing page |

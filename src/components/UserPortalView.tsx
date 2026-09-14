@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { 
   LifeBuoy, 
+  ArrowLeft,
   Send, 
   CheckCircle2, 
   AlertTriangle, 
@@ -53,10 +54,10 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   onSelectTask,
   onOpenRunbook,
 }) => {
-  const [activeTab, setActiveTab] = useState<'submit' | 'my-tickets' | 'create-form' | 'help'>('submit');
+  const [activeTab, setActiveTab] = useState<'my-tickets' | 'create-form' | 'help'>('create-form');
   // null shows the picker; a value opens that form.
   const [selectedForm, setSelectedForm] = useState<
-    'requisition' | 'disposal' | 'allocation' | 'user-id' | null
+    'request' | 'requisition' | 'disposal' | 'allocation' | 'user-id' | null
   >(null);
   
   // Submit Form State
@@ -299,15 +300,20 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
-            onClick={() => setActiveTab('submit')}
+            onClick={() => {
+              // Always land on the picker, the same place Back returns to,
+              // rather than reopening whichever form was last left open.
+              setSelectedForm(null);
+              setActiveTab('create-form');
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-              activeTab === 'submit'
+              activeTab === 'create-form'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Send className="w-3.5 h-3.5" />
-            <span>Submit IT Request</span>
+            <FilePlus2 className="w-3.5 h-3.5" />
+            <span>Create Form</span>
           </button>
 
           <button
@@ -339,24 +345,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Self-Service SOP Guides</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              // Always land on the picker, the same place Back returns to,
-              // rather than reopening whichever form was last left open.
-              setSelectedForm(null);
-              setActiveTab('create-form');
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-              activeTab === 'create-form'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <FilePlus2 className="w-3.5 h-3.5" />
-            <span>Create Form</span>
           </button>
         </div>
       </div>
@@ -393,273 +381,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
             >
               Dismiss
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 1: SUBMIT REQUEST FORM */}
-      {activeTab === 'submit' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
-            <div className="mb-5">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <LifeBuoy className="w-5 h-5 text-indigo-600" />
-                <span>Submit an IT Incident or Request</span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tell us what you're experiencing. Our IT team will triage and troubleshoot your issue.
-              </p>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Summary / What is the issue? <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. No Internet connection"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  System <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  required
-                  value={systemRequested}
-                  onChange={(e) => setSystemRequested(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="">Select system...</option>
-                  {SYSTEM_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Category
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as ITCategory)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                  >
-                    <option value="Application">Software & Tool Access (Figma, Slack, Jira)</option>
-                    <option value="Networking">Network, Wi-Fi & Corporate VPN</option>
-                    <option value="SysAdmin">Hardware, Laptop, Monitor & Peripherals</option>
-                    <option value="Security & IAM">Password, SSO, Okta 2FA & Accounts</option>
-                    <option value="Cloud Infra">Cloud, Server & Infrastructure</option>
-                    <option value="Database">Database & Data Access</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Affected Device
-                  </label>
-                  <div className="relative">
-                    <Laptop className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={deviceInfo}
-                      onChange={(e) => setDeviceInfo(e.target.value)}
-                      placeholder="e.g. Laptop, Printer"
-                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Location <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={userLocation}
-                    onChange={(e) => setUserLocation(e.target.value)}
-                    placeholder="e.g. HQ, KLO"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Phone / Extension <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={userPhoneExt}
-                    onChange={(e) => setUserPhoneExt(e.target.value)}
-                    placeholder="e.g. 1234"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    HOD Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={hodName}
-                    onChange={(e) => setHodName(e.target.value)}
-                    placeholder="Name"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    HOD Email <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={hodEmail}
-                    onChange={(e) => setHodEmail(e.target.value)}
-                    placeholder="hod@eadeco.com.my"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Remarks / Description <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the issue in detail..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    Attachments{' '}
-                    <span className="font-normal text-slate-400">
-                      (Optional)
-                    </span>
-                  </label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFilesPicked}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    <Paperclip className="w-3.5 h-3.5" />
-                    <span>Add Files</span>
-                  </button>
-                </div>
-
-                {files.length > 0 ? (
-                  // One row per file on a shared grid, so names, sizes and remove
-                  // buttons line up down the list however many are attached.
-                  <ul className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
-                    {files.map((file, index) => (
-                      <li
-                        key={`${file.name}-${file.size}`}
-                        className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-3 py-2"
-                      >
-                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs text-slate-800 dark:text-slate-200 truncate" title={file.name}>
-                          {file.name}
-                        </span>
-                        <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 text-right">
-                          {formatBytes(file.size)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          aria-label={`Remove ${file.name}`}
-                          className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    Screenshots, error photos or documents that help IT understand the request.
-                  </p>
-                )}
-              </div>
-
-              {submitError && (
-                <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
-                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
-                  <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{submitError}</p>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-between">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Requester: <strong>{currentUser.name}</strong> ({currentUser.email})
-                </span>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !title.trim() || !description.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-2 shadow-sm"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isSubmitting ? (files.length ? 'Uploading...' : 'Submitting...') : 'Submit Ticket'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Right Sidebar: Guidelines & Quick Help */}
-          <div className="space-y-4">
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-900/50 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Self-Service Troubleshooting</span>
-              </h3>
-              <p className="text-xs text-indigo-900/80 dark:text-indigo-300 leading-relaxed">
-                Need a quick fix for VPN, Wi-Fi passwords, or laptop monitors? Check our company SOP guides first:
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveTab('help')}
-                className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <span>Browse {runbooks.length} Help Guides</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -724,12 +445,15 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {ticketFilter === 'all'
-                  ? "You haven't submitted any IT tickets yet. Click 'Submit IT Request' to report any issue."
+                  ? "You haven't submitted any IT tickets yet. Open the Request Form to report an issue."
                   : `You don't have any ${ticketFilter} tickets at the moment.`}
               </p>
               <button
                 type="button"
-                onClick={() => setActiveTab('submit')}
+                onClick={() => {
+                  setSelectedForm('request');
+                  setActiveTab('create-form');
+                }}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer inline-flex items-center gap-2"
               >
                 <Send className="w-3.5 h-3.5" />
@@ -803,7 +527,284 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       {/* CREATE FORM TAB */}
       {activeTab === 'create-form' && (
         <div>
-          {selectedForm === 'user-id' ? (
+          {selectedForm === 'request' ? (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <LifeBuoy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Request Form</span>
+                  </h2>
+                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+                    Tell us what you're experiencing. IT will triage and follow up.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm(null)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
+                  <form onSubmit={handleFormSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                        Summary / What is the issue? <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="e.g. No Internet connection"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                        System <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={systemRequested}
+                        onChange={(e) => setSystemRequested(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                      >
+                        <option value="">Select system...</option>
+                        {SYSTEM_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          Category
+                        </label>
+                        <select
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value as ITCategory)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                        >
+                          <option value="Application">Software & Tool Access (Figma, Slack, Jira)</option>
+                          <option value="Networking">Network, Wi-Fi & Corporate VPN</option>
+                          <option value="SysAdmin">Hardware, Laptop, Monitor & Peripherals</option>
+                          <option value="Security & IAM">Password, SSO, Okta 2FA & Accounts</option>
+                          <option value="Cloud Infra">Cloud, Server & Infrastructure</option>
+                          <option value="Database">Database & Data Access</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          Affected Device
+                        </label>
+                        <div className="relative">
+                          <Laptop className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={deviceInfo}
+                            onChange={(e) => setDeviceInfo(e.target.value)}
+                            placeholder="e.g. Laptop, Printer"
+                            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          Location <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={userLocation}
+                          onChange={(e) => setUserLocation(e.target.value)}
+                          placeholder="e.g. HQ, KLO"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          Phone / Extension <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={userPhoneExt}
+                          onChange={(e) => setUserPhoneExt(e.target.value)}
+                          placeholder="e.g. 1234"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          HOD Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={hodName}
+                          onChange={(e) => setHodName(e.target.value)}
+                          placeholder="Name"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          HOD Email <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={hodEmail}
+                          onChange={(e) => setHodEmail(e.target.value)}
+                          placeholder="hod@eadeco.com.my"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                        Remarks / Description <span className="text-rose-500">*</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        required
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Describe the issue in detail..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between gap-3 mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          Attachments{' '}
+                          <span className="font-normal text-slate-400">
+                            (Optional)
+                          </span>
+                        </label>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={handleFilesPicked}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                        >
+                          <Paperclip className="w-3.5 h-3.5" />
+                          <span>Add Files</span>
+                        </button>
+                      </div>
+
+                      {files.length > 0 ? (
+                        // One row per file on a shared grid, so names, sizes and remove
+                        // buttons line up down the list however many are attached.
+                        <ul className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+                          {files.map((file, index) => (
+                            <li
+                              key={`${file.name}-${file.size}`}
+                              className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-3 py-2"
+                            >
+                              <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-xs text-slate-800 dark:text-slate-200 truncate" title={file.name}>
+                                {file.name}
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 text-right">
+                                {formatBytes(file.size)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                aria-label={`Remove ${file.name}`}
+                                className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          Screenshots, error photos or documents that help IT understand the request.
+                        </p>
+                      )}
+                    </div>
+
+                    {submitError && (
+                      <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
+                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                        <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{submitError}</p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Requester: <strong>{currentUser.name}</strong> ({currentUser.email})
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !title.trim() || !description.trim()}
+                        className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-2 shadow-sm"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isSubmitting ? (files.length ? 'Uploading...' : 'Submitting...') : 'Submit Ticket'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Right Sidebar: Guidelines & Quick Help */}
+                <div className="space-y-4">
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-900/50 shadow-xs space-y-3">
+                    <h3 className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span>Self-Service Troubleshooting</span>
+                    </h3>
+                    <p className="text-xs text-indigo-900/80 dark:text-indigo-300 leading-relaxed">
+                      Need a quick fix for VPN, Wi-Fi passwords, or laptop monitors? Check our company SOP guides first:
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('help')}
+                      className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <span>Browse {runbooks.length} Help Guides</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : selectedForm === 'user-id' ? (
             <UserIdFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
           ) : selectedForm === 'requisition' ? (
             <RequisitionFormView currentUser={currentUser} onBack={() => setSelectedForm(null)} />
@@ -820,11 +821,31 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   Create a Form
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
-                  Choose the form you need. Fill it in here, then export a PDF to print and sign.
+                  Choose the form you need. Requests go straight to IT; the other forms export a PDF to print and sign.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* IT incident or support request - raises a ticket straight away */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedForm('request')}
+                  className="text-left p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900">
+                      <LifeBuoy className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    Request Form
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                    Report an IT issue or ask for support. It goes straight to the IT queue as a ticket.
+                  </p>
+                </button>
+
                 {/* Hardware, software and peripherals requisition */}
                 <button
                   type="button"
