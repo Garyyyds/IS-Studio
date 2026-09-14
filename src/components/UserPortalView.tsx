@@ -362,11 +362,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           >
             <Inbox className="w-3.5 h-3.5" />
             <span>My Tickets</span>
-            {activeMyTickets.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold">
-                {activeMyTickets.length}
-              </span>
-            )}
           </button>
 
           <button
