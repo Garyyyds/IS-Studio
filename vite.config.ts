@@ -22,7 +22,21 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       // data/ holds the server-side storage cache, which the server rewrites on
       // every GET /api/data. Watching it makes each page load trigger the next.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {ignored: ['**/data/**']},
+      // Anchored to the project root on purpose: a "**/data/**" glob also
+      // matches src/data/, so edits there were silently never picked up and the
+      // browser kept importing a stale module.
+      watch:
+        process.env.DISABLE_HMR === 'true'
+          ? null
+          : {
+              ignored: [
+                (file: string) => {
+                  const normalized = path.resolve(file).toLowerCase();
+                  const dataDir = path.resolve(__dirname, 'data').toLowerCase();
+                  return normalized === dataDir || normalized.startsWith(dataDir + path.sep);
+                },
+              ],
+            },
     },
   };
 });

@@ -79,3 +79,4 @@ away later work permanently.
 | `14092026ver006` | 2026-09-14 | Ticket submission becomes the Request Form, first card in Create Form; Create Form is now the first portal tab and the default landing page |
 | `14092026ver007` | 2026-09-14 | Rename Request Form to IT Support Request on the picker card, form header and My Tickets empty state |
 | `14092026ver008` | 2026-09-14 | Export to PDF for IT Support Request (sections A-D); long remarks and file lists now continue onto a new page on every form instead of running off the sheet |
+| `14092026ver009` | 2026-09-14 | Fix blank page: Vite watch ignore now anchored to the root data folder, so edits in src/data are no longer missed and served stale |
