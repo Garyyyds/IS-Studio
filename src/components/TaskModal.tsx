@@ -98,6 +98,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 }) => {
   const isReadOnly = userRole === 'user';
   const [formData, setFormData] = useState<Task>(task || emptyTask);
+  // Tickets raised through the employee portal carry what the employee typed.
+  // IT works the ticket (status, assignee, checklist, resolution) but must not
+  // rewrite that record, so those fields stay locked even for admins. Tickets
+  // an admin creates on the board remain fully editable.
+  const isPortalSubmission =
+    Boolean(formData.systemRequested) || (formData.manualTags || []).includes('Portal Submission');
+  const lockSubmission = isReadOnly || isPortalSubmission;
   const [newChecklistText, setNewChecklistText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isEditingRequester, setIsEditingRequester] = useState(false);
@@ -246,7 +253,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               </div>
 
-              {!isReadOnly && (
+              {!lockSubmission && (
                 <button
                   type="button"
                   onClick={() => setIsEditingRequester(!isEditingRequester)}
@@ -259,7 +266,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
 
             {/* Editable or Display Requester Info */}
-            {isEditingRequester ? (
+            {isEditingRequester && !lockSubmission ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
@@ -419,17 +426,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Issue Details Mentioned in Ticket</span>
+              {isPortalSubmission && !isReadOnly && (
+                <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <Lock className="w-3 h-3" />
+                  <span>Submitted by employee</span>
+                </span>
+              )}
             </h3>
 
             {/* Title / Summary */}
             <div>
               <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                Summary / What is the issue? {!isReadOnly && <span className="text-red-500">*</span>}
+                Summary / What is the issue? {!lockSubmission && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
-                required={!isReadOnly}
-                disabled={isReadOnly}
+                required={!lockSubmission}
+                disabled={lockSubmission}
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Cannot connect to Singapore Office VPN, or Need Figma Enterprise Access"
@@ -437,7 +450,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               />
             </div>
 
-            {/* Category */}
+            {/* Category & Environment - admin-created tickets only */}
+            {!isPortalSubmission && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Category */}
               <div>
@@ -484,15 +498,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               </div>
             </div>
+            )}
 
             {/* Detailed Description */}
             <div>
               <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                Detailed Description of the Issue
+                {isPortalSubmission ? 'Remarks / Description' : 'Detailed Description of the Issue'}
               </label>
               <textarea
                 rows={4}
-                disabled={isReadOnly}
+                disabled={lockSubmission}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Details of what happened, symptoms, what the user was doing, or specific error message..."
