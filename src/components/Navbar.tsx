@@ -224,16 +224,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Upper Right Action Controls & User Profile (Right) */}
           <div className="flex items-center justify-end gap-1 sm:gap-2 min-w-0">
-            {/* Storage Indicator - hidden on mobile */}
+            {/* Sync indicator light - the status is in its tooltip. Hidden on mobile. */}
             <div
-              className="hidden lg:flex items-center gap-1.5 h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-[11px] text-slate-600 dark:text-slate-300 shrink-0"
+              className="hidden lg:flex items-center justify-center w-5 h-8 shrink-0"
+              title={
+                serverSyncStatus === 'syncing'
+                  ? 'Saving...'
+                  : serverSyncStatus === 'synced'
+                    ? 'All changes saved'
+                    : serverSyncStatus === 'error'
+                      ? 'Could not save - check the connection'
+                      : 'Not synced yet'
+              }
+              aria-label="Sync status"
             >
               {serverSyncStatus === 'syncing' ? (
                 <RefreshCw className="w-3 h-3 text-amber-500 animate-spin" />
               ) : (
-                <span className={`w-1.5 h-1.5 rounded-full ${serverSyncStatus === 'synced' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    serverSyncStatus === 'synced'
+                      ? 'bg-emerald-500'
+                      : serverSyncStatus === 'error'
+                        ? 'bg-rose-500'
+                        : 'bg-slate-400'
+                  }`}
+                />
               )}
-              <span className="hidden xl:inline">Storage</span>
             </div>
 
             {/* Role-specific Admin Tools */}
@@ -269,7 +286,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleCycleTheme}
-                className="hidden xs:flex w-8 h-8 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0"
+                className="flex w-8 h-8 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0"
                 title={`Theme Mode: ${getThemeLabel()} (Click to toggle)`}
                 aria-label="Toggle Theme Mode"
               >
