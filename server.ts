@@ -1178,6 +1178,42 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
 // route just answers in the mode it is asked for.
 const CHAT_MAX_HISTORY = 12;
 const CHAT_MAX_MESSAGE_CHARS = 2000;
+
+// Usage window: an employee's first question opens a session of
+// CHAT_SESSION_SECONDS; when it ends, the assistant is locked for
+// CHAT_COOLDOWN_SECONDS before a new session can start. Enforced here, not in
+// the browser, so reloading the page or opening another tab does not reset it.
+// Kept in memory, so restarting the server clears every window.
+const CHAT_SESSION_MS = (Number(process.env.CHAT_SESSION_SECONDS) || 10 * 60) * 1000;
+const CHAT_COOLDOWN_MS = (Number(process.env.CHAT_COOLDOWN_SECONDS) || 30 * 60) * 1000;
+const chatSessionStarts = new Map<string, number>();
+
+type ChatSessionState =
+  | { status: 'new'; sessionMs: number; cooldownMs: number }
+  | { status: 'active'; endsInMs: number; cooldownMs: number }
+  | { status: 'ended'; retryInMs: number };
+
+function chatSessionKey(req: any, user: any): string {
+  return String(user?.id || user?.email || req.ip || 'anonymous').toLowerCase();
+}
+
+function chatSessionState(key: string, now: number): ChatSessionState {
+  // Forget windows that have fully expired so the map cannot grow forever.
+  for (const [k, started] of chatSessionStarts) {
+    if (now - started >= CHAT_SESSION_MS + CHAT_COOLDOWN_MS) chatSessionStarts.delete(k);
+  }
+  const started = chatSessionStarts.get(key);
+  if (started === undefined) return { status: 'new', sessionMs: CHAT_SESSION_MS, cooldownMs: CHAT_COOLDOWN_MS };
+  if (now - started < CHAT_SESSION_MS) {
+    return { status: 'active', endsInMs: started + CHAT_SESSION_MS - now, cooldownMs: CHAT_COOLDOWN_MS };
+  }
+  return { status: 'ended', retryInMs: started + CHAT_SESSION_MS + CHAT_COOLDOWN_MS - now };
+}
+
+function chatSessionEndedMessage(retryInMs: number): string {
+  const minutes = Math.max(1, Math.ceil(retryInMs / 60000));
+  return `Session ended. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
+}
 // Keeps the guide text sent per question bounded as the handbook grows.
 const CHAT_KNOWLEDGE_MAX_CHARS = 60000;
 
@@ -1243,6 +1279,11 @@ const EMPLOYEE_SAFETY_RULES = `- You are talking to an employee, not an IT engin
 - A ticket-status answer is one line, e.g. "REQ-0003 is In Progress."
 - Plain text only. No markdown headings, no code fences, no asterisks.`;
 
+// Lets the panel show the countdown or the lock as soon as it opens.
+app.post('/api/ai/chat/session', (req, res) => {
+  res.json(chatSessionState(chatSessionKey(req, req.body?.user), Date.now()));
+});
+
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { message, question, history, user, tickets } = req.body;
@@ -1256,6 +1297,16 @@ app.post('/api/ai/chat', async (req, res) => {
         error: 'Message is too long. Please keep it under ' + CHAT_MAX_MESSAGE_CHARS + ' characters.',
       });
     }
+
+    const sessionKey = chatSessionKey(req, user);
+    const now = Date.now();
+    const session = chatSessionState(sessionKey, now);
+    if (session.status === 'ended') {
+      return res.status(429).json({ error: chatSessionEndedMessage(session.retryInMs), sessionEnded: true, retryInMs: session.retryInMs });
+    }
+    if (session.status === 'new') chatSessionStarts.set(sessionKey, now);
+    const sessionEndsInMs = session.status === 'active' ? session.endsInMs : CHAT_SESSION_MS;
+    const sessionInfo = { sessionEndsInMs, cooldownMs: CHAT_COOLDOWN_MS };
 
     const ai = getAi();
 
@@ -1334,7 +1385,7 @@ ${EMPLOYEE_SAFETY_RULES}`;
         return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
       }
 
-      return res.json({ mode, found: Boolean(parsed.found), reply });
+      return res.json({ mode, found: Boolean(parsed.found), reply, ...sessionInfo });
     }
 
     // ---- Attempt 2: search the web ----
@@ -1375,7 +1426,7 @@ ${EMPLOYEE_SAFETY_RULES}`;
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const grounded = chunks.some((c: any) => c?.web?.uri);
 
-    res.json({ mode, found: true, reply, webSearchUsed: webSearchUsed && grounded });
+    res.json({ mode, found: true, reply, webSearchUsed: webSearchUsed && grounded, ...sessionInfo });
   } catch (error: any) {
     console.error('Support chat error:', error);
     sendAiError(res, error, 'Failed to reach the IT assistant');

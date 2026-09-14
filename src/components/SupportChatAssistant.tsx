@@ -12,6 +12,7 @@ import {
   XCircle,
   LifeBuoy,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AppUser, Task } from '../types';
@@ -90,7 +91,26 @@ const SUGGESTED_QUESTIONS = [
   'Where are my open requests up to?',
 ];
 
-const newId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+/**
+ * The usage window, as last reported by the server (which enforces it):
+ * - new:    no session; the next question starts one
+ * - active: questions allowed until endsAt
+ * - ended:  locked until retryAt
+ * Times are local clock values, computed from the durations the server sends.
+ */
+type Session = { status: 'new' } | { status: 'active'; endsAt: number; cooldownMs: number } | { status: 'ended'; retryAt: number };
+
+const formatCountdown = (ms: number) => {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+};
+
+const minutesLeft = (ms: number) => {
+  const minutes = Math.max(1, Math.ceil(ms / 60000));
+  return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+};
+
+const newId = () =>`msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   currentUser,
@@ -106,6 +126,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   const [stage, setStage] = useState<Stage>('none');
   // The question that opened the current case; every attempt answers this.
   const [caseQuestion, setCaseQuestion] = useState('');
+  const [session, setSession] = useState<Session>({ status: 'new' });
+  const [now, setNow] = useState(() => Date.now());
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -126,6 +148,48 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
+
+  // Ask the server for the window on opening, so a reload or another tab shows
+  // the real countdown or lock instead of assuming a fresh start.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetch('/api/ai/chat/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: { id: currentUser.id, email: currentUser.email } }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const at = Date.now();
+        setNow(at);
+        if (data.status === 'active') setSession({ status: 'active', endsAt: at + data.endsInMs, cooldownMs: data.cooldownMs });
+        else if (data.status === 'ended') setSession({ status: 'ended', retryAt: at + data.retryInMs });
+        else setSession({ status: 'new' });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, currentUser.id, currentUser.email]);
+
+  // Ticks the countdown, and moves the window along when a deadline passes.
+  useEffect(() => {
+    if (session.status === 'new') return;
+    const timer = window.setInterval(() => {
+      const at = Date.now();
+      setNow(at);
+      setSession((prev) => {
+        if (prev.status === 'active' && at >= prev.endsAt) return { status: 'ended', retryAt: prev.endsAt + prev.cooldownMs };
+        if (prev.status === 'ended' && at >= prev.retryAt) return { status: 'new' };
+        return prev;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [session.status]);
+
+  const sessionEnded = session.status === 'ended';
 
   // Escape closes the panel, matching the app's modals.
   useEffect(() => {
@@ -157,7 +221,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
           question,
           message,
           history: history.map((m) => ({ role: m.role, content: m.content })),
-          user: { name: currentUser.name, department: currentUser.department },
+          user: { id: currentUser.id, email: currentUser.email, name: currentUser.name, department: currentUser.department },
           tickets: myOpenTickets.map((t) => ({ ticketNumber: t.ticketNumber, title: t.title, status: t.status })),
         }),
       });
@@ -165,7 +229,18 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
       // The server sends a readable explanation for quota and rate-limit
       // failures, so surface that rather than a bare status code.
       const data = await res.json().catch(() => null);
+      if (data?.sessionEnded) {
+        const at = Date.now();
+        setNow(at);
+        setSession({ status: 'ended', retryAt: at + data.retryInMs });
+        return;
+      }
       if (!res.ok) throw new Error(data?.error || `The assistant is unavailable (error ${res.status}).`);
+      if (typeof data.sessionEndsInMs === 'number') {
+        const at = Date.now();
+        setNow(at);
+        setSession({ status: 'active', endsAt: at + data.sessionEndsInMs, cooldownMs: data.cooldownMs });
+      }
 
       if (mode === 'knowledge') {
         if (data.found) {
@@ -199,7 +274,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || sessionEnded) return;
 
     const history = messages;
     add({ role: 'user', content: trimmed });
@@ -242,8 +317,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     setStage('ticket');
   };
 
-  const handleRaiseTicket = (messageId: string) => {
-    markStepTaken(messageId);
+  const handleRaiseTicket = (messageId?: string) => {
+    if (messageId) markStepTaken(messageId);
     const summary = caseQuestion.length > 120 ? caseQuestion.slice(0, 117) + '...' : caseQuestion;
     onRaiseTicket?.({ summary, description: summarizeCase(caseQuestion, messages) });
     setIsOpen(false);
@@ -277,6 +352,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   const renderNextStep = (m: ChatMessage) => {
     if (!m.nextStep) return null;
     const disabled = Boolean(m.stepTaken) || isLoading;
+    // Buttons that would call the assistant again are locked once the session ends.
+    const askDisabled = disabled || sessionEnded;
     switch (m.nextStep) {
       case 'confirm-knowledge':
         return (
@@ -288,7 +365,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
             </button>
             <button
               type="button"
-              disabled={disabled}
+              disabled={askDisabled}
               onClick={() => handleTryWeb(m.id, "No, that didn't solve it.")}
               className={neutralButton}
             >
@@ -301,7 +378,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
         return (
           <button
             type="button"
-            disabled={disabled}
+            disabled={askDisabled}
             onClick={() => handleTryWeb(m.id, 'Yes, please search the web.')}
             className={primaryButton}
           >
@@ -390,6 +467,17 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {session.status === 'active' && (
+                  <span
+                    role="timer"
+                    aria-label="Time left in this session"
+                    title="Time left in this session"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 mr-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-mono font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {formatCountdown(session.endsAt - now)}
+                  </span>
+                )}
                 {messages.length > 0 && (
                   <button
                     onClick={startOver}
@@ -423,8 +511,9 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
                     {SUGGESTED_QUESTIONS.map((question) => (
                       <button
                         key={question}
+                        disabled={sessionEnded}
                         onClick={() => sendMessage(question)}
-                        className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                        className="disabled:opacity-40 disabled:cursor-not-allowed px-2.5 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
                       >
                         {question}
                       </button>
@@ -468,7 +557,29 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
               )}
             </div>
 
-            {/* Composer */}
+            {/* Composer, or the lock once the session has ended */}
+            {session.status === 'ended' ? (
+              <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div
+                  role="status"
+                  className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900"
+                >
+                  <Clock className="w-4 h-4 mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Session ended</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                      Please try again in {minutesLeft(session.retryAt - now)}.
+                    </p>
+                    {caseQuestion && (
+                      <button type="button" onClick={() => handleRaiseTicket()} className={primaryButton}>
+                        <LifeBuoy className="w-3.5 h-3.5" />
+                        <span>Submit IT Support Request</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <div className="flex items-end gap-2">
                 <textarea
@@ -494,6 +605,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
                 AI can be wrong. If it can't fix your issue, raise an IT Support Request.
               </p>
             </form>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
