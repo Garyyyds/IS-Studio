@@ -290,6 +290,8 @@ export function drawRuledRemarks(ctx: FormDoc, label: string, value?: string, mi
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(0, 0, 0);
+  // The cursor is a text baseline and each rule sits 1mm below it.
+  breakBeforeBaseline(ctx);
   doc.text(label, margin, ctx.y);
 
   const start = margin + doc.getTextWidth(label) + 2;
@@ -300,6 +302,9 @@ export function drawRuledRemarks(ctx: FormDoc, label: string, value?: string, mi
   const rules = Math.max(minRules, lines.length);
 
   for (let i = 0; i < rules; i++) {
+    // Long remarks continue at the top of the next page rather than being
+    // drawn below the bottom edge where they would be cut off.
+    if (i > 0) breakBeforeBaseline(ctx);
     const lineStart = i === 0 ? start : margin;
     doc.line(lineStart, ctx.y + 1, margin + contentWidth, ctx.y + 1);
     if (lines[i]) doc.text(lines[i], lineStart + 1, ctx.y);
@@ -317,6 +322,17 @@ export function measureRuledRemarks(ctx: FormDoc, label: string, value?: string,
     ? (doc.splitTextToSize(value.trim(), margin + contentWidth - start - 2) as string[])
     : [];
   return Math.max(minRules, lines.length) * 6;
+}
+
+/**
+ * Starts a new page when a line of text on the cursor's baseline, plus the
+ * rule 1mm beneath it, would cross the bottom margin. jsPDF keeps the current
+ * font across pages, so only the cursor needs resetting.
+ */
+function breakBeforeBaseline(ctx: FormDoc): void {
+  if (ctx.y + 1 <= ctx.pageHeight - ctx.margin) return;
+  ctx.doc.addPage();
+  ctx.y = ctx.margin + 4;
 }
 
 /** A tick box, optionally ticked, drawn with its top-left at (x, y). */
@@ -595,7 +611,10 @@ export function drawFileNames(ctx: FormDoc, labelX: number, names: string[]): vo
     const lines = doc.splitTextToSize(name, nameWidth) as string[];
     lines.forEach((line, lineIndex) => {
       // The first line sits beside the label; everything after it steps down.
-      if (nameIndex > 0 || lineIndex > 0) ctx.y += 5;
+      if (nameIndex > 0 || lineIndex > 0) {
+        ctx.y += 5;
+        breakBeforeBaseline(ctx);
+      }
       doc.text(line, nameX, ctx.y);
     });
   });

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { 
   LifeBuoy, 
   ArrowLeft,
+  FileDown,
   Send, 
   CheckCircle2, 
   AlertTriangle, 
@@ -30,7 +31,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
-import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
+import { SYSTEM_OPTIONS, CATEGORY_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
+import { exportSupportRequestPdf } from '../utils/supportRequestPdf';
 import { uploadAttachment, formatBytes } from '../utils/attachments';
 import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
@@ -72,6 +74,8 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [hodEmail, setHodEmail] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,6 +133,39 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Prints what is on screen right now, so it works before or after submitting.
+  const handleExportPdf = async () => {
+    if (!title.trim()) {
+      setExportError('Fill in the Summary before exporting.');
+      return;
+    }
+
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      await exportSupportRequestPdf({
+        requestDate: new Date().toISOString().slice(0, 10),
+        requesterName: currentUser.name,
+        requesterEmail: currentUser.email,
+        department: currentUser.department || '',
+        location: userLocation.trim(),
+        phoneExt: userPhoneExt.trim(),
+        hodName: hodName.trim(),
+        hodEmail: hodEmail.trim(),
+        summary: title.trim(),
+        system: systemRequested,
+        category: CATEGORY_OPTIONS.find((o) => o.value === category)?.label || category,
+        affectedDevice: deviceInfo.trim(),
+        description: description.trim(),
+        attachmentNames: files.map((file) => file.name),
+      });
+    } catch (err: any) {
+      setExportError(err?.message || 'Could not generate the PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -540,15 +577,34 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedForm(null)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedForm(null)}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportPdf}
+                    disabled={isExporting}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
+                  >
+                    {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                    <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
+                  </button>
+                </div>
               </div>
+
+              {exportError && (
+                <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{exportError}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
@@ -596,12 +652,11 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                           onChange={(e) => setCategory(e.target.value as ITCategory)}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                         >
-                          <option value="Application">Software & Tool Access (Figma, Slack, Jira)</option>
-                          <option value="Networking">Network, Wi-Fi & Corporate VPN</option>
-                          <option value="SysAdmin">Hardware, Laptop, Monitor & Peripherals</option>
-                          <option value="Security & IAM">Password, SSO, Okta 2FA & Accounts</option>
-                          <option value="Cloud Infra">Cloud, Server & Infrastructure</option>
-                          <option value="Database">Database & Data Access</option>
+                          {CATEGORY_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
