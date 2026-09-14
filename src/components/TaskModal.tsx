@@ -349,7 +349,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* Request Details - captured by the employee portal form */}
           {(formData.systemRequested ||
-            formData.natureOfRequest ||
             formData.userLocation ||
             formData.userPhoneExt ||
             formData.hodName ||
@@ -367,7 +366,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-2 border-t border-slate-200 dark:border-slate-700">
                 {[
                   { label: 'System', value: formData.systemRequested, Icon: Server },
-                  { label: 'Nature of Request', value: formData.natureOfRequest, Icon: ClipboardList },
                   { label: 'Location', value: formData.userLocation, Icon: MapPin },
                   { label: 'Phone / Ext', value: formData.userPhoneExt, Icon: Phone },
                   { label: 'HOD Name', value: formData.hodName, Icon: UserCheck },

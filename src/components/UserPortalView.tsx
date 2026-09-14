@@ -29,7 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
-import { SYSTEM_OPTIONS, NATURE_OF_REQUEST_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
+import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
 import { uploadAttachment, formatBytes } from '../utils/attachments';
 import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
@@ -66,7 +66,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [deviceInfo, setDeviceInfo] = useState('Company Laptop (macOS / Windows)');
   const [rawLogs, setRawLogs] = useState('');
   const [systemRequested, setSystemRequested] = useState('');
-  const [natureOfRequest, setNatureOfRequest] = useState('');
   const [userLocation, setUserLocation] = useState('');
   const [userPhoneExt, setUserPhoneExt] = useState('');
   const [hodName, setHodName] = useState('');
@@ -182,7 +181,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
       systemRequested,
-      natureOfRequest,
       userLocation: userLocation.trim(),
       userPhoneExt: userPhoneExt.trim(),
       hodName: hodName.trim(),
@@ -199,7 +197,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     setDescription('');
     setRawLogs('');
     setSystemRequested('');
-    setNatureOfRequest('');
     setUserLocation('');
     setUserPhoneExt('');
     setHodName('');
@@ -431,44 +428,23 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    System <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={systemRequested}
-                    onChange={(e) => setSystemRequested(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">Select system...</option>
-                    {SYSTEM_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Nature of Request <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={natureOfRequest}
-                    onChange={(e) => setNatureOfRequest(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">Select nature...</option>
-                    {NATURE_OF_REQUEST_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                  System <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  required
+                  value={systemRequested}
+                  onChange={(e) => setSystemRequested(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="">Select system...</option>
+                  {SYSTEM_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
