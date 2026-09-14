@@ -68,6 +68,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [category, setCategory] = useState<ITCategory>('Application');
   const [deviceInfo, setDeviceInfo] = useState('');
   const [systemRequested, setSystemRequested] = useState('');
+  const [designation, setDesignation] = useState('');
   const [userLocation, setUserLocation] = useState('');
   const [userPhoneExt, setUserPhoneExt] = useState('');
   const [hodName, setHodName] = useState('');
@@ -148,6 +149,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       await exportSupportRequestPdf({
         requestDate: new Date().toISOString().slice(0, 10),
         requesterName: currentUser.name,
+        designation: designation.trim(),
         requesterEmail: currentUser.email,
         department: currentUser.department || '',
         location: userLocation.trim(),
@@ -217,6 +219,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
       systemRequested,
+      requesterDesignation: designation.trim() || undefined,
       userLocation: userLocation.trim(),
       userPhoneExt: userPhoneExt.trim(),
       hodName: hodName.trim(),
@@ -233,6 +236,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     setDescription('');
     setDeviceInfo('');
     setSystemRequested('');
+    setDesignation('');
     setUserLocation('');
     setUserPhoneExt('');
     setHodName('');
@@ -677,7 +681,20 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                          Designation
+                        </label>
+                        <input
+                          type="text"
+                          value={designation}
+                          onChange={(e) => setDesignation(e.target.value)}
+                          placeholder="e.g. IT Executive"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
                       <div>
                         <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                           Location <span className="text-rose-500">*</span>

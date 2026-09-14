@@ -25,6 +25,7 @@ export const SUPPORT_IT_SIGNATURE_LABELS = ['Processed By', 'Approved By'];
 export interface SupportRequestPdfData {
   requestDate: string;
   requesterName: string;
+  designation: string;
   requesterEmail: string;
   department: string;
   location: string;
@@ -44,13 +45,15 @@ export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
   const ctx = createFormDoc();
   const { doc, margin } = ctx;
 
-  await drawHeaderBand(ctx);
+  // Request date sits in the masthead, so Section A's first row can carry the
+  // requestor's designation instead.
+  await drawHeaderBand(ctx, undefined, { label: 'Date:', value: data.requestDate });
   drawTitleBar(ctx, SUPPORT_REQUEST_TITLE);
 
   // --- Section A: who is asking, and who approves ---
   drawSectionHeader(ctx, SUPPORT_SECTION_A_TITLE);
   drawInfoRows(ctx, [
-    ['Requestor Name:', data.requesterName, 'Request Date:', data.requestDate],
+    ['Requestor Name:', data.requesterName, 'Designation:', data.designation],
     ['Email:', data.requesterEmail, 'Department:', data.department],
     ['Location:', data.location, 'Phone/Ext:', data.phoneExt],
     ['HOD Name:', data.hodName, 'HOD Email:', data.hodEmail],

@@ -69,6 +69,7 @@ export interface Task {
   isUserSubmitted?: boolean;
   /** Portal request details, as captured by the employee submission form. */
   systemRequested?: string;
+  requesterDesignation?: string;
   userLocation?: string;
   userPhoneExt?: string;
   hodName?: string;

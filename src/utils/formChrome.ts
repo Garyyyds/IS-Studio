@@ -160,18 +160,27 @@ async function decodeLogo(): Promise<{
 /**
  * Logo on the left, address filling the rest. `logoWidth` lets a form match the
  * column grid of its own table; it defaults to a third of the content width.
+ * `sideCell` adds a third box at the right, e.g. "Date: 2026-09-14", taking its
+ * width from the address box.
  */
-export async function drawHeaderBand(ctx: FormDoc, logoWidth?: number) {
+export async function drawHeaderBand(
+  ctx: FormDoc,
+  logoWidth?: number,
+  sideCell?: { label: string; value: string }
+) {
   const { doc, margin, contentWidth } = ctx;
   const headerHeight = 18;
   const logoCellWidth = logoWidth ?? contentWidth / 3;
+  // Wide enough for "Date:" and an ISO date with padding either side.
+  const sideCellWidth = sideCell ? 45 : 0;
   const addressX = margin + logoCellWidth;
-  const addressWidth = contentWidth - logoCellWidth;
+  const addressWidth = contentWidth - logoCellWidth - sideCellWidth;
 
   const logo = await loadLogoAsPng();
 
   doc.rect(margin, ctx.y, logoCellWidth, headerHeight);
   doc.rect(addressX, ctx.y, addressWidth, headerHeight);
+  if (sideCell) doc.rect(addressX + addressWidth, ctx.y, sideCellWidth, headerHeight);
 
   if (logo) {
     // Fit inside the logo cell while preserving the source aspect ratio.
@@ -205,6 +214,23 @@ export async function drawHeaderBand(ctx: FormDoc, logoWidth?: number) {
   COMPANY_ADDRESS.forEach((line, i) => {
     doc.text(line, centreX, firstBaseline + i * lineHeight, { align: 'center' });
   });
+
+  if (sideCell) {
+    // Label bold, value regular, centred together as one line in the box.
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const labelWidth = doc.getTextWidth(sideCell.label);
+    doc.setFont('helvetica', 'normal');
+    const gap = 1.5;
+    const valueWidth = doc.getTextWidth(sideCell.value);
+    const startX = addressX + addressWidth + (sideCellWidth - (labelWidth + gap + valueWidth)) / 2;
+    const baseline = ctx.y + headerHeight / 2 + 1.2;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(sideCell.label, startX, baseline);
+    doc.setFont('helvetica', 'normal');
+    if (sideCell.value) doc.text(sideCell.value, startX + labelWidth + gap, baseline);
+  }
 
   ctx.y += headerHeight;
 }

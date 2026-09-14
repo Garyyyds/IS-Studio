@@ -691,6 +691,7 @@ export default function App() {
       deviceInfo: ticketData.deviceInfo,
       isUserSubmitted: true,
       systemRequested: ticketData.systemRequested,
+      requesterDesignation: ticketData.requesterDesignation,
       userLocation: ticketData.userLocation,
       userPhoneExt: ticketData.userPhoneExt,
       hodName: ticketData.hodName,
