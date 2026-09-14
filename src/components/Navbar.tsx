@@ -39,6 +39,8 @@ interface NavbarProps {
   currentUser?: AppUser | null;
   onSignOut?: () => void;
   onOpenUserProfile?: () => void;
+  /** Returns to the start page: the board for admins, the portal for employees. */
+  onGoHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,6 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onSignOut,
   onOpenUserProfile,
+  onGoHome,
 }) => {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -125,13 +128,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="grid grid-cols-3 items-center h-14 gap-1">
           {/* Brand & Workspace Title (Left) */}
           <div className="flex items-center min-w-0">
-            <div 
+            <button
+              type="button"
               onClick={() => {
-                if (currentUser?.role === 'admin' && setActiveTab) {
-                  setActiveTab(settings.defaultView || 'kanban');
-                }
+                if (onGoHome) onGoHome();
+                else if (setActiveTab) setActiveTab(settings.defaultView || 'kanban');
               }}
-              className="flex items-center gap-2 sm:gap-2.5 cursor-pointer hover:opacity-90 transition min-w-0"
+              title="Back to home"
+              aria-label="Back to home"
+              className="flex items-center gap-2 sm:gap-2.5 cursor-pointer hover:opacity-90 transition min-w-0 text-left"
             >
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs shrink-0 ${
                 currentUser?.role === 'user' ? 'bg-emerald-600' : 'bg-indigo-600'
@@ -152,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
 
           </div>
 

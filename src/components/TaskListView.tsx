@@ -296,17 +296,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <img
-                            src={task.assignee.avatar}
-                            alt=""
-                            className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-                            referrerPolicy="no-referrer"
-                          />
-                          <span className="text-slate-700 dark:text-slate-300 text-[11px] truncate max-w-[90px] font-medium">
-                            {task.assignee.name.split(' ')[0]}
-                          </span>
-                        </div>
+                        <span
+                          className="block text-slate-700 dark:text-slate-300 text-[11px] truncate max-w-[160px] font-medium"
+                          title={task.assignee.name}
+                        >
+                          {task.assignee.name}
+                        </span>
                       </td>
 
                       <td className="py-3.5 px-4 text-right">

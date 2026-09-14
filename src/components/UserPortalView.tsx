@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   LifeBuoy, 
   ArrowLeft,
@@ -51,6 +51,8 @@ interface UserPortalViewProps {
   onSubmitTicket: (newTask: Partial<Task>) => string;
   onSelectTask: (task: Task) => void;
   onOpenRunbook: (runbookId: string) => void;
+  /** Changes each time the user asks to go home; the portal resets to its start page. */
+  homeSignal?: number;
 }
 
 export const UserPortalView: React.FC<UserPortalViewProps> = ({
@@ -60,9 +62,17 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   onSubmitTicket,
   onSelectTask,
   onOpenRunbook,
+  homeSignal = 0,
 }) => {
   const [activeTab, setActiveTab] = useState<'my-tickets' | 'create-form' | 'help'>('create-form');
   // null shows the picker; a value opens that form.
+  // Home = the Create Form picker, the page the portal opens on.
+  useEffect(() => {
+    if (!homeSignal) return;
+    setActiveTab('create-form');
+    setSelectedForm(null);
+  }, [homeSignal]);
+
   const [selectedForm, setSelectedForm] = useState<
     'request' | 'requisition' | 'disposal' | 'allocation' | 'user-id' | null
   >(null);
@@ -203,7 +213,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       ],
       assignee: {
         name: 'IT Helpdesk Queue',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         role: 'Triage Specialist',
         email: 'helpdesk@company.com'
       },
@@ -421,7 +430,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                My Service Requests ({myTickets.length})
+                My Service Requests
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Track real-time progress, technician assignments, and resolution notes.
@@ -557,16 +566,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <img
-                          src={ticket.assignee.avatar}
-                          alt={ticket.assignee.name}
-                          className="w-4 h-4 rounded-full object-cover"
-                        />
-                        <span className="text-slate-700 dark:text-slate-300 font-medium">
-                          Assigned: {ticket.assignee.name}
-                        </span>
-                      </div>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        Assigned: {ticket.assignee.name}
+                      </span>
                       <ChevronRight className="w-4 h-4 text-slate-400" />
                     </div>
                   </div>

@@ -61,7 +61,6 @@ const emptyTask: Task = {
   deviceInfo: '',
   assignee: {
     name: 'Unassigned',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
     role: 'IT Engineer',
     email: 'it-support@internal.corp',
   },

@@ -306,7 +306,6 @@ Windows cannot access \\\\hq-file01. Error code: 0x80070035 The network path was
     category: 'Network',
     assignee: {
       name: 'Alex Rivera',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
       role: 'Senior Systems Administrator',
       email: 'alex.rivera@internal.corp',
     },

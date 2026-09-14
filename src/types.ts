@@ -59,7 +59,6 @@ export interface Task {
   category: ITCategory;
   assignee: {
     name: string;
-    avatar: string;
     role: string;
     email: string;
   };

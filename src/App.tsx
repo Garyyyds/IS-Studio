@@ -137,6 +137,13 @@ export default function App() {
   // Settings active section state (profile, theme, views, defaults, data)
   const [settingsSection, setSettingsSection] = useState<'profile' | 'theme' | 'views' | 'defaults' | 'data'>('profile');
 
+  // Bumped by the logo so the employee portal returns to its start page.
+  const [portalHomeSignal, setPortalHomeSignal] = useState(0);
+  const handleGoHome = () => {
+    setActiveView(settings.defaultView || 'kanban');
+    setPortalHomeSignal((n) => n + 1);
+  };
+
   const handleOpenUserProfile = () => {
     setSettingsSection('profile');
     setActiveView('settings');
@@ -563,7 +570,6 @@ export default function App() {
       isUserSubmitted: true,
       assignee: {
         name: settings.operatorName || 'Alex Rivera',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         role: 'IT Support Engineer',
         email: 'alex.rivera@internal.corp',
       },
@@ -697,7 +703,6 @@ export default function App() {
       category: ticketData.category || 'Others',
       assignee: ticketData.assignee || {
         name: 'IT Helpdesk Queue',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         role: 'Triage Specialist',
         email: 'helpdesk@company.com',
       },
@@ -757,6 +762,7 @@ export default function App() {
         currentUser={currentUser}
         onSignOut={handleSignOut}
         onOpenUserProfile={handleOpenUserProfile}
+        onGoHome={handleGoHome}
       />
 
       {/* Primary Workspace View */}
@@ -791,6 +797,7 @@ export default function App() {
             onSubmitTicket={handleUserSubmitTicket}
             onSelectTask={handleSelectTask}
             onOpenRunbook={handleOpenRunbookFromAnywhere}
+            homeSignal={portalHomeSignal}
           />
         ) : (
           <>
