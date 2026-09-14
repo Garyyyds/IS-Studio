@@ -31,7 +31,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
-import { SYSTEM_OPTIONS, CATEGORY_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
+import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
 import { exportSupportRequestPdf } from '../utils/supportRequestPdf';
 import { uploadAttachment, formatBytes } from '../utils/attachments';
 import { AssetFormView } from './AssetFormView';
@@ -68,7 +68,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [category, setCategory] = useState<ITCategory>('Application');
   const [deviceInfo, setDeviceInfo] = useState('');
   const [systemRequested, setSystemRequested] = useState('');
-  const [designation, setDesignation] = useState('');
   const [userLocation, setUserLocation] = useState('');
   const [userPhoneExt, setUserPhoneExt] = useState('');
   const [hodName, setHodName] = useState('');
@@ -149,7 +148,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       await exportSupportRequestPdf({
         requestDate: new Date().toISOString().slice(0, 10),
         requesterName: currentUser.name,
-        designation: designation.trim(),
+        designation: currentUser.designation || '',
         requesterEmail: currentUser.email,
         department: currentUser.department || '',
         location: userLocation.trim(),
@@ -157,8 +156,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         hodName: hodName.trim(),
         hodEmail: hodEmail.trim(),
         summary: title.trim(),
-        system: systemRequested,
-        category: CATEGORY_OPTIONS.find((o) => o.value === category)?.label || category,
+        category: systemRequested,
         affectedDevice: deviceInfo.trim(),
         description: description.trim(),
         attachmentNames: files.map((file) => file.name),
@@ -219,7 +217,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
       systemRequested,
-      requesterDesignation: designation.trim() || undefined,
+      requesterDesignation: currentUser.designation || undefined,
       userLocation: userLocation.trim(),
       userPhoneExt: userPhoneExt.trim(),
       hodName: hodName.trim(),
@@ -236,7 +234,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     setDescription('');
     setDeviceInfo('');
     setSystemRequested('');
-    setDesignation('');
     setUserLocation('');
     setUserPhoneExt('');
     setHodName('');
@@ -627,38 +624,21 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                        System <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        required
-                        value={systemRequested}
-                        onChange={(e) => setSystemRequested(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                      >
-                        <option value="">Select system...</option>
-                        {SYSTEM_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                          Category
+                          Category <span className="text-rose-500">*</span>
                         </label>
                         <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value as ITCategory)}
+                          required
+                          value={systemRequested}
+                          onChange={(e) => setSystemRequested(e.target.value)}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                         >
-                          {CATEGORY_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
+                          <option value="">Select a category</option>
+                          {SYSTEM_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
                             </option>
                           ))}
                         </select>
@@ -681,20 +661,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                          Designation
-                        </label>
-                        <input
-                          type="text"
-                          value={designation}
-                          onChange={(e) => setDesignation(e.target.value)}
-                          placeholder="e.g. IT Executive"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                        />
-                      </div>
-
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                           Location <span className="text-rose-500">*</span>

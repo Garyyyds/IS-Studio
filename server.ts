@@ -512,9 +512,13 @@ CREATE TABLE IF NOT EXISTS app_users (
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user', -- 'admin' for IT Staff, 'user' for Normal Employee
   department TEXT DEFAULT 'General',
+  designation TEXT,
   avatar TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Added after the table first shipped; a no-op on fresh installs.
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS designation TEXT;
 
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow user sync" ON app_users;
@@ -860,9 +864,9 @@ app.get('/api/auth/users', async (req, res) => {
       try {
         const { data, error } = await supabase
           .from('app_users')
-          .select('id, email, name, role, department, avatar, created_at');
+          .select('*');
         if (!error && data && data.length > 0) {
-          return res.json({ users: data });
+          return res.json({ users: data.map(({ password, ...safe }: any) => safe) });
         }
       } catch (err) {
         // fallback to local
@@ -874,6 +878,44 @@ app.get('/api/auth/users', async (req, res) => {
     res.json({ users });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to retrieve users' });
+  }
+});
+
+// API: Current account details
+// The browser keeps the signed-in user in localStorage, so fields IT changes on
+// the account (designation, role, department) would otherwise only appear after
+// signing out and back in. The app calls this on load to pick them up.
+app.post('/api/auth/me', async (req, res) => {
+  try {
+    const { id, email } = req.body || {};
+    if (!id && !email) {
+      return res.status(400).json({ error: 'User identifier required' });
+    }
+
+    const supabase = getSupabase();
+    if (supabase) {
+      let query = supabase.from('app_users').select('*');
+      query = id ? query.eq('id', id) : query.ilike('email', String(email).trim());
+      const { data, error } = await query.maybeSingle();
+      if (!error && data) {
+        const { password: _, ...safe } = data;
+        return res.json({ user: safe });
+      }
+    }
+
+    const stored = getStoredData() || {};
+    const users = stored.users || DEFAULT_USERS;
+    const match = users.find(
+      (u: any) => (id && u.id === id) || (email && u.email?.toLowerCase() === String(email).trim().toLowerCase())
+    );
+    if (!match) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    const { password: _, ...safe } = match;
+    res.json({ user: safe });
+  } catch (err: any) {
+    console.error('Error in /api/auth/me:', err);
+    res.status(500).json({ error: 'Failed to load account' });
   }
 });
 
@@ -903,12 +945,11 @@ app.post('/api/auth/profile', async (req, res) => {
           query = query.eq('email', email.toLowerCase().trim());
         }
 
-        const { data, error } = await query
-          .select('id, email, name, role, department, avatar, created_at')
-          .maybeSingle();
+        const { data, error } = await query.select('*').maybeSingle();
 
         if (!error && data) {
-          updatedUser = data;
+          const { password: _, ...safe } = data;
+          updatedUser = safe;
         }
       } catch (e) {
         console.warn('Supabase profile update fallback to local:', e);

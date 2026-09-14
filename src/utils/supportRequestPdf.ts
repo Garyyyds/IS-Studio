@@ -33,8 +33,7 @@ export interface SupportRequestPdfData {
   hodName: string;
   hodEmail: string;
   summary: string;
-  system: string;
-  /** The category's display label, not its internal value. */
+  /** The option picked in the form's Category list. */
   category: string;
   affectedDevice: string;
   description: string;
@@ -63,15 +62,7 @@ export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
 
   // --- Section B: what the request is ---
   drawSectionHeader(ctx, SUPPORT_SECTION_B_TITLE);
-  drawInfoRows(ctx, [
-    ['System:', data.system, 'Category:', data.category],
-    [
-      'Affected Device:',
-      data.affectedDevice,
-      'Attachments:',
-      data.attachmentNames.length ? String(data.attachmentNames.length) : 'None',
-    ],
-  ]);
+  drawInfoRows(ctx, [['Category:', data.category, 'Affected Device:', data.affectedDevice]]);
 
   ctx.y += 8;
   drawRuledRemarks(ctx, 'Summary:', data.summary, 1);

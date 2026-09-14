@@ -31,6 +31,8 @@ export interface AppUser {
   name: string;
   role: UserRole; // 'admin' = IT Operations / Admin, 'user' = Employee / Requester
   department?: string;
+  /** Job title, e.g. "IT Executive IV". Assigned by IT like role; not self-edited. */
+  designation?: string;
   avatar?: string;
   createdAt?: string;
 }

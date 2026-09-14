@@ -123,6 +123,28 @@ export default function App() {
     setActiveView('settings');
   };
 
+  // Re-read the account once per sign-in, so changes IT makes to it (such as a
+  // designation) show up without signing out. Failures keep the saved copy.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+    fetch('/api/auth/me', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentUser.id, email: currentUser.email }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.user) return;
+        setCurrentUser((prev) => (prev ? { ...prev, ...data.user } : prev));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('it_ops_current_user', JSON.stringify(currentUser));
