@@ -1,3 +1,4 @@
+import { Task } from '../types';
 import {
   createFormDoc,
   drawHeaderBand,
@@ -37,6 +38,8 @@ export interface SupportRequestPdfData {
   affectedDevice: string;
   description: string;
   attachmentNames: string[];
+  /** Set when printing a submitted ticket; only used in the file name. */
+  ticketNumber?: string;
 }
 
 export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
@@ -94,5 +97,38 @@ export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
     .trim()
     .slice(0, 60)
     .replace(/[^a-zA-Z0-9-_]+/g, '_');
-  doc.save(`IT_Support_Request_${safeRef}.pdf`);
+  const prefix = data.ticketNumber ? `${data.ticketNumber.replace(/[^a-zA-Z0-9-_]+/g, '_')}_` : '';
+  doc.save(`IT_Support_Request_${prefix}${safeRef}.pdf`);
+}
+
+/** YYYY-MM-DD in the viewer's own time zone, so a morning ticket keeps its date. */
+function localDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Prints a saved ticket on the same IT Support Request form the employee
+ * exports, filled from what they submitted. Tickets created on the admin board
+ * never had a form Category, so they fall back to their board category.
+ */
+export function exportTicketPdf(task: Task) {
+  return exportSupportRequestPdf({
+    requestDate: localDate(task.createdAt),
+    requesterName: task.requesterName || '',
+    requesterEmail: task.requesterEmail || '',
+    department: task.requesterDepartment || '',
+    location: task.userLocation || '',
+    phoneExt: task.userPhoneExt || '',
+    hodName: task.hodName || '',
+    hodEmail: task.hodEmail || '',
+    summary: task.title || '',
+    category: task.systemRequested || task.category || '',
+    affectedDevice: task.deviceInfo || '',
+    description: task.description || '',
+    attachmentNames: (task.attachments || []).map((file) => file.name),
+    ticketNumber: task.ticketNumber,
+  });
 }

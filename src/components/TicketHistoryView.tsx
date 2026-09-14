@@ -26,7 +26,7 @@ import {
   getTimeToResolve,
   DEFAULT_COMPLETED_RETENTION_MINUTES,
 } from '../utils/ticketRetention';
-import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
+import { exportTicketPdf } from '../utils/supportRequestPdf';
 
 interface TicketHistoryViewProps {
   tasks: Task[];
@@ -648,10 +648,10 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
                       <span className="hidden lg:inline">Reopen</span>
                     </button>
 
-                    {/* Post-Mortem Report */}
+                    {/* Ticket PDF - same IT Support Request form as the employee export */}
                     <button
-                      onClick={() => exportIncidentPostMortemPdf(task)}
-                      title="Download Incident Post-Mortem PDF"
+                      onClick={() => exportTicketPdf(task)}
+                      title="Export as IT Support Request PDF"
                       className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 transition cursor-pointer"
                     >
                       <FileDown className="w-3.5 h-3.5" />

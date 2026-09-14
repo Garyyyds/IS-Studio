@@ -18,7 +18,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { Task, Runbook, TaskStatus, UserSettings } from '../types';
-import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
+import { exportTicketPdf } from '../utils/supportRequestPdf';
 import { isTaskRecentlyCompleted, getTaskRetentionInfo, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
 interface TaskListViewProps {
@@ -91,9 +91,9 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     }
   };
 
-  const handleExportPostMortem = (task: Task, e: React.MouseEvent) => {
+  const handleExportPdf = (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
-    exportIncidentPostMortemPdf(task);
+    exportTicketPdf(task);
   };
 
   return (
@@ -340,9 +340,9 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={(e) => handleExportPostMortem(task, e)}
+                            onClick={(e) => handleExportPdf(task, e)}
                             className="px-2.5 py-1 rounded bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
-                            title="Export Incident Post-Mortem to PDF"
+                            title="Export as IT Support Request PDF"
                           >
                             <FileText className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                             <span>PDF</span>

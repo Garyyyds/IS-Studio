@@ -28,7 +28,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Task, Runbook, EnvironmentType, ITCategory, TaskStatus, UserRole } from '../types';
-import { exportIncidentPostMortemPdf } from '../utils/pdfExport';
+import { exportTicketPdf } from '../utils/supportRequestPdf';
 import { attachmentUrl, formatBytes } from '../utils/attachments';
 
 interface TaskModalProps {
@@ -177,9 +177,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             {formData.id && (
               <button
                 type="button"
-                onClick={() => exportIncidentPostMortemPdf(formData)}
+                onClick={() => exportTicketPdf(formData)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                title="Export Ticket / Incident PDF Report"
+                title="Export as IT Support Request PDF"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Export PDF</span>

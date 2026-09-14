@@ -88,3 +88,4 @@ away later work permanently.
 | `14092026ver015` | 2026-09-14 | My Tickets cards show the IT Support Request details (category, affected device, location, phone/ext, HOD, attachment count); drop the internal category from the card footer |
 | `14092026ver016` | 2026-09-14 | Ticket modal: fields from the employee portal (summary, description, requester) are locked for admins; internal Category and Environment hidden on portal tickets, still editable on admin-created ones |
 | `14092026ver017` | 2026-09-14 | Remove the remediation checklist and resolution notes from the ticket modal (admin and employee) and the resolution note preview on My Tickets; status and technician stay |
+| `14092026ver018` | 2026-09-14 | Ticket PDF export on the admin side (ticket pop-up, List view, Ticket History) now prints the same IT Support Request form as the employee export; old incident post-mortem report removed |
