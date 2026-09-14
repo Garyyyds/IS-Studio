@@ -125,7 +125,7 @@ variables. **Copy each value from your local `.env` file.**
 | `GEMINI_API_KEY` | `.env` — starts with `AQ.` |
 | `SUPABASE_URL` | `.env` — the `https://….supabase.co` URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | `.env` — the `sb_secret_…` key |
-| `GEMINI_MODEL` | `gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash` |
+| `GEMINI_MODEL` | `gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3-flash-preview` |
 
 Notes:
 
@@ -307,9 +307,10 @@ npm run dev     # http://localhost:3000
 - ~5 requests per minute, per model
 - A separate daily cap, per model
 
-Verified working on this key: `gemini-3.7-flash`, `gemini-3.6-flash`,
-`gemini-3.5-flash`, `gemini-3.5-flash-lite` (fastest, weakest reasoning).
-`gemini-2.5-flash` and `gemini-2.5-flash-lite` return 404 — do not use them.
+Verified working on this key: `gemini-3.8-flash`, `gemini-3.7-flash`,
+`gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`,
+`gemini-3.1-flash-lite` (the lite models are fastest, weakest reasoning) and
+`gemini-3-flash-preview`.
 
 The model in use is printed at startup, so Render's log confirms which one a
 deploy picked up.

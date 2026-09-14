@@ -1193,6 +1193,29 @@ type ChatSessionState =
   | { status: 'active'; endsInMs: number; cooldownMs: number }
   | { status: 'ended'; retryInMs: number };
 
+/**
+ * Puts each numbered step on its own line. Models sometimes run a list
+ * together ("1. Do this. 2. Do that."), especially inside JSON replies. Steps
+ * are split only in order (2 after 1, 3 after 2...), so a number inside a step
+ * such as "Windows 10. " is left alone. A closing "If..." or "Contact..."
+ * sentence after the last step also gets its own line.
+ */
+function formatChatSteps(text: string): string {
+  let out = text.trim();
+  let stepStart = out.search(/(^|\s)1\.\s/);
+  if (stepStart === -1) return out;
+  for (let n = 2; n <= 12; n++) {
+    const match = new RegExp(`\\s+${n}\\.\\s`).exec(out.slice(stepStart));
+    if (!match) break;
+    const at = stepStart + match.index;
+    const spaceLength = match[0].length - match[0].trimStart().length;
+    out = out.slice(0, at) + '\n' + out.slice(at + spaceLength);
+    stepStart = at + 1;
+  }
+  const lastStep = out.slice(stepStart).replace(/([.!])[ \t]+(If |Contact |Please contact )/, '$1\n$2');
+  return out.slice(0, stepStart) + lastStep;
+}
+
 function chatSessionKey(req: any, user: any): string {
   return String(user?.id || user?.email || req.ip || 'anonymous').toLowerCase();
 }
@@ -1273,7 +1296,9 @@ const EMPLOYEE_SAFETY_RULES = `- You are talking to an employee, not an IT engin
   IT, say so.
 - Never invent a ticket number, a policy, a deadline, or a person's name.
 - Reply with the instructions only: a numbered list of at most 6 short steps,
-  one action per step. If the fix needs IT, add one final line saying so.
+  one action per step, each step on its own line (separate steps with a line
+  break, never put two steps on one line). If the fix needs IT, add one final
+  line saying so.
 - No greeting, no apology, no restating the question, no sympathy, no sign-off,
   no "I hope this helps" or offers of further help. Start with step 1.
 - A ticket-status answer is one line, e.g. "REQ-0003 is In Progress."
@@ -1380,7 +1405,7 @@ ${EMPLOYEE_SAFETY_RULES}`;
       } catch {
         return res.status(502).json({ error: 'The assistant returned an unreadable reply. Please try again.' });
       }
-      const reply = String(parsed.reply || '').trim();
+      const reply = formatChatSteps(String(parsed.reply || ''));
       if (!reply) {
         return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
       }
@@ -1417,7 +1442,7 @@ ${EMPLOYEE_SAFETY_RULES}`;
       response = await generateWithRetry(ai, { contents: webPrompt });
     }
 
-    const reply = response.text?.trim();
+    const reply = formatChatSteps(response.text || '');
     if (!reply) {
       return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
     }
