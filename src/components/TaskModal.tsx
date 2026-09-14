@@ -199,288 +199,243 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-            {/* Requester & Workstation Card (Identical to User-Side) */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
-                  {formData.requesterName ? formData.requesterName.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />}
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>Requester Information</span>
-                    <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
-                      (Employee who reported the issue)
-                    </span>
-                  </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    {formData.requesterName || 'Employee Requester'} • {formData.requesterDepartment || 'General Department'}
-                  </p>
-                </div>
-              </div>
+            {/* The two sections follow the IT Support Request form and its PDF:
+                who is asking first, then what they asked for. */}
 
-              {!lockSubmission && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingRequester(!isEditingRequester)}
-                  className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                >
-                  <Edit3 className="w-3 h-3" />
-                  <span>{isEditingRequester ? 'Done' : 'Edit Requester'}</span>
-                </button>
-              )}
-            </div>
-
-            {/* Editable or Display Requester Info */}
-            {isEditingRequester && !lockSubmission ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    Requester Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.requesterName || ''}
-                    onChange={(e) => setFormData({ ...formData, requesterName: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. Sarah Jenkins"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    Work Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.requesterEmail || ''}
-                    onChange={(e) => setFormData({ ...formData, requesterEmail: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. sarah@company.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    Department
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.requesterDepartment || ''}
-                    onChange={(e) => setFormData({ ...formData, requesterDepartment: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. Design / Marketing"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    Affected Device
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.deviceInfo || ''}
-                    onChange={(e) => setFormData({ ...formData, deviceInfo: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. Laptop, Printer"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2 border-t border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Email</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
-                    {formData.requesterEmail || 'Unspecified'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Department</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200 block">
-                    {formData.requesterDepartment || 'General'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Affected Device</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <Laptop className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span className="truncate">{formData.deviceInfo || 'Unspecified'}</span>
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Request Details - captured by the employee portal form */}
-          {(formData.systemRequested ||
-            formData.userLocation ||
-            formData.userPhoneExt ||
-            formData.hodName ||
-            formData.hodEmail ||
-            (formData.attachments && formData.attachments.length > 0)) && (
+            {/* REQUESTOR INFORMATION */}
             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 space-y-3">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <ClipboardList className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Request Details</span>
-                <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
-                  (Submitted through the employee portal)
-                </span>
-              </h4>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Requestor Information</span>
+                </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-2 border-t border-slate-200 dark:border-slate-700">
-                {[
-                  { label: 'Category', value: formData.systemRequested, Icon: Server },
-                  { label: 'Location', value: formData.userLocation, Icon: MapPin },
-                  { label: 'Phone / Ext', value: formData.userPhoneExt, Icon: Phone },
-                  { label: 'HOD Name', value: formData.hodName, Icon: UserCheck },
-                ].map(({ label, value, Icon }) => (
-                  <div key={label} className="min-w-0">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{label}</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                      <Icon className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span className="truncate">{value || 'Unspecified'}</span>
+                {isPortalSubmission && !isReadOnly ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <Lock className="w-3 h-3" />
+                    <span>Submitted by employee</span>
+                  </span>
+                ) : (
+                  !lockSubmission && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingRequester(!isEditingRequester)}
+                      className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>{isEditingRequester ? 'Done' : 'Edit Requester'}</span>
+                    </button>
+                  )
+                )}
+              </div>
+
+              {isEditingRequester && !lockSubmission ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-xs pt-3 border-t border-slate-200 dark:border-slate-700">
+                  {[
+                    { label: 'Requestor Name', key: 'requesterName', type: 'text', placeholder: 'e.g. Sarah Jenkins' },
+                    { label: 'Email', key: 'requesterEmail', type: 'email', placeholder: 'e.g. sarah@company.com' },
+                    { label: 'Department', key: 'requesterDepartment', type: 'text', placeholder: 'e.g. Finance' },
+                    { label: 'Location', key: 'userLocation', type: 'text', placeholder: 'e.g. HQ, KLO' },
+                    { label: 'Phone / Ext', key: 'userPhoneExt', type: 'text', placeholder: 'e.g. 1234' },
+                    { label: 'HOD Name', key: 'hodName', type: 'text', placeholder: 'Name' },
+                    { label: 'HOD Email', key: 'hodEmail', type: 'email', placeholder: 'hod@eadeco.com.my' },
+                  ].map((field) => (
+                    <div key={field.key}>
+                      <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
+                        {field.label}
+                      </label>
+                      <input
+                        type={field.type}
+                        value={((formData as any)[field.key] as string) || ''}
+                        onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                        placeholder={field.placeholder}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-xs pt-3 border-t border-slate-200 dark:border-slate-700">
+                  {[
+                    { label: 'Requestor Name', value: formData.requesterName, Icon: User },
+                    {
+                      label: 'Submitted',
+                      value: formData.createdAt ? new Date(formData.createdAt).toLocaleDateString() : '',
+                      Icon: Calendar,
+                    },
+                    { label: 'Email', value: formData.requesterEmail, Icon: Mail },
+                    { label: 'Department', value: formData.requesterDepartment, Icon: Building2 },
+                    { label: 'Location', value: formData.userLocation, Icon: MapPin },
+                    { label: 'Phone / Ext', value: formData.userPhoneExt, Icon: Phone },
+                    { label: 'HOD Name', value: formData.hodName, Icon: UserCheck },
+                  ].map(({ label, value, Icon }) => (
+                    <div key={label} className="min-w-0">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{label}</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1 min-w-0">
+                        <Icon className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate" title={value || ''}>{value || 'Unspecified'}</span>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">HOD Email</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1 min-w-0">
+                      <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                      {formData.hodEmail ? (
+                        <a
+                          href={`mailto:${formData.hodEmail}`}
+                          title={formData.hodEmail}
+                          className="truncate text-indigo-600 dark:text-indigo-400 hover:underline"
+                        >
+                          {formData.hodEmail}
+                        </a>
+                      ) : (
+                        <span className="truncate">Unspecified</span>
+                      )}
                     </span>
                   </div>
-                ))}
-                <div className="min-w-0">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">HOD Email</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                    {formData.hodEmail ? (
-                      <a
-                        href={`mailto:${formData.hodEmail}`}
-                        className="truncate text-indigo-600 dark:text-indigo-400 hover:underline"
-                      >
-                        {formData.hodEmail}
-                      </a>
-                    ) : (
-                      <span className="truncate">Unspecified</span>
-                    )}
-                  </span>
                 </div>
-              </div>
+              )}
+            </div>
 
-              {formData.attachments && formData.attachments.length > 0 && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1.5">
-                    Attachments ({formData.attachments.length})
-                  </span>
-                  {/* Shared grid so every file's name, size and location line up. */}
-                  <ul className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
-                    {formData.attachments.map((file) => (
-                      <li key={file.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2">
-                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                        <a
-                          href={attachmentUrl(file)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={file.name}
-                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline truncate"
-                        >
-                          {file.name}
-                        </a>
-                        <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 text-right">
-                          {formatBytes(file.size)}
+            {/* REQUEST DETAILS */}
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <ClipboardList className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Request Details</span>
+              </h3>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-4">
+                {isPortalSubmission ? (
+                  // Category and device as the employee entered them.
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                    {[
+                      { label: 'Category', value: formData.systemRequested, Icon: Server },
+                      { label: 'Affected Device', value: formData.deviceInfo, Icon: Laptop },
+                    ].map(({ label, value, Icon }) => (
+                      <div key={label} className="min-w-0">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{label}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1 min-w-0">
+                          <Icon className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate" title={value || ''}>{value || 'Unspecified'}</span>
                         </span>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+                ) : (
+                  // Tickets created on the admin board: board category,
+                  // environment and device, all editable.
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Category</label>
+                      <div className="relative">
+                        <select
+                          value={formData.category}
+                          disabled={isReadOnly}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value as ITCategory })}
+                          className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
+                        >
+                          {CATEGORIES.map((cat) => (
+                            <option key={cat.value} value={cat.value}>
+                              {cat.label} ({cat.desc})
+                            </option>
+                          ))}
+                        </select>
+                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Environment Context</label>
+                      <div className="relative">
+                        <select
+                          value={formData.environment}
+                          disabled={isReadOnly}
+                          onChange={(e) => setFormData({ ...formData, environment: e.target.value as EnvironmentType })}
+                          className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
+                        >
+                          <option value="Corporate LAN">Corporate LAN / Office Network</option>
+                          <option value="Production">Production Environment</option>
+                          <option value="Staging">Staging / Pre-Release</option>
+                          <option value="Internal Tooling">Internal Tooling</option>
+                          <option value="Cloud Infrastructure">Cloud Infrastructure</option>
+                          <option value="DR / Failover">DR / Failover</option>
+                        </select>
+                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Affected Device</label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={formData.deviceInfo || ''}
+                        onChange={(e) => setFormData({ ...formData, deviceInfo: e.target.value })}
+                        placeholder="e.g. Laptop, Printer"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    Summary / What is the issue? {!lockSubmission && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    required={!lockSubmission}
+                    disabled={lockSubmission}
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g. No Internet connection"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-white dark:disabled:bg-slate-900 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
+                  />
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Issue Details Section (Same as user portal) */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Issue Details Mentioned in Ticket</span>
-              {isPortalSubmission && !isReadOnly && (
-                <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                  <Lock className="w-3 h-3" />
-                  <span>Submitted by employee</span>
-                </span>
-              )}
-            </h3>
-
-            {/* Title / Summary */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                Summary / What is the issue? {!lockSubmission && <span className="text-red-500">*</span>}
-              </label>
-              <input
-                type="text"
-                required={!lockSubmission}
-                disabled={lockSubmission}
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. Cannot connect to Singapore Office VPN, or Need Figma Enterprise Access"
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
-              />
-            </div>
-
-            {/* Category & Environment - admin-created tickets only */}
-            {!isPortalSubmission && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Category */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Category
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.category}
-                    disabled={isReadOnly}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as ITCategory })}
-                    className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label} ({cat.desc})
-                      </option>
-                    ))}
-                  </select>
-                  {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                {/* Remarks / Description */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Remarks / Description</label>
+                  <textarea
+                    rows={4}
+                    disabled={lockSubmission}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe the issue in detail..."
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-white dark:disabled:bg-slate-900 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
+                  />
                 </div>
+
+                {/* Attachments */}
+                {formData.attachments && formData.attachments.length > 0 && (
+                  <div>
+                    <span className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Attachments ({formData.attachments.length})</span>
+                    {/* Shared grid so every file's name and size line up. */}
+                    <ul className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+                      {formData.attachments.map((file) => (
+                        <li key={file.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2">
+                          <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                          <a
+                            href={attachmentUrl(file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={file.name}
+                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline truncate"
+                          >
+                            {file.name}
+                          </a>
+                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 text-right">
+                            {formatBytes(file.size)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-
-              {/* Environment / System Context */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Environment Context
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.environment}
-                    disabled={isReadOnly}
-                    onChange={(e) => setFormData({ ...formData, environment: e.target.value as EnvironmentType })}
-                    className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 pr-9 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    <option value="Corporate LAN">Corporate LAN / Office Network</option>
-                    <option value="Production">Production Environment</option>
-                    <option value="Staging">Staging / Pre-Release</option>
-                    <option value="Internal Tooling">Internal Tooling</option>
-                    <option value="Cloud Infrastructure">Cloud Infrastructure</option>
-                    <option value="DR / Failover">DR / Failover</option>
-                  </select>
-                  {!isReadOnly && <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
-                </div>
-              </div>
             </div>
-            )}
-
-            {/* Detailed Description */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                {isPortalSubmission ? 'Remarks / Description' : 'Detailed Description of the Issue'}
-              </label>
-              <textarea
-                rows={4}
-                disabled={lockSubmission}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Details of what happened, symptoms, what the user was doing, or specific error message..."
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
-              />
-            </div>
-          </div>
 
           {/* Admin Triage & Management Section */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
