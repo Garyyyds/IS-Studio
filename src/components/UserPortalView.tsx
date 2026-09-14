@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   LifeBuoy, 
   Send, 
@@ -24,8 +24,13 @@ import {
   ClipboardList,
   PackageCheck,
   KeyRound,
+  Paperclip,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
+import { SYSTEM_OPTIONS, NATURE_OF_REQUEST_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
+import { uploadAttachment, formatBytes } from '../utils/attachments';
 import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
 import { RequisitionFormView } from './RequisitionFormView';
@@ -60,6 +65,15 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [category, setCategory] = useState<ITCategory>('Application');
   const [deviceInfo, setDeviceInfo] = useState('Company Laptop (macOS / Windows)');
   const [rawLogs, setRawLogs] = useState('');
+  const [systemRequested, setSystemRequested] = useState('');
+  const [natureOfRequest, setNatureOfRequest] = useState('');
+  const [userLocation, setUserLocation] = useState('');
+  const [userPhoneExt, setUserPhoneExt] = useState('');
+  const [hodName, setHodName] = useState('');
+  const [hodEmail, setHodEmail] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -93,11 +107,48 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     )
   );
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  // Picked files are appended, so the button can be used more than once. A file
+  // already in the list (same name and size) is skipped, and anything over the
+  // limit is refused up front rather than failing at submit time.
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked: File[] = e.target.files ? Array.from(e.target.files) : [];
+    const tooLarge = picked.filter((f) => f.size > MAX_ATTACHMENT_BYTES);
+    const accepted = picked.filter((f) => f.size <= MAX_ATTACHMENT_BYTES);
+
+    setFiles((prev) => [
+      ...prev,
+      ...accepted.filter((f) => !prev.some((p) => p.name === f.name && p.size === f.size)),
+    ]);
+    setSubmitError(
+      tooLarge.length
+        ? `${tooLarge.map((f) => f.name).join(', ')} ${tooLarge.length > 1 ? 'are' : 'is'} over ${formatBytes(MAX_ATTACHMENT_BYTES)} and was not added.`
+        : null
+    );
+    // Reset so picking the same file again after removing it still fires.
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
+
+    // Files go up first: if any fails, nothing is submitted and the form keeps
+    // everything the employee entered so they can retry.
+    let attachments;
+    try {
+      attachments = await Promise.all(files.map((file) => uploadAttachment(file)));
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Could not upload the attachments. Please try again.');
+      setIsSubmitting(false);
+      return;
+    }
 
     const ticketNumber = `REQ-${1000 + tasks.length + 1}`;
 
@@ -130,6 +181,13 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       requesterDepartment: currentUser.department || 'General',
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
+      systemRequested,
+      natureOfRequest,
+      userLocation: userLocation.trim(),
+      userPhoneExt: userPhoneExt.trim(),
+      hodName: hodName.trim(),
+      hodEmail: hodEmail.trim(),
+      attachments: attachments.length ? attachments : undefined,
     };
 
     onSubmitTicket(newTicket);
@@ -140,6 +198,13 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     setTitle('');
     setDescription('');
     setRawLogs('');
+    setSystemRequested('');
+    setNatureOfRequest('');
+    setUserLocation('');
+    setUserPhoneExt('');
+    setHodName('');
+    setHodEmail('');
+    setFiles([]);
   };
 
   const getStatusBadge = (status: TaskStatus) => {
@@ -369,6 +434,46 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    System <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={systemRequested}
+                    onChange={(e) => setSystemRequested(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Select system...</option>
+                    {SYSTEM_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    Nature of Request <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={natureOfRequest}
+                    onChange={(e) => setNatureOfRequest(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Select nature...</option>
+                    {NATURE_OF_REQUEST_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                     Category
                   </label>
                   <select
@@ -402,16 +507,76 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    Location <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={userLocation}
+                    onChange={(e) => setUserLocation(e.target.value)}
+                    placeholder="e.g. HQ, EA2, KLO, ED Shop"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    Phone / Extension <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={userPhoneExt}
+                    onChange={(e) => setUserPhoneExt(e.target.value)}
+                    placeholder="e.g. ext 1234"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    HOD Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={hodName}
+                    onChange={(e) => setHodName(e.target.value)}
+                    placeholder="Head of Department name"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                    HOD Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={hodEmail}
+                    onChange={(e) => setHodEmail(e.target.value)}
+                    placeholder="hod@eadeco.com.my"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                  Detailed Description <span className="text-rose-500">*</span>
+                  Remarks / Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   rows={4}
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Explain what happened, what you were trying to do, and any error message you saw..."
+                  placeholder="Describe the issue in detail..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
@@ -429,6 +594,72 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                 />
               </div>
 
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Attachments{' '}
+                    <span className="font-normal text-slate-400">
+                      (optional, max {formatBytes(MAX_ATTACHMENT_BYTES)} each)
+                    </span>
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFilesPicked}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                    <span>Add Files</span>
+                  </button>
+                </div>
+
+                {files.length > 0 ? (
+                  // One row per file on a shared grid, so names, sizes and remove
+                  // buttons line up down the list however many are attached.
+                  <ul className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+                    {files.map((file, index) => (
+                      <li
+                        key={`${file.name}-${file.size}`}
+                        className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-3 py-2"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-xs text-slate-800 dark:text-slate-200 truncate" title={file.name}>
+                          {file.name}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 text-right">
+                          {formatBytes(file.size)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          aria-label={`Remove ${file.name}`}
+                          className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                    Screenshots, error photos or documents that help IT understand the request.
+                  </p>
+                )}
+              </div>
+
+              {submitError && (
+                <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{submitError}</p>
+                </div>
+              )}
+
               <div className="pt-2 flex items-center justify-between">
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Requester: <strong>{currentUser.name}</strong> ({currentUser.email})
@@ -438,8 +669,12 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   disabled={isSubmitting || !title.trim() || !description.trim()}
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-2 shadow-sm"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Submit Ticket</span>
+                  {isSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isSubmitting ? (files.length ? 'Uploading...' : 'Submitting...') : 'Submit Ticket'}</span>
                 </button>
               </div>
             </form>

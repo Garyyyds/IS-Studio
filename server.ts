@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -1218,6 +1219,158 @@ How to answer:
   } catch (error: any) {
     console.error('Support chat error:', error);
     sendAiError(res, error, 'Failed to reach the IT assistant');
+  }
+});
+
+// --- Ticket attachments ---
+// File bytes never go into workspace_data: every save re-posts the whole
+// workspace, so a few uploads would make each sync megabytes large. Files go to
+// a private Supabase Storage bucket and the ticket keeps only their metadata.
+// Without Supabase they are written under data/attachments, which only the
+// machine that received them can serve.
+const ATTACHMENT_BUCKET = 'ticket-attachments';
+const ATTACHMENT_DIR = path.join(DATA_DIR, 'attachments');
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+// Generated keys only ever contain these characters, which also rules out any
+// path traversal through the download route.
+const ATTACHMENT_KEY = /^[A-Za-z0-9._-]{1,200}$/;
+
+// Types a browser may render in place. Anything else - HTML and SVG above all,
+// which could run script on this origin - is only ever offered as a download.
+const INLINE_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+  txt: 'text/plain; charset=utf-8',
+};
+
+let attachmentBucketReady: Promise<boolean> | null = null;
+
+function ensureAttachmentBucket(supabase: SupabaseClient): Promise<boolean> {
+  if (!attachmentBucketReady) {
+    attachmentBucketReady = (async () => {
+      const { data, error } = await supabase.storage.getBucket(ATTACHMENT_BUCKET);
+      if (data && !error) return true;
+
+      const { error: createError } = await supabase.storage.createBucket(ATTACHMENT_BUCKET, {
+        public: false,
+        fileSizeLimit: MAX_ATTACHMENT_BYTES,
+      });
+      if (createError && !/already exists/i.test(createError.message)) {
+        console.warn('Attachment bucket unavailable, using local storage:', createError.message);
+        return false;
+      }
+      return true;
+    })().catch((err) => {
+      console.warn('Attachment bucket check failed, using local storage:', err?.message || err);
+      return false;
+    });
+
+    // A failed check is retried on the next upload rather than cached forever.
+    attachmentBucketReady.then((ok) => {
+      if (!ok) attachmentBucketReady = null;
+    });
+  }
+  return attachmentBucketReady;
+}
+
+app.post(
+  '/api/attachments',
+  express.raw({ type: 'application/octet-stream', limit: MAX_ATTACHMENT_BYTES }),
+  async (req, res) => {
+    try {
+      const body = req.body;
+      const originalName = String(req.query.name || '').trim();
+      const type = String(req.query.type || 'application/octet-stream').slice(0, 120);
+
+      if (!Buffer.isBuffer(body) || body.length === 0) {
+        return res.status(400).json({ error: 'The file is empty.' });
+      }
+      if (!originalName) {
+        return res.status(400).json({ error: 'A file name is required.' });
+      }
+
+      const safeName = originalName.replace(/[^A-Za-z0-9._-]+/g, '_').slice(-120) || 'file';
+      const key = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}-${safeName}`;
+
+      let storage: 'supabase' | 'local' = 'local';
+      const supabase = getSupabase();
+
+      if (supabase && (await ensureAttachmentBucket(supabase))) {
+        const { error } = await supabase.storage
+          .from(ATTACHMENT_BUCKET)
+          .upload(key, body, { contentType: type, upsert: false });
+        if (error) {
+          console.warn('Attachment upload to Supabase failed, using local storage:', error.message);
+        } else {
+          storage = 'supabase';
+        }
+      }
+
+      if (storage === 'local') {
+        await fs.promises.mkdir(ATTACHMENT_DIR, { recursive: true });
+        await fs.promises.writeFile(path.join(ATTACHMENT_DIR, key), body);
+      }
+
+      res.json({
+        id: key,
+        name: originalName.slice(0, 255),
+        size: body.length,
+        type,
+        storage,
+        uploadedAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.error('Attachment upload error:', err);
+      res.status(500).json({ error: 'Could not store the attachment.' });
+    }
+  }
+);
+
+app.get('/api/attachments/:key', async (req, res) => {
+  const key = String(req.params.key || '');
+  if (!ATTACHMENT_KEY.test(key) || key.includes('..')) {
+    return res.status(400).json({ error: 'Invalid attachment reference.' });
+  }
+
+  const downloadName = String(req.query.name || key).replace(/[\r\n"]/g, '').slice(0, 255);
+  const ext = (downloadName.split('.').pop() || '').toLowerCase();
+  const inlineType = INLINE_TYPES[ext];
+
+  const send = (bytes: Buffer) => {
+    res.setHeader('Content-Type', inlineType || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `${inlineType ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(downloadName)}`
+    );
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Belt and braces: even a mislabelled file cannot run script if opened.
+    res.setHeader('Content-Security-Policy', 'sandbox');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(bytes);
+  };
+
+  try {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data, error } = await supabase.storage.from(ATTACHMENT_BUCKET).download(key);
+      if (data && !error) {
+        return send(Buffer.from(await data.arrayBuffer()));
+      }
+    }
+
+    const localPath = path.join(ATTACHMENT_DIR, key);
+    if (fs.existsSync(localPath)) {
+      return send(await fs.promises.readFile(localPath));
+    }
+
+    res.status(404).json({ error: 'Attachment not found on this server.' });
+  } catch (err: any) {
+    console.error('Attachment download error:', err);
+    res.status(500).json({ error: 'Could not read the attachment.' });
   }
 });
 

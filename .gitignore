@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 .claude/.version-note
+
+# Files employees upload with tickets when Supabase storage is unavailable
+data/attachments/

@@ -690,6 +690,13 @@ export default function App() {
       requesterDepartment: currentUser?.department || 'General Staff',
       deviceInfo: ticketData.deviceInfo || 'Company Workstation',
       isUserSubmitted: true,
+      systemRequested: ticketData.systemRequested,
+      natureOfRequest: ticketData.natureOfRequest,
+      userLocation: ticketData.userLocation,
+      userPhoneExt: ticketData.userPhoneExt,
+      hodName: ticketData.hodName,
+      hodEmail: ticketData.hodEmail,
+      attachments: ticketData.attachments,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       checklist: ticketData.checklist || [

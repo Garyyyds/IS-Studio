@@ -67,6 +67,16 @@ export interface Task {
   requesterDepartment?: string;
   deviceInfo?: string;
   isUserSubmitted?: boolean;
+  /** Portal request details, as captured by the employee submission form. */
+  systemRequested?: string;
+  natureOfRequest?: string;
+  userLocation?: string;
+  userPhoneExt?: string;
+  hodName?: string;
+  hodEmail?: string;
+  /** Files uploaded with the request. Only metadata lives on the ticket; the
+   * bytes are held by the server's attachment store. */
+  attachments?: TicketAttachment[];
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
@@ -76,6 +86,18 @@ export interface Task {
   resolutionNotes?: string;
   resolvedAt?: string;
   isAutoTagged: boolean;
+}
+
+export interface TicketAttachment {
+  /** Storage key, also used in the download URL. */
+  id: string;
+  /** Original file name as picked by the employee. */
+  name: string;
+  size: number;
+  type: string;
+  /** Where the bytes live. Local files only exist on the machine that received them. */
+  storage: 'supabase' | 'local';
+  uploadedAt: string;
 }
 
 export interface DiagnosticStep {

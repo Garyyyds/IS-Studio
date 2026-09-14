@@ -14,7 +14,8 @@ import {
   Trash2,
   CheckCircle2,
   History,
-  User
+  User,
+  Paperclip,
 } from 'lucide-react';
 import { Task, Runbook, TaskStatus, UserSettings } from '../types';
 import { getTaskRetentionInfo, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
@@ -95,6 +96,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <span className="inline-flex items-center text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800" title={`User Request from ${task.requesterName || 'Employee'}${task.requesterDepartment ? ` (${task.requesterDepartment})` : ''}`}>
               <User className="w-2.5 h-2.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
               <span>{task.requesterName ? task.requesterName.split(' ')[0] : 'User'}</span>
+            </span>
+          )}
+          {task.attachments && task.attachments.length > 0 && (
+            <span
+              className="inline-flex items-center text-[10px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700"
+              title={task.attachments.map((file) => file.name).join(', ')}
+            >
+              <Paperclip className="w-2.5 h-2.5 mr-0.5 text-slate-500 dark:text-slate-400" />
+              <span>{task.attachments.length}</span>
             </span>
           )}
         </div>
