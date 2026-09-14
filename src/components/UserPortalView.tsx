@@ -63,7 +63,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ITCategory>('Application');
-  const [deviceInfo, setDeviceInfo] = useState('Company Laptop (macOS / Windows)');
+  const [deviceInfo, setDeviceInfo] = useState('');
   const [systemRequested, setSystemRequested] = useState('');
   const [userLocation, setUserLocation] = useState('');
   const [userPhoneExt, setUserPhoneExt] = useState('');
@@ -193,6 +193,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     // Reset form
     setTitle('');
     setDescription('');
+    setDeviceInfo('');
     setSystemRequested('');
     setUserLocation('');
     setUserPhoneExt('');
@@ -465,7 +466,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                    Your Device / Workstation
+                    Affected Device
                   </label>
                   <div className="relative">
                     <Laptop className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -473,7 +474,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       type="text"
                       value={deviceInfo}
                       onChange={(e) => setDeviceInfo(e.target.value)}
-                      placeholder="e.g. MacBook Pro M2, ThinkPad X1"
+                      placeholder="e.g. Laptop, Printer"
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>

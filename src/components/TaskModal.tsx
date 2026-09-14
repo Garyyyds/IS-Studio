@@ -60,7 +60,7 @@ const emptyTask: Task = {
   requesterName: '',
   requesterEmail: '',
   requesterDepartment: 'General',
-  deviceInfo: 'Company Workstation (macOS / Windows)',
+  deviceInfo: '',
   assignee: {
     name: 'Unassigned',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
@@ -299,14 +299,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    Device / Workstation
+                    Affected Device
                   </label>
                   <input
                     type="text"
                     value={formData.deviceInfo || ''}
                     onChange={(e) => setFormData({ ...formData, deviceInfo: e.target.value })}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. MacBook Pro M2"
+                    placeholder="e.g. Laptop, Printer"
                   />
                 </div>
               </div>
@@ -325,10 +325,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Workstation Device</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Affected Device</span>
                   <span className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
                     <Laptop className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span className="truncate">{formData.deviceInfo || 'Workstation / Laptop'}</span>
+                    <span className="truncate">{formData.deviceInfo || 'Unspecified'}</span>
                   </span>
                 </div>
               </div>

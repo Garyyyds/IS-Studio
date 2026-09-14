@@ -500,7 +500,7 @@ export default function App() {
       requesterName: currentUser?.name || 'Employee Requester',
       requesterEmail: currentUser?.email || 'employee@company.com',
       requesterDepartment: currentUser?.department || 'General',
-      deviceInfo: 'Company Workstation (macOS / Windows)',
+      deviceInfo: '',
       isUserSubmitted: true,
       assignee: {
         name: settings.operatorName || 'Alex Rivera',
@@ -688,7 +688,7 @@ export default function App() {
       requesterName: currentUser?.name || 'Employee',
       requesterEmail: currentUser?.email,
       requesterDepartment: currentUser?.department || 'General Staff',
-      deviceInfo: ticketData.deviceInfo || 'Company Workstation',
+      deviceInfo: ticketData.deviceInfo,
       isUserSubmitted: true,
       systemRequested: ticketData.systemRequested,
       userLocation: ticketData.userLocation,

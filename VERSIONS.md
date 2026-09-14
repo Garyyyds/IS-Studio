@@ -75,3 +75,4 @@ away later work permanently.
 | `14092026ver002` | 2026-09-14 | Attachments label hint now reads (Optional) |
 | `14092026ver003` | 2026-09-14 | Remove the Error Code, Log Output or URL field from the employee ticket form and the admin ticket modal |
 | `14092026ver004` | 2026-09-14 | Ticket form placeholders: Summary e.g. No Internet connection, Location e.g. HQ, KLO, Phone e.g. 1234, HOD Name reads Name |
+| `14092026ver005` | 2026-09-14 | Device field renamed Affected Device on both sides, no invented default, placeholder e.g. Laptop, Printer |
