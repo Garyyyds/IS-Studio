@@ -33,7 +33,6 @@ const PRESET_TEST_CASES = [
     badge: 'Outage',
     badgeClass: 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900',
     text: 'FATAL: remaining connection slots are reserved for non-replication superuser connections in production billing cluster',
-    env: 'Production' as const,
     affected: 15000,
   },
   {
@@ -41,7 +40,6 @@ const PRESET_TEST_CASES = [
     badge: 'Degraded',
     badgeClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900',
     text: 'WARN [WorkerPool]: Container memory usage exceeded 92% threshold; potential OOM crash loop impending',
-    env: 'Production' as const,
     affected: 3500,
   },
   {
@@ -49,7 +47,6 @@ const PRESET_TEST_CASES = [
     badge: 'Certificate',
     badgeClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900',
     text: 'Notice: SSL certificate for api.internal.infra expires in 5 days. Renewal needed before Friday.',
-    env: 'Staging' as const,
     affected: 0,
   },
   {
@@ -57,7 +54,6 @@ const PRESET_TEST_CASES = [
     badge: 'Cosmetic',
     badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     text: 'Minor typo in staging admin navigation banner. Please fix before next weekly release.',
-    env: 'Staging' as const,
     affected: 0,
   },
 ];
@@ -69,7 +65,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
   isScanning = false,
 }) => {
   const [testText, setTestText] = useState('FATAL: remaining connection slots are reserved for non-replication superuser connections in production billing cluster');
-  const [testEnv, setTestEnv] = useState<'Production' | 'Staging'>('Production');
   const [testAffected, setTestAffected] = useState<number>(10000);
   const [isTestingSandbox, setIsTestingSandbox] = useState(false);
   const [lastTestedTime, setLastTestedTime] = useState<string | null>(null);
@@ -93,7 +88,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
     {
       title: 'Sample Incident Evaluation',
       description: testText,
-      environment: testEnv,
       affectedUsersEstimate: testAffected,
     },
     rules
@@ -113,8 +107,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
       } catch {
         return false;
       }
-    } else if (rule.matchType === 'environment') {
-      return testEnv.toLowerCase() === rule.pattern.toLowerCase();
     }
     return false;
   });
@@ -129,7 +121,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
 
   const handleLoadPreset = (preset: typeof PRESET_TEST_CASES[0]) => {
     setTestText(preset.text);
-    setTestEnv(preset.env);
     setTestAffected(preset.affected);
     setIsTestingSandbox(true);
     setTimeout(() => {
@@ -223,7 +214,7 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
               <span>Rule Evaluation Sandbox</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Simulate how raw incident logs, alert messages, and environment contexts are evaluated by your active triage rules.
+              Simulate how raw incident logs and alert messages are evaluated by your active triage rules.
             </p>
           </div>
 
@@ -300,18 +291,6 @@ export const PriorityRulesManager: React.FC<PriorityRulesManagerProps> = ({
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex flex-wrap items-center gap-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">Target Environment:</span>
-                  <select
-                    value={testEnv}
-                    onChange={(e) => setTestEnv(e.target.value as any)}
-                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 font-medium cursor-pointer focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="Production">Production</option>
-                    <option value="Staging">Staging</option>
-                  </select>
-                </div>
-
                 <div className="flex items-center gap-2">
                   <span className="text-slate-600 dark:text-slate-400 font-medium">Estimated Affected Users:</span>
                   <input

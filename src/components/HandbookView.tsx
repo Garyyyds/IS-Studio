@@ -213,8 +213,6 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span className="text-slate-700 dark:text-slate-300 font-medium">{rb.category}</span>
                         <span>•</span>
-                        <span>{rb.environment}</span>
-                        <span>•</span>
                         <span>v{rb.version}</span>
                         <span>•</span>
                         <span>Updated: {rb.lastUpdated}</span>

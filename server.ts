@@ -982,7 +982,7 @@ app.post('/api/auth/profile', async (req, res) => {
 // API: Automated tagging & triage
 app.post('/api/ai/classify-priority', async (req, res) => {
   try {
-    const { title, description, rawLogs, environment, affectedUsers } = req.body;
+    const { title, description, rawLogs, affectedUsers } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -993,7 +993,6 @@ app.post('/api/ai/classify-priority', async (req, res) => {
     const prompt = `Analyze this IT operational task/incident and perform automated categorisation and triage tagging.
 
 Task Title: ${title}
-Environment: ${environment || 'Production'}
 Estimated Affected Users: ${affectedUsers || 'Unknown'}
 Description: ${description || 'N/A'}
 System Logs / Stack Trace / Error Payload: ${rawLogs || 'None provided'}
@@ -1056,7 +1055,6 @@ app.post('/api/ai/generate-runbook', async (req, res) => {
   try {
     const problemTitle = req.body.problemTitle || req.body.incidentTitle || req.body.title;
     const errorLogs = req.body.errorLogs || req.body.rawLogs || '';
-    const environment = req.body.environment || 'Production';
     const category = req.body.category || 'Network';
     const systemContext = req.body.systemContext || req.body.incidentDescription || req.body.description || '';
 
@@ -1070,7 +1068,6 @@ app.post('/api/ai/generate-runbook', async (req, res) => {
 Write an exhaustive, high-standard IT Issue-Solution Handbook Standard Operating Procedure (SOP) / Runbook for:
 
 Problem: ${problemTitle}
-Environment: ${environment}
 Category: ${category}
 System Context: ${systemContext}
 Error Output / Logs: ${errorLogs || 'None provided'}
@@ -1088,7 +1085,6 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
             title: { type: Type.STRING, description: 'Descriptive, professional SOP title' },
             code: { type: Type.STRING, description: 'Standard code like SOP-OPS-042 or RUN-DB-019' },
             category: { type: Type.STRING },
-            environment: { type: Type.STRING },
             symptom: { type: Type.STRING, description: 'Observable behavior, alert triggers, metrics deviation' },
             triggerAlertPatterns: {
               type: Type.ARRAY,

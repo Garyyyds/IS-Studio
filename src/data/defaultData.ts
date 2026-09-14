@@ -51,16 +51,6 @@ export const DEFAULT_TAGGING_RULES: TaggingRule[] = [
     enabled: true,
     description: 'Tags node storage threshold and build worker maintenance.',
   },
-  {
-    id: 'rule-6',
-    name: 'Staging / QA Routine Operations',
-    matchType: 'environment',
-    pattern: 'Staging',
-    tagsToApply: ['non-prod', 'staging-env', 'standard-change'],
-    category: 'Others',
-    enabled: true,
-    description: 'Tags staging and non-customer facing tasks.',
-  },
 ];
 
 export const DEFAULT_RUNBOOKS: Runbook[] = [
@@ -69,7 +59,6 @@ export const DEFAULT_RUNBOOKS: Runbook[] = [
     code: 'SOP-DB-001',
     title: 'PostgreSQL Connection Pool Exhaustion & Deadlock Recovery',
     category: 'Database',
-    environment: 'Production',
     lastUpdated: '2026-08-28',
     author: 'Elena Rostova',
     authorRole: 'Principal Database Reliability Engineer',
@@ -142,7 +131,6 @@ export const DEFAULT_RUNBOOKS: Runbook[] = [
     code: 'SOP-K8S-014',
     title: 'Kubernetes Pod CrashLoopBackOff & OOMKilled Diagnostics',
     category: 'Others',
-    environment: 'Production',
     lastUpdated: '2026-08-30',
     author: 'Marcus Vance',
     authorRole: 'Staff SRE & Kubernetes Lead',
@@ -215,7 +203,6 @@ export const DEFAULT_RUNBOOKS: Runbook[] = [
     code: 'SOP-SEC-008',
     title: 'Emergency TLS/SSL Certificate Renewal & Ingress Reload Protocol',
     category: 'Network',
-    environment: 'Production',
     lastUpdated: '2026-08-25',
     author: 'Sarah Chen',
     authorRole: 'Security Operations & Cryptography Architect',
@@ -273,7 +260,6 @@ export const DEFAULT_RUNBOOKS: Runbook[] = [
     code: 'SOP-NET-004',
     title: 'Windows SMB Fileshare Connection Failure & Network Drive Mapping (\\\\hq-file01)',
     category: 'Network',
-    environment: 'Corporate LAN',
     lastUpdated: '2026-09-01',
     author: 'Alex Rivera',
     authorRole: 'Senior Systems & Network Administrator',
@@ -371,7 +357,6 @@ Windows cannot access \\\\hq-file01. Error code: 0x80070035 The network path was
     automatedTags: ['fileshare', 'smb', 'windows', 'networking', 'dns', 'drive-mapping'],
     manualTags: ['corp-lan'],
     category: 'Network',
-    environment: 'Corporate LAN',
     affectedUsersEstimate: 24,
     assignee: {
       name: 'Alex Rivera',
@@ -409,6 +394,5 @@ export const DEFAULT_USER_SETTINGS: import('../types').UserSettings = {
   showChecklistProgressOnCards: true,
   compactCards: false,
   operatorName: 'Alex Rivera',
-  defaultEnvironment: 'Production',
   defaultCategory: 'Others',
 };

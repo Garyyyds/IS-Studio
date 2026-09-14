@@ -70,7 +70,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       t.title.toLowerCase().includes(q) ||
       t.ticketNumber.toLowerCase().includes(q) ||
       t.category.toLowerCase().includes(q) ||
-      t.environment.toLowerCase().includes(q) ||
       t.automatedTags.some((tag) => tag.toLowerCase().includes(q))
     );
   });
@@ -218,7 +217,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 </th>
                 <th className="py-3 px-3">Ticket</th>
                 <th className="py-3 px-4">Title & Context</th>
-                <th className="py-3 px-3">Environment</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-3">Checklist</th>
                 <th className="py-3 px-3">Assignee</th>
@@ -270,20 +268,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             </span>
                           ))}
                         </div>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                            task.environment === 'Production'
-                              ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
-                              : task.environment === 'Staging'
-                              ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-900'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                          }`}
-                        >
-                          {task.environment}
-                        </span>
                       </td>
 
                       <td className="py-3.5 px-3">

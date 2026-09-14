@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { Task, EnvironmentType, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
+import { Task, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
 import {
   isTaskRecentlyCompleted,
   isTaskArchived,
@@ -50,7 +50,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
   onNavigateToBoard,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedEnv, setSelectedEnv] = useState<EnvironmentType | 'ALL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
   const [retentionFilter, setRetentionFilter] = useState<'all' | 'archived' | 'recent'>('all');
   const [sortBy, setSortBy] = useState<'resolved_desc' | 'resolved_asc' | 'duration'>('resolved_desc');
@@ -103,11 +102,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         return false;
       }
 
-      // Environment
-      if (selectedEnv !== 'ALL' && task.environment !== selectedEnv) {
-        return false;
-      }
-
       // Category
       if (selectedCategory !== 'ALL' && task.category !== selectedCategory) {
         return false;
@@ -131,7 +125,7 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
 
       return true;
     });
-  }, [allResolvedTasks, retentionFilter, selectedEnv, selectedCategory, search, retentionMinutes]);
+  }, [allResolvedTasks, retentionFilter, selectedCategory, search, retentionMinutes]);
 
   // Sorted tasks
   const sortedTasks = useMemo(() => {
@@ -175,7 +169,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
       'Ticket Number',
       'Title',
       'Category',
-      'Environment',
       'Assignee',
       'Created At',
       'Resolved At',
@@ -189,7 +182,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         `"${t.ticketNumber}"`,
         `"${t.title.replace(/"/g, '""')}"`,
         `"${t.category}"`,
-        `"${t.environment}"`,
         `"${t.assignee.name}"`,
         `"${t.createdAt}"`,
         `"${t.resolvedAt || t.updatedAt}"`,
@@ -390,21 +382,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             <span>Filter:</span>
           </div>
 
-          {/* Environment */}
-          <select
-            value={selectedEnv}
-            onChange={(e) => setSelectedEnv(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
-          >
-            <option value="ALL">All Environments</option>
-            <option value="Production">Production</option>
-            <option value="Staging">Staging</option>
-            <option value="DR / Failover">DR / Failover</option>
-            <option value="Corporate LAN">Corporate LAN</option>
-            <option value="Internal Tooling">Internal Tooling</option>
-            <option value="Cloud Infrastructure">Cloud Infrastructure</option>
-          </select>
-
           {/* Category */}
           <select
             value={selectedCategory}
@@ -419,10 +396,9 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             ))}
           </select>
 
-          {(selectedEnv !== 'ALL' || selectedCategory !== 'ALL' || search.trim()) && (
+          {(selectedCategory !== 'ALL' || search.trim()) && (
             <button
               onClick={() => {
-                setSelectedEnv('ALL');
                 setSelectedCategory('ALL');
                 setSearch('');
               }}
@@ -504,7 +480,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
               <button
                 onClick={() => {
                   setRetentionFilter('all');
-                  setSelectedEnv('ALL');
                   setSelectedCategory('ALL');
                   setSearch('');
                 }}
@@ -592,13 +567,10 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Category & Env */}
+                  {/* Category */}
                   <div className="col-span-2 hidden md:flex flex-col gap-1 text-[11px]">
                     <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
                       {task.category}
-                    </span>
-                    <span className="text-slate-400 dark:text-slate-500 truncate text-[10px]">
-                      {task.environment}
                     </span>
                   </div>
 

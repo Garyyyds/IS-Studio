@@ -4,7 +4,6 @@ import {
   Runbook, 
   TaggingRule, 
   TaskStatus, 
-  EnvironmentType, 
   ITCategory,
   UserSettings,
   ActiveTab,
@@ -571,7 +570,6 @@ export default function App() {
       automatedTags: [],
       manualTags: [],
       category: settings.defaultCategory || 'Others',
-      environment: settings.defaultEnvironment || 'Corporate LAN',
       requesterName: currentUser?.name || 'Employee Requester',
       requesterEmail: currentUser?.email || 'employee@company.com',
       requesterDepartment: currentUser?.department || 'General',
@@ -608,7 +606,6 @@ export default function App() {
           title: task.title,
           description: task.description,
           rawLogs: task.rawLogs,
-          environment: task.environment,
           affectedUsersEstimate: task.affectedUsersEstimate,
         },
         rules
@@ -751,7 +748,6 @@ export default function App() {
       automatedTags: ticketData.automatedTags || ['User Request', 'PORTAL'],
       manualTags: ticketData.manualTags || ['Portal Submission'],
       category: ticketData.category || 'Others',
-      environment: ticketData.environment || 'Corporate LAN',
       affectedUsersEstimate: 1,
       assignee: ticketData.assignee || {
         name: 'IT Helpdesk Queue',

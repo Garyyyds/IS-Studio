@@ -9,7 +9,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
-import { Runbook, Task, ITCategory, IT_CATEGORIES, EnvironmentType } from '../types';
+import { Runbook, Task, ITCategory, IT_CATEGORIES } from '../types';
 
 interface AiRunbookGeneratorModalProps {
   isOpen: boolean;
@@ -22,21 +22,18 @@ const QUICK_PROMPT_PRESETS = [
   {
     title: 'Connection failure to fileshare (\\\\hq-file01)',
     category: 'Network' as ITCategory,
-    environment: 'Corporate LAN' as EnvironmentType,
     description: 'Workstation cannot connect to \\\\hq-file01 fileshare or map drive Z:. Need DNS verification and adapter DHCP reset.',
     logs: 'ping: could not find host hq-file01\nError 0x80070035: The network path was not found.',
   },
   {
     title: 'PostgreSQL Connection Pool Exhaustion & Deadlocks',
     category: 'Database' as ITCategory,
-    environment: 'Production' as EnvironmentType,
     description: 'PgBouncer connection queue full, pg_stat_activity shows idle in transaction queries blocking table locks.',
     logs: 'FATAL: remaining connection slots are reserved for non-replication superuser connections',
   },
   {
     title: 'Kubernetes Pod CrashLoopBackOff & Exit 137 OOMKilled',
     category: 'Others' as ITCategory,
-    environment: 'Production' as EnvironmentType,
     description: 'Container killed by Linux cgroup OOM killer due to memory spikes during load.',
     logs: 'Last State: Terminated, Reason: OOMKilled, Exit Code: 137',
   },
@@ -52,7 +49,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
   const [incidentDescription, setIncidentDescription] = useState(initialTask?.description || '');
   const [rawLogs, setRawLogs] = useState(initialTask?.rawLogs || '');
   const [category, setCategory] = useState<ITCategory>(initialTask?.category || 'Network');
-  const [environment, setEnvironment] = useState<EnvironmentType>(initialTask?.environment || 'Corporate LAN');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +59,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
       setIncidentDescription(initialTask?.description || '');
       setRawLogs(initialTask?.rawLogs || '');
       setCategory(initialTask?.category || 'Network');
-      setEnvironment(initialTask?.environment || 'Corporate LAN');
       setError(null);
     }
   }, [initialTask, isOpen]);
@@ -73,7 +68,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
   const handleSelectPreset = (p: typeof QUICK_PROMPT_PRESETS[0]) => {
     setIncidentTitle(p.title);
     setCategory(p.category);
-    setEnvironment(p.environment);
     setIncidentDescription(p.description);
     setRawLogs(p.logs);
   };
@@ -94,7 +88,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
           incidentDescription,
           rawLogs,
           category,
-          environment,
         }),
       });
 
@@ -109,7 +102,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
         code: generatedData.code || `SOP-${category.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
         title: generatedData.title || incidentTitle,
         category: (generatedData.category as ITCategory) || category,
-        environment,
         lastUpdated: new Date().toISOString().slice(0, 10),
         author: 'AI SRE Assistant (Reviewed by Lead)',
         authorRole: 'Infrastructure & Operations Engine',
@@ -218,19 +210,6 @@ export const AiRunbookGeneratorModal: React.FC<AiRunbookGeneratorModalProps> = (
               </select>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Environment</label>
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value as EnvironmentType)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800"
-              >
-                <option value="Corporate LAN">Corporate LAN</option>
-                <option value="Production">Production</option>
-                <option value="Staging">Staging</option>
-                <option value="DR / Failover">DR / Failover</option>
-              </select>
-            </div>
 
           </div>
 

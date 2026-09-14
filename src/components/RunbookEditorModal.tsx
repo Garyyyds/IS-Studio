@@ -19,7 +19,7 @@ import {
   RotateCcw,
   Lock
 } from 'lucide-react';
-import { Runbook, EnvironmentType, ITCategory, IT_CATEGORIES, DiagnosticStep, RemediationStep, UserRole } from '../types';
+import { Runbook, ITCategory, IT_CATEGORIES, DiagnosticStep, RemediationStep, UserRole } from '../types';
 
 interface RunbookEditorModalProps {
   runbook: Runbook | null;
@@ -38,7 +38,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-NET-004',
       title: 'Windows SMB Fileshare Connection Failure & Network Drive Mapping (\\\\hq-file01)',
       category: 'Network',
-      environment: 'Corporate LAN',
       author: 'Senior Systems Administrator',
       authorRole: 'Infrastructure Support Lead',
       version: '1.0.0',
@@ -125,7 +124,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-DB-002',
       title: 'PostgreSQL Connection Exhaustion & Deadlock Kill Protocol',
       category: 'Database',
-      environment: 'Production',
       author: 'Principal Database Reliability Engineer',
       authorRole: 'Database Team Lead',
       version: '1.0.0',
@@ -174,7 +172,6 @@ const PRESET_TEMPLATES = [
       code: 'SOP-K8S-015',
       title: 'Kubernetes Pod CrashLoopBackOff & OOMKilled Emergency Protocol',
       category: 'Others',
-      environment: 'Production',
       author: 'Staff SRE',
       authorRole: 'Infrastructure Engineer',
       version: '1.0.0',
@@ -223,7 +220,6 @@ const buildDefaultRunbook = (rb?: Runbook | null): Runbook => ({
   code: rb?.code || `SOP-OPS-${Math.floor(100 + Math.random() * 900)}`,
   title: rb?.title || '',
   category: rb?.category || 'Network',
-  environment: rb?.environment || 'Corporate LAN',
   lastUpdated: new Date().toISOString().slice(0, 10),
   author: rb?.author || 'Alex Rivera',
   authorRole: rb?.authorRole || 'Senior Systems Administrator',
@@ -375,7 +371,6 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
       code: tpl.runbook.code,
       title: tpl.runbook.title,
       category: tpl.runbook.category,
-      environment: tpl.runbook.environment,
       symptom: tpl.runbook.symptom,
       triggerAlertPatterns: tpl.runbook.triggerAlertPatterns,
       rootCauseAnalysis: tpl.runbook.rootCauseAnalysis,
@@ -616,7 +611,7 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
           </div>
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Category</label>
               <select
@@ -630,22 +625,6 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
                     {cat}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Environment</label>
-              <select
-                value={formData.environment}
-                disabled={isReadOnly}
-                onChange={(e) => setFormData({ ...formData, environment: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
-              >
-                <option value="Corporate LAN">Corporate LAN</option>
-                <option value="Production">Production</option>
-                <option value="Staging">Staging</option>
-                <option value="DR / Failover">DR / Failover</option>
-                <option value="Cloud Infrastructure">Cloud Infrastructure</option>
               </select>
             </div>
 

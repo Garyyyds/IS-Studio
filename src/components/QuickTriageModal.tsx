@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { Task, Runbook, ITCategory, EnvironmentType } from '../types';
+import { Task, Runbook, ITCategory } from '../types';
 
 interface QuickTriageModalProps {
   isOpen: boolean;
@@ -28,7 +28,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
 }) => {
   const [rawText, setRawText] = useState('');
   const [ticketNumber, setTicketNumber] = useState('');
-  const [environment, setEnvironment] = useState<EnvironmentType>('Production');
   const [affectedEstimate, setAffectedEstimate] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -61,7 +60,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
           title: rawText.split('\n')[0].slice(0, 100) || 'Incident Triage',
           description: rawText,
           rawLogs: rawText,
-          environment,
           affectedUsers: affectedEstimate,
         }),
       });
@@ -96,7 +94,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
       automatedTags: result.automatedTags || ['ai-triage'],
       manualTags: [],
       category: (result.category as ITCategory) || 'Others',
-      environment,
       affectedUsersEstimate: affectedEstimate,
       assignee: {
         name: 'On-Call SRE',
@@ -165,20 +162,6 @@ at pool.getConnection (/app/node_modules/pg-pool/index.js:52)`}
 
           {/* Context selectors */}
           <div className="flex flex-wrap items-center gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Target Environment:</span>
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value as any)}
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="Production">Production</option>
-                <option value="Staging">Staging</option>
-                <option value="DR / Failover">DR / Failover</option>
-                <option value="Corporate LAN">Corporate LAN</option>
-              </select>
-            </div>
-
             <div className="flex items-center gap-2">
               <span className="text-slate-500 dark:text-slate-400 font-medium">Estimated Affected Users:</span>
               <input

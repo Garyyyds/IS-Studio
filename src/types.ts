@@ -6,14 +6,6 @@ export type TaskStatus =
   | 'testing' 
   | 'done';
 
-export type EnvironmentType = 
-  | 'Production' 
-  | 'Staging' 
-  | 'DR / Failover' 
-  | 'Corporate LAN' 
-  | 'Internal Tooling' 
-  | 'Cloud Infrastructure';
-
 /**
  * The one category list, shared by the request form, tickets, the board,
  * analytics, the SOP handbook, tagging rules and settings.
@@ -65,7 +57,6 @@ export interface Task {
   automatedTags: string[];
   manualTags: string[];
   category: ITCategory;
-  environment: EnvironmentType;
   affectedUsersEstimate?: number;
   assignee: {
     name: string;
@@ -132,7 +123,6 @@ export interface Runbook {
   code: string; // e.g. "SOP-SEC-042"
   title: string;
   category: ITCategory | string;
-  environment: EnvironmentType | string;
   lastUpdated: string;
   author: string;
   authorRole: string;
@@ -152,7 +142,7 @@ export interface Runbook {
 export interface TaggingRule {
   id: string;
   name: string;
-  matchType: 'keyword' | 'regex' | 'environment' | 'impact_high';
+  matchType: 'keyword' | 'regex' | 'impact_high';
   pattern: string; // keyword or regex pattern
   tagsToApply: string[];
   category?: ITCategory;
@@ -179,7 +169,6 @@ export interface UserSettings {
   showChecklistProgressOnCards: boolean;
   compactCards: boolean;
   operatorName: string;
-  defaultEnvironment: EnvironmentType;
   defaultCategory: ITCategory;
 }
 

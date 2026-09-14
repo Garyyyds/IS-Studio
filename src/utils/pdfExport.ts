@@ -80,14 +80,12 @@ export function exportRunbookToPdf(runbook: Runbook, options: PdfExportOptions =
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(100, 116, 139);
   doc.text('CATEGORY:', margin + 4, y + 6);
-  doc.text('TARGET ENV:', margin + 50, y + 6);
   doc.text('AUTHOR / OWNER:', margin + 98, y + 6);
   doc.text('LAST UPDATED:', margin + 145, y + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
   doc.text(runbook.category, margin + 4, y + 13);
-  doc.text(runbook.environment, margin + 50, y + 13);
   doc.text(`${runbook.author} (${runbook.authorRole || 'Lead'})`, margin + 98, y + 13);
   doc.text(runbook.lastUpdated, margin + 145, y + 13);
 
@@ -371,7 +369,7 @@ export function exportAllHandbookToPdf(runbooks: Runbook[], companyName = 'ENTER
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${rb.category} | ${rb.environment}`, margin + 6, y + 4.5);
+    doc.text(rb.category, margin + 6, y + 4.5);
 
     y += 12;
     if (y > pageHeight - 20) {

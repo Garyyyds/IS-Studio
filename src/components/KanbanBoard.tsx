@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
-import { Task, Runbook, TaskStatus, EnvironmentType, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
+import { Task, Runbook, TaskStatus, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
 import { TaskCard } from './TaskCard';
 import { isTaskRecentlyCompleted, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
@@ -104,7 +104,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   isScanning = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEnv, setSelectedEnv] = useState<EnvironmentType | 'ALL'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
   const [showAllDone, setShowAllDone] = useState(false);
   const [mobileSelectedColumn, setMobileSelectedColumn] = useState<TaskStatus | 'ALL'>('ALL');
@@ -124,11 +123,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (!matchTitle && !matchNumber && !matchDesc && !matchTags && !matchLogs) {
         return false;
       }
-    }
-
-    // Environment filter
-    if (selectedEnv !== 'ALL' && task.environment !== selectedEnv) {
-      return false;
     }
 
     // Category filter
@@ -186,20 +180,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {/* Quick Filters */}
           <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0 snap-x">
-
-            {/* Environment Filter */}
-            <select
-              value={selectedEnv}
-              onChange={(e) => setSelectedEnv(e.target.value as any)}
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 shrink-0 snap-start"
-            >
-              <option value="ALL">All Envs</option>
-              <option value="Production">Production</option>
-              <option value="Staging">Staging</option>
-              <option value="DR / Failover">DR / Failover</option>
-              <option value="Corporate LAN">Corporate LAN</option>
-              <option value="Internal Tooling">Internal Tooling</option>
-            </select>
 
             {/* Category Filter */}
             <select

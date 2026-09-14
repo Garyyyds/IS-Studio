@@ -30,7 +30,10 @@ export const normalizeRunbooks = (runbooks: Runbook[]): Runbook[] =>
   runbooks.map((rb) => ({ ...rb, category: normalizeCategory(rb.category as string) }));
 
 export const normalizeRules = (rules: TaggingRule[]): TaggingRule[] =>
-  rules.map((rule) => (rule.category ? { ...rule, category: normalizeCategory(rule.category) } : rule));
+  rules
+    // Environment no longer exists, so a rule that matched on it can never fire.
+    .filter((rule) => (rule.matchType as string) !== 'environment')
+    .map((rule) => (rule.category ? { ...rule, category: normalizeCategory(rule.category) } : rule));
 
 export function normalizeSettings<T extends Partial<UserSettings>>(settings: T): T {
   return settings && settings.defaultCategory

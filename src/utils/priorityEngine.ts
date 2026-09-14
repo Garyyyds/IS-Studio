@@ -1,11 +1,10 @@
-import { TaggingRule, ITCategory, EnvironmentType } from '../types';
+import { TaggingRule, ITCategory } from '../types';
 
 export function evaluateTaskPriorityWithRules(
   taskData: {
     title: string;
     description: string;
     rawLogs?: string;
-    environment: EnvironmentType;
     affectedUsersEstimate?: number;
   },
   rules: TaggingRule[]
@@ -17,13 +16,6 @@ export function evaluateTaskPriorityWithRules(
 
   const tagsSet = new Set<string>();
   let category: ITCategory = 'Others';
-
-  // Add environment tag
-  if (taskData.environment === 'Production') {
-    tagsSet.add('prod');
-  } else if (taskData.environment === 'Staging') {
-    tagsSet.add('staging');
-  }
 
   // Iterate enabled rules. The last matching rule that carries a category wins,
   // since rules are listed in the order the operator wants them applied.
@@ -46,10 +38,6 @@ export function evaluateTaskPriorityWithRules(
         }
       } catch (e) {
         console.error('Invalid regex in rule:', rule.pattern);
-      }
-    } else if (rule.matchType === 'environment') {
-      if (taskData.environment.toLowerCase() === rule.pattern.toLowerCase()) {
-        matched = true;
       }
     }
 

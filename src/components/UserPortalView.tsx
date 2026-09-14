@@ -34,7 +34,7 @@ import {
   UserCheck,
   Tag,
 } from 'lucide-react';
-import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
+import { Task, Runbook, AppUser, ITCategory, TaskStatus } from '../types';
 import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
 import { exportSupportRequestPdf } from '../utils/supportRequestPdf';
 import { uploadAttachment, formatBytes } from '../utils/attachments';
@@ -193,7 +193,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       title: title.trim(),
       description: description.trim(),
       category: systemRequested as ITCategory,
-      environment: 'Corporate LAN',
       status: 'backlog',
       automatedTags: ['User Request', systemRequested],
       manualTags: ['Portal Submission'],
