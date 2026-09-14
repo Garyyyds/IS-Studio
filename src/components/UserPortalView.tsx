@@ -445,7 +445,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {ticketFilter === 'all'
-                  ? "You haven't submitted any IT tickets yet. Open the Request Form to report an issue."
+                  ? "You haven't submitted any IT tickets yet. Open IT Support Request to report an issue."
                   : `You don't have any ${ticketFilter} tickets at the moment.`}
               </p>
               <button
@@ -533,7 +533,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <LifeBuoy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                    <span>Request Form</span>
+                    <span>IT Support Request</span>
                   </h2>
                   <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
                     Tell us what you're experiencing. IT will triage and follow up.
@@ -839,7 +839,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                    Request Form
+                    IT Support Request
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
                     Report an IT issue or ask for support. It goes straight to the IT queue as a ticket.

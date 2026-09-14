@@ -77,3 +77,4 @@ away later work permanently.
 | `14092026ver004` | 2026-09-14 | Ticket form placeholders: Summary e.g. No Internet connection, Location e.g. HQ, KLO, Phone e.g. 1234, HOD Name reads Name |
 | `14092026ver005` | 2026-09-14 | Device field renamed Affected Device on both sides, no invented default, placeholder e.g. Laptop, Printer |
 | `14092026ver006` | 2026-09-14 | Ticket submission becomes the Request Form, first card in Create Form; Create Form is now the first portal tab and the default landing page |
+| `14092026ver007` | 2026-09-14 | Rename Request Form to IT Support Request on the picker card, form header and My Tickets empty state |
