@@ -560,13 +560,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     );
                   })()}
 
-                  {/* Resolution Notes preview if resolved */}
-                  {ticket.status === 'done' && ticket.resolutionNotes && (
-                    <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 text-xs text-emerald-800 dark:text-emerald-200">
-                      <strong>IT Resolution Note:</strong> {ticket.resolutionNotes}
-                    </div>
-                  )}
-
                   {/* Ticket Footer details */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
                     <div className="flex items-center gap-3">

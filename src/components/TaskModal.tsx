@@ -105,7 +105,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isPortalSubmission =
     Boolean(formData.systemRequested) || (formData.manualTags || []).includes('Portal Submission');
   const lockSubmission = isReadOnly || isPortalSubmission;
-  const [newChecklistText, setNewChecklistText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isEditingRequester, setIsEditingRequester] = useState(false);
 
@@ -117,39 +116,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   }, [task]);
 
   if (!isOpen) return null;
-
-  const handleAddChecklist = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChecklistText.trim()) return;
-
-    const newItem = {
-      id: `chk-${Date.now()}`,
-      text: newChecklistText.trim(),
-      done: false,
-    };
-
-    setFormData({
-      ...formData,
-      checklist: [...formData.checklist, newItem],
-    });
-    setNewChecklistText('');
-  };
-
-  const handleToggleChecklist = (id: string) => {
-    setFormData({
-      ...formData,
-      checklist: formData.checklist.map((item) =>
-        item.id === id ? { ...item, done: !item.done } : item
-      ),
-    });
-  };
-
-  const handleRemoveChecklist = (id: string) => {
-    setFormData({
-      ...formData,
-      checklist: formData.checklist.filter((item) => item.id !== id),
-    });
-  };
 
   const handleStatusChange = (status: TaskStatus) => {
     const isDone = status === 'done';
@@ -564,97 +530,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed"
                 />
               </div>
-            </div>
-
-            {/* Action Checklist */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
-                Remediation Action Checklist ({formData.checklist.filter(c => c.done).length}/{formData.checklist.length})
-              </label>
-              
-              {formData.checklist.length > 0 ? (
-                <div className="space-y-1.5 mb-2">
-                  {formData.checklist.map((item) => (
-                    <div 
-                      key={item.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs"
-                    >
-                      <label className={`flex items-center gap-2 flex-1 min-w-0 mr-2 ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}>
-                        <input
-                          type="checkbox"
-                          checked={item.done}
-                          disabled={isReadOnly}
-                          onChange={() => !isReadOnly && handleToggleChecklist(item.id)}
-                          className="rounded text-indigo-600 focus:ring-0 w-4 h-4 disabled:opacity-75 disabled:cursor-not-allowed"
-                        />
-                        <span className={`truncate ${item.done ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                          {item.text}
-                        </span>
-                      </label>
-
-                      {!isReadOnly && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveChecklist(item.id)}
-                          className="text-slate-400 hover:text-red-500 p-1 rounded transition cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 italic py-1">No action checklist steps listed.</div>
-              )}
-
-              {/* Add checklist item */}
-              {!isReadOnly && (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newChecklistText}
-                    onChange={(e) => setNewChecklistText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddChecklist(e);
-                      }
-                    }}
-                    placeholder="Add action item step (e.g. Verify DNS propagation, Reset MFA secret key)..."
-                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddChecklist}
-                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition cursor-pointer shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Step</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Resolution Notes (Visible to employee upon ticket completion) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Resolution & Fix Notes</span>
-                </label>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Visible to employee in My Tickets
-                </span>
-              </div>
-              <textarea
-                rows={3}
-                disabled={isReadOnly}
-                value={formData.resolutionNotes || ''}
-                onChange={(e) => setFormData({ ...formData, resolutionNotes: e.target.value })}
-                placeholder={isReadOnly ? 'No resolution notes provided yet by the IT technician.' : 'Explain what steps were taken to resolve this ticket. The user will see this resolution message when their ticket is marked resolved...'}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
-              />
             </div>
           </div>
         </div>
