@@ -95,3 +95,4 @@ away later work permanently.
 | `14092026ver022` | 2026-09-14 | Remove the environment concept everywhere: board and history filters, card chip, list column, CSV column, ticket pop-up, runbook editor, AI runbook generator, Quick Triage, rules sandbox, Settings default, auto-tagging, runbook PDFs, AI prompts and stored data |
 | `14092026ver023` | 2026-09-14 | Remove the automated tagging rules feature (Rules page, Scan & Tag, Auto badge, card #tags, Ops Metrics rule card, Settings entries and toggles, stored rules) and the Remediation Tasks progress on board cards |
 | `14092026ver024` | 2026-09-14 | Top bar on both sides: Storage label and box removed leaving only the sync light (status in tooltip, red on save error); quick theme button visible again (was hidden by an undefined xs: breakpoint) |
+| `14092026ver025` | 2026-09-14 | Remove the Checklist column from List view; sync light back in a framed box matching the top-bar buttons |

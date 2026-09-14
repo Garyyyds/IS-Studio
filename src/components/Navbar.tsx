@@ -226,7 +226,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center justify-end gap-1 sm:gap-2 min-w-0">
             {/* Sync indicator light - the status is in its tooltip. Hidden on mobile. */}
             <div
-              className="hidden lg:flex items-center justify-center w-5 h-8 shrink-0"
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shrink-0"
               title={
                 serverSyncStatus === 'syncing'
                   ? 'Saving...'

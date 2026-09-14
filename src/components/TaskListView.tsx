@@ -218,7 +218,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 <th className="py-3 px-3">Ticket</th>
                 <th className="py-3 px-4">Title & Context</th>
                 <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3">Checklist</th>
                 <th className="py-3 px-3">Assignee</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -226,7 +225,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {sortedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     No matching IT tasks found.
                   </td>
                 </tr>
@@ -234,7 +233,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 sortedTasks.map((task) => {
                   const isSelected = selectedIds.includes(task.id);
                   const linkedRunbook = runbooks.find((r) => r.id === task.linkedRunbookId);
-                  const completedCheck = task.checklist.filter((c) => c.done).length;
 
                   return (
                     <tr
@@ -295,16 +293,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             </div>
                           );
                         })()}
-                      </td>
-
-                      <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400">
-                        {task.checklist.length > 0 ? (
-                          <span>
-                            {completedCheck}/{task.checklist.length} ({Math.round((completedCheck / task.checklist.length) * 100)}%)
-                          </span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-slate-600">—</span>
-                        )}
                       </td>
 
                       <td className="py-3.5 px-3">
