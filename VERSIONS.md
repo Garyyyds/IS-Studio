@@ -99,3 +99,4 @@ away later work permanently.
 | `14092026ver026` | 2026-09-14 | Remove Workstation Style (personal/team mode, mode badge, unused compact cards) and move the resolved-ticket retention limit into Task Defaults; remove the affected users estimate from cards, Quick Triage, tickets and the AI prompt |
 | `14092026ver027` | 2026-09-14 | Employee portal: remove the My Tickets count badge (duplicated the Open Requests stat and sat misaligned) |
 | `14092026ver028` | 2026-09-14 | IT Service Desk logo returns home on both sides; remove the (1) from My Service Requests; remove assignee profile pictures (My Tickets, List view) keeping the assignee name |
+| `14092026ver029` | 2026-09-14 | Employee portal tabs become three equal-width segments with centred labels so spacing looks even whichever tab is selected |

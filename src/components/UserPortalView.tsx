@@ -341,7 +341,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
       {/* Portal Tabs */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
+        {/* Three equal columns, each as wide as the longest label, so the
+            selected tab and the gaps look the same whichever tab is active. */}
+        <div className="grid grid-cols-[repeat(3,1fr)] gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => {
@@ -350,7 +352,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               setSelectedForm(null);
               setActiveTab('create-form');
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'create-form'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -363,7 +365,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('my-tickets')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'my-tickets'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -376,7 +378,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('help')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'help'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
