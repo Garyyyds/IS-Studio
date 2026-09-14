@@ -45,7 +45,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
-export type SettingsSection = 'profile' | 'theme' | 'views' | 'workstation' | 'defaults' | 'data';
+export type SettingsSection = 'profile' | 'theme' | 'views' | 'defaults' | 'data';
 
 interface SettingsViewProps {
   settings: UserSettings;
@@ -181,7 +181,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         });
       }
 
-      // Also sync operator name in workstation settings if needed. That setting
+      // Also sync the operator name into the task defaults. That setting
       // is shared by the whole workspace, so only the full settings page does it.
       if (!isPersonalOnly) {
         onUpdateSettings({
@@ -394,7 +394,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {isPersonalOnly
               ? 'Update your profile and choose how the app looks on this device.'
-              : 'Choose your theme mode, configure visible views, customize workstation defaults, and manage offline data backups.'}
+              : 'Choose your theme mode, configure visible views, set task defaults, and manage offline data backups.'}
           </p>
         </div>
 
@@ -409,15 +409,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
         )}
 
-        {/* Quick Mode Indicator - a workspace setting, so full settings only */}
-        {!isPersonalOnly && (
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300">
-          <span className="text-slate-400 dark:text-slate-500 font-medium">Mode:</span>
-          <span className="font-semibold text-indigo-700 dark:text-indigo-400">
-            {settings.workstationMode === 'personal' ? 'Personal Workstation' : 'Team SRE'}
-          </span>
-        </div>
-        )}
       </div>
 
       {/* Settings Grid Layout */}
@@ -463,20 +454,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <Eye className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <span>Navigation & View Visibility</span>
-          </button>
-          )}
-
-          {isAllowed('workstation') && (
-          <button
-            onClick={() => handleSelectSection('workstation')}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
-              activeSection === 'workstation'
-                ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-100 dark:border-indigo-800 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>Workstation Style</span>
           </button>
           )}
 
@@ -1030,122 +1007,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* SECTION 2: Workstation mode */}
-          {activeSection === 'workstation' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-5">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span>Personal Workstation vs Team Mode</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Configure how much operational detail the board surfaces on each ticket.
-                  </p>
-                </div>
-
-                {/* Mode Switcher */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div
-                    onClick={() =>
-                      onUpdateSettings({
-                        ...settings,
-                        workstationMode: 'personal',
-                      })
-                    }
-                    className={`p-4 rounded-xl border cursor-pointer transition ${
-                      settings.workstationMode === 'personal'
-                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Personal Workstation (Recommended)</div>
-                      {settings.workstationMode === 'personal' && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">Active</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Optimized for self-directed engineering, personal homelabs, and internal tools. Keeps ticket cards clean and low-noise.
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() =>
-                      onUpdateSettings({
-                        ...settings,
-                        workstationMode: 'team',
-                      })
-                    }
-                    className={`p-4 rounded-xl border cursor-pointer transition ${
-                      settings.workstationMode === 'team'
-                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Team SRE / Shared Queue</div>
-                      {settings.workstationMode === 'team' && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">Active</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Surfaces incident escalation workflows and richer ticket detail for a shared support queue.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Granular Toggles */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
-                    Display Preferences
-                  </h4>
-
-                  {/* Completed Ticket Retention Window on Board/List */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 gap-3">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span>Completed Ticket Retention Time Limit</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Completed tickets remain visible on active Board and List views for this duration before automatically moving to Ticket History.
-                      </div>
-                    </div>
-                    <select
-                      value={settings.completedTicketRetentionMinutes ?? 60}
-                      onChange={(e) =>
-                        onUpdateSettings({
-                          ...settings,
-                          completedTicketRetentionMinutes: Number(e.target.value),
-                        })
-                      }
-                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 shrink-0"
-                    >
-                      <option value={15}>15 Minutes</option>
-                      <option value={30}>30 Minutes</option>
-                      <option value={60}>1 Hour (Recommended)</option>
-                      <option value={120}>2 Hours</option>
-                      <option value={240}>4 Hours</option>
-                      <option value={1440}>24 Hours (1 Day)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION: Task Defaults & Workstation Preferences */}
+          {/* SECTION: Task Defaults */}
           {activeSection === 'defaults' && (
             <div className="space-y-5 animate-in fade-in duration-150">
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Task Defaults & Workstation Preferences</span>
+                    <span>Task Defaults</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Configure default values used when creating new tasks or authoring runbooks.
+                    Default values for new tickets and runbooks, and how long resolved tickets stay on the board.
                   </p>
                 </div>
 
@@ -1191,6 +1063,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                 </div>
+
+                  {/* Completed Ticket Retention Window on Board/List */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>Completed Ticket Retention Time Limit</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Completed tickets remain visible on active Board and List views for this duration before automatically moving to Ticket History.
+                      </div>
+                    </div>
+                    <select
+                      value={settings.completedTicketRetentionMinutes ?? 60}
+                      onChange={(e) =>
+                        onUpdateSettings({
+                          ...settings,
+                          completedTicketRetentionMinutes: Number(e.target.value),
+                        })
+                      }
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 shrink-0"
+                    >
+                      <option value={15}>15 Minutes</option>
+                      <option value={30}>30 Minutes</option>
+                      <option value={60}>1 Hour (Recommended)</option>
+                      <option value={120}>2 Hours</option>
+                      <option value={240}>4 Hours</option>
+                      <option value={1440}>24 Hours (1 Day)</option>
+                    </select>
+                  </div>
               </div>
             </div>
           )}

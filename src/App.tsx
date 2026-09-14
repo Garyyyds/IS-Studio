@@ -134,8 +134,8 @@ export default function App() {
     return null;
   });
 
-  // Settings active section state (profile, theme, views, workstation, defaults, data)
-  const [settingsSection, setSettingsSection] = useState<'profile' | 'theme' | 'views' | 'workstation' | 'defaults' | 'data'>('profile');
+  // Settings active section state (profile, theme, views, defaults, data)
+  const [settingsSection, setSettingsSection] = useState<'profile' | 'theme' | 'views' | 'defaults' | 'data'>('profile');
 
   const handleOpenUserProfile = () => {
     setSettingsSection('profile');
@@ -695,7 +695,6 @@ export default function App() {
       automatedTags: ticketData.automatedTags || ['User Request', 'PORTAL'],
       manualTags: ticketData.manualTags || ['Portal Submission'],
       category: ticketData.category || 'Others',
-      affectedUsersEstimate: 1,
       assignee: ticketData.assignee || {
         name: 'IT Helpdesk Queue',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',

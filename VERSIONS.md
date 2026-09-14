@@ -96,3 +96,4 @@ away later work permanently.
 | `14092026ver023` | 2026-09-14 | Remove the automated tagging rules feature (Rules page, Scan & Tag, Auto badge, card #tags, Ops Metrics rule card, Settings entries and toggles, stored rules) and the Remediation Tasks progress on board cards |
 | `14092026ver024` | 2026-09-14 | Top bar on both sides: Storage label and box removed leaving only the sync light (status in tooltip, red on save error); quick theme button visible again (was hidden by an undefined xs: breakpoint) |
 | `14092026ver025` | 2026-09-14 | Remove the Checklist column from List view; sync light back in a framed box matching the top-bar buttons |
+| `14092026ver026` | 2026-09-14 | Remove Workstation Style (personal/team mode, mode badge, unused compact cards) and move the resolved-ticket retention limit into Task Defaults; remove the affected users estimate from cards, Quick Triage, tickets and the AI prompt |

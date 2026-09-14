@@ -33,7 +33,7 @@ export function normalizeSettings<T extends Partial<UserSettings>>(settings: T):
   if (!settings) return settings;
   const next: any = { ...settings };
   if (next.defaultCategory) next.defaultCategory = normalizeCategory(next.defaultCategory);
-  // Removed features: the Rules view and the card tag/checklist toggles.
+  // Removed features: the Rules view, card tag/checklist toggles and Workstation Style.
   if (next.defaultView === 'rules') next.defaultView = 'kanban';
   if (next.visibleViews && 'rules' in next.visibleViews) {
     const { rules: _rules, ...views } = next.visibleViews;
@@ -41,5 +41,7 @@ export function normalizeSettings<T extends Partial<UserSettings>>(settings: T):
   }
   delete next.showAutomatedTagsOnCards;
   delete next.showChecklistProgressOnCards;
+  delete next.workstationMode;
+  delete next.compactCards;
   return next;
 }

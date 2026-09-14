@@ -108,11 +108,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
           {task.category}
         </span>
-        {task.affectedUsersEstimate ? (
-          <span className="text-slate-500 dark:text-slate-400 font-mono">
-            ~{task.affectedUsersEstimate.toLocaleString()} users
-          </span>
-        ) : null}
       </div>
 
       {/* Done Retention Countdown / History Badge */}

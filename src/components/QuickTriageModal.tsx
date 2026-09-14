@@ -28,7 +28,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
 }) => {
   const [rawText, setRawText] = useState('');
   const [ticketNumber, setTicketNumber] = useState('');
-  const [affectedEstimate, setAffectedEstimate] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +59,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
           title: rawText.split('\n')[0].slice(0, 100) || 'Incident Triage',
           description: rawText,
           rawLogs: rawText,
-          affectedUsers: affectedEstimate,
         }),
       });
 
@@ -94,7 +92,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
       automatedTags: result.automatedTags || ['ai-triage'],
       manualTags: [],
       category: (result.category as ITCategory) || 'Others',
-      affectedUsersEstimate: affectedEstimate,
       assignee: {
         name: 'On-Call SRE',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -161,16 +158,6 @@ at pool.getConnection (/app/node_modules/pg-pool/index.js:52)`}
 
           {/* Context selectors */}
           <div className="flex flex-wrap items-center gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Estimated Affected Users:</span>
-              <input
-                type="number"
-                value={affectedEstimate}
-                onChange={(e) => setAffectedEstimate(Number(e.target.value))}
-                className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-mono focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
             <button
               type="button"
               onClick={handleAnalyze}

@@ -304,7 +304,6 @@ Windows cannot access \\\\hq-file01. Error code: 0x80070035 The network path was
     automatedTags: ['fileshare', 'smb', 'windows', 'networking', 'dns', 'drive-mapping'],
     manualTags: ['corp-lan'],
     category: 'Network',
-    affectedUsersEstimate: 24,
     assignee: {
       name: 'Alex Rivera',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
@@ -333,9 +332,7 @@ export const DEFAULT_USER_SETTINGS: import('../types').UserSettings = {
   },
   defaultView: 'kanban',
   themeMode: 'light',
-  workstationMode: 'personal',
   completedTicketRetentionMinutes: 60, // 1 hour default retention on active board
-  compactCards: false,
   operatorName: 'Alex Rivera',
   defaultCategory: 'Others',
 };

@@ -57,7 +57,6 @@ export interface Task {
   automatedTags: string[];
   manualTags: string[];
   category: ITCategory;
-  affectedUsersEstimate?: number;
   assignee: {
     name: string;
     avatar: string;
@@ -148,11 +147,9 @@ export interface UserSettings {
   };
   defaultView: 'kanban' | 'list' | 'history' | 'handbook' | 'analytics';
   themeMode: 'light' | 'dark' | 'system';
-  workstationMode: 'personal' | 'team';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
   /** Highest REQ number issued so far; numbers are never reused. */
   lastTicketSequence?: number;
-  compactCards: boolean;
   operatorName: string;
   defaultCategory: ITCategory;
 }

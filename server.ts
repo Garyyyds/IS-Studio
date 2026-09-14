@@ -982,7 +982,7 @@ app.post('/api/auth/profile', async (req, res) => {
 // API: Automated tagging & triage
 app.post('/api/ai/classify-priority', async (req, res) => {
   try {
-    const { title, description, rawLogs, affectedUsers } = req.body;
+    const { title, description, rawLogs } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -993,7 +993,6 @@ app.post('/api/ai/classify-priority', async (req, res) => {
     const prompt = `Analyze this IT operational task/incident and perform automated categorisation and triage tagging.
 
 Task Title: ${title}
-Estimated Affected Users: ${affectedUsers || 'Unknown'}
 Description: ${description || 'N/A'}
 System Logs / Stack Trace / Error Payload: ${rawLogs || 'None provided'}
 
