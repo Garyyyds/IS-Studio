@@ -50,16 +50,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const completedChecklist = task.checklist.filter(c => c.done).length;
-  const totalChecklist = task.checklist.length;
-  const checklistPercent = totalChecklist > 0 ? Math.round((completedChecklist / totalChecklist) * 100) : 0;
-
   const currentStatusIndex = STATUS_ORDER.indexOf(task.status);
   const canMoveLeft = currentStatusIndex > 0;
   const canMoveRight = currentStatusIndex < STATUS_ORDER.length - 1;
 
-  const showTags = settings?.showAutomatedTagsOnCards ?? true;
-  const showChecklist = settings?.showChecklistProgressOnCards ?? true;
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
   const retentionInfo = task.status === 'done' ? getTaskRetentionInfo(task, retentionMinutes) : null;
 
@@ -74,11 +68,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900 group-hover:text-indigo-800 dark:group-hover:text-indigo-200 transition">
             {task.ticketNumber}
           </span>
-          {task.isAutoTagged && (
-            <span className="inline-flex items-center text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900" title="Automated Tagging Rule Applied">
-              <Zap className="w-2.5 h-2.5 mr-0.5 text-indigo-600 dark:text-indigo-400" /> Auto
-            </span>
-          )}
           {(task.isUserSubmitted || task.requesterName) && (
             <span className="inline-flex items-center text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800" title={`User Request from ${task.requesterName || 'Employee'}${task.requesterDepartment ? ` (${task.requesterDepartment})` : ''}`}>
               <User className="w-2.5 h-2.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
@@ -125,43 +114,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </span>
         ) : null}
       </div>
-
-      {/* Automated & Manual Tags (if enabled in settings) */}
-      {showTags && (task.automatedTags.length > 0 || task.manualTags.length > 0) && (
-        <div className="flex flex-wrap gap-1 mb-2.5">
-          {task.automatedTags.slice(0, 3).map((tag, i) => (
-            <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
-              #{tag}
-            </span>
-          ))}
-          {task.automatedTags.length > 3 && (
-            <span className="text-[9px] text-slate-400 font-mono self-center">
-              +{task.automatedTags.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Checklist Progress Bar if checklist items exist (if enabled in settings) */}
-      {showChecklist && totalChecklist > 0 && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-1">
-            <span className="flex items-center gap-1">
-              <CheckSquare className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-              <span>Remediation Tasks</span>
-            </span>
-            <span className="font-mono">{completedChecklist}/{totalChecklist}</span>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-            <div 
-              className={`h-full transition-all duration-300 ${
-                checklistPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-600 dark:bg-indigo-500'
-              }`}
-              style={{ width: `${checklistPercent}%` }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Done Retention Countdown / History Badge */}
       {task.status === 'done' && retentionInfo && (

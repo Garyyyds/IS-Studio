@@ -22,11 +22,9 @@ interface KanbanBoardProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onOpenRunbook: (runbookId: string) => void;
   onNewTaskWithStatus: (status: TaskStatus) => void;
-  onAutoScanAll: () => void;
   onOpenQuickTriage: () => void;
   onDeleteTask?: (taskId: string) => void;
   onNavigateToHistory?: () => void;
-  isScanning?: boolean;
 }
 
 interface ColumnDef {
@@ -97,11 +95,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onStatusChange,
   onOpenRunbook,
   onNewTaskWithStatus,
-  onAutoScanAll,
   onOpenQuickTriage,
   onDeleteTask,
   onNavigateToHistory,
-  isScanning = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
@@ -208,17 +204,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <span className="sm:hidden">AI</span>
             </button>
 
-            {/* Automated Tagging Scan Trigger */}
-            <button
-              onClick={onAutoScanAll}
-              disabled={isScanning}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold transition disabled:opacity-50 cursor-pointer shadow-xs shrink-0 snap-start"
-              title="Re-run the Automated Tagging Rules engine across all tasks"
-            >
-              <Zap className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : 'text-slate-400'}`} />
-              <span className="hidden sm:inline">{isScanning ? 'Scanning...' : 'Scan & Tag'}</span>
-              <span className="sm:hidden">{isScanning ? '...' : 'Scan'}</span>
-            </button>
           </div>
         </div>
       </div>

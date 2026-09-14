@@ -55,7 +55,6 @@ const emptyTask: Task = {
   automatedTags: [],
   manualTags: [],
   checklist: [],
-  isAutoTagged: false,
   requesterName: '',
   requesterEmail: '',
   requesterDepartment: 'General',

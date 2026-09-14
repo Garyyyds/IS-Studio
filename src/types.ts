@@ -8,7 +8,7 @@ export type TaskStatus =
 
 /**
  * The one category list, shared by the request form, tickets, the board,
- * analytics, the SOP handbook, tagging rules and settings.
+ * analytics, the SOP handbook and settings.
  */
 export const IT_CATEGORIES = [
   'E-mail',
@@ -87,7 +87,6 @@ export interface Task {
   incidentSummary?: string;
   resolutionNotes?: string;
   resolvedAt?: string;
-  isAutoTagged: boolean;
 }
 
 export interface TicketAttachment {
@@ -139,40 +138,26 @@ export interface Runbook {
   tags: string[];
 }
 
-export interface TaggingRule {
-  id: string;
-  name: string;
-  matchType: 'keyword' | 'regex' | 'impact_high';
-  pattern: string; // keyword or regex pattern
-  tagsToApply: string[];
-  category?: ITCategory;
-  enabled: boolean;
-  description: string;
-}
-
 export interface UserSettings {
   visibleViews: {
     kanban: boolean;
     list: boolean;
     history: boolean;
     handbook: boolean;
-    rules: boolean;
     analytics: boolean;
   };
-  defaultView: 'kanban' | 'list' | 'history' | 'handbook' | 'rules' | 'analytics';
+  defaultView: 'kanban' | 'list' | 'history' | 'handbook' | 'analytics';
   themeMode: 'light' | 'dark' | 'system';
   workstationMode: 'personal' | 'team';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
   /** Highest REQ number issued so far; numbers are never reused. */
   lastTicketSequence?: number;
-  showAutomatedTagsOnCards: boolean;
-  showChecklistProgressOnCards: boolean;
   compactCards: boolean;
   operatorName: string;
   defaultCategory: ITCategory;
 }
 
-export type ActiveTab = 'kanban' | 'list' | 'history' | 'handbook' | 'rules' | 'analytics' | 'settings';
+export type ActiveTab = 'kanban' | 'list' | 'history' | 'handbook' | 'analytics' | 'settings';
 
 export interface StorageStatusInfo {
   storageType: 'supabase' | 'file';

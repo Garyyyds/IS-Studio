@@ -1,57 +1,4 @@
-import { Task, Runbook, TaggingRule } from '../types';
-
-export const DEFAULT_TAGGING_RULES: TaggingRule[] = [
-  {
-    id: 'rule-1',
-    name: 'Production Outage / Down Critical Match',
-    matchType: 'keyword',
-    pattern: 'prod down,outage,service unavailable,catastrophic,data corruption,database down',
-    tagsToApply: ['prod-outage', 'critical', 'pager-duty-triggered', 'tier-0'],
-    category: 'Others',
-    enabled: true,
-    description: 'Tags critical production outages and core service failures.',
-  },
-  {
-    id: 'rule-2',
-    name: 'Critical Security & CVE Vulnerabilities',
-    matchType: 'keyword',
-    pattern: 'cve-,rce,sql injection,credential leak,unauthorized access,zero-day,breach',
-    tagsToApply: ['security-incident', 'cve-critical', 'infosec', 'legal-hold'],
-    category: 'Others',
-    enabled: true,
-    description: 'Tags active security exploits and zero-day vulnerabilities.',
-  },
-  {
-    id: 'rule-3',
-    name: 'High Memory Leak & Pod CrashLoopBackOff',
-    matchType: 'keyword',
-    pattern: 'crashloopbackoff,oomkilled,memory leak,high cpu,deadlock,replica lag,502 bad gateway',
-    tagsToApply: ['k8s-pod', 'oom-investigation', 'degraded-perf'],
-    category: 'Others',
-    enabled: true,
-    description: 'Catches degraded cluster services, OOM kills, and backend 502/504 errors.',
-  },
-  {
-    id: 'rule-4',
-    name: 'Certificate & Domain Expiry',
-    matchType: 'keyword',
-    pattern: 'ssl certificate,cert expired,tls handshake,domain renewal,acme challenge',
-    tagsToApply: ['tls-cert', 'security', 'dns-network'],
-    category: 'Network',
-    enabled: true,
-    description: 'Flags expiring or invalid TLS/SSL certificates before customer outage.',
-  },
-  {
-    id: 'rule-5',
-    name: 'Disk Space & CI/CD Queue Saturation',
-    matchType: 'keyword',
-    pattern: 'disk full,no space left on device,jenkins queue,docker prune,volume threshold',
-    tagsToApply: ['storage-cleanup', 'ci-cd', 'sysadmin'],
-    category: 'Others',
-    enabled: true,
-    description: 'Tags node storage threshold and build worker maintenance.',
-  },
-];
+import { Task, Runbook } from '../types';
 
 export const DEFAULT_RUNBOOKS: Runbook[] = [
   {
@@ -373,7 +320,6 @@ Windows cannot access \\\\hq-file01. Error code: 0x80070035 The network path was
       { id: 'c74', text: 'Test connection and verify directory structure at Windows File Explorer', done: false, command: 'explorer.exe Z:\\' },
     ],
     linkedRunbookId: 'runbook-4',
-    isAutoTagged: true,
   },
 ];
 
@@ -383,15 +329,12 @@ export const DEFAULT_USER_SETTINGS: import('../types').UserSettings = {
     list: true,
     history: true,
     handbook: true,
-    rules: true,
     analytics: true,
   },
   defaultView: 'kanban',
   themeMode: 'light',
   workstationMode: 'personal',
   completedTicketRetentionMinutes: 60, // 1 hour default retention on active board
-  showAutomatedTagsOnCards: true,
-  showChecklistProgressOnCards: true,
   compactCards: false,
   operatorName: 'Alex Rivera',
   defaultCategory: 'Others',

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Task, 
   Runbook, 
-  TaggingRule, 
   TaskStatus, 
   ITCategory,
   UserSettings,
@@ -13,7 +12,6 @@ import {
 import { 
   DEFAULT_TASKS, 
   DEFAULT_RUNBOOKS, 
-  DEFAULT_TAGGING_RULES as DEFAULT_RULES,
   DEFAULT_USER_SETTINGS 
 } from './data/defaultData';
 import { Navbar } from './components/Navbar';
@@ -21,7 +19,6 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { TaskListView } from './components/TaskListView';
 import { TicketHistoryView } from './components/TicketHistoryView';
 import { HandbookView } from './components/HandbookView';
-import { PriorityRulesManager } from './components/PriorityRulesManager';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { SettingsView } from './components/SettingsView';
 import { TaskModal } from './components/TaskModal';
@@ -31,9 +28,8 @@ import { AiRunbookGeneratorModal } from './components/AiRunbookGeneratorModal';
 import { AuthPage } from './components/AuthPage';
 import { UserPortalView } from './components/UserPortalView';
 import { SupportChatAssistant } from './components/SupportChatAssistant';
-import { evaluateTaskPriorityWithRules } from './utils/priorityEngine';
 import { formatTicketNumber, nextTicketSequence, sequenceOf } from './utils/ticketNumber';
-import { normalizeRules, normalizeRunbooks, normalizeSettings, normalizeTasks } from './utils/categories';
+import { normalizeRunbooks, normalizeSettings, normalizeTasks } from './utils/categories';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
 import { Check, Zap, Info } from 'lucide-react';
 
@@ -77,7 +73,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.defaultView) return parsed.defaultView;
+        if (parsed.defaultView && parsed.defaultView !== 'rules') return parsed.defaultView;
       } catch (e) {}
     }
     return 'kanban';
@@ -125,11 +121,6 @@ export default function App() {
     } catch (e) {
       return DEFAULT_RUNBOOKS;
     }
-  });
-
-  const [rules, setRules] = useState<TaggingRule[]>(() => {
-    const saved = localStorage.getItem('it_ops_rules');
-    return saved ? JSON.parse(saved) : DEFAULT_RULES;
   });
 
   // User Authentication & Role State - defaults to null so the app opens on Login / Register
@@ -192,7 +183,6 @@ export default function App() {
 
   // Status & Feedback Toasts
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
 
   // Sync to LocalStorage
   useEffect(() => {
@@ -233,9 +223,10 @@ export default function App() {
     localStorage.setItem('it_ops_runbooks', JSON.stringify(runbooks));
   }, [runbooks]);
 
+  // Tagging rules were removed; clear the copy older versions kept.
   useEffect(() => {
-    localStorage.setItem('it_ops_rules', JSON.stringify(rules));
-  }, [rules]);
+    localStorage.removeItem('it_ops_rules');
+  }, []);
 
   // Server-side & Supabase Cloud Storage State
   const [serverSyncStatus, setServerSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
@@ -280,10 +271,6 @@ export default function App() {
           if (data.runbooks && Array.isArray(data.runbooks)) {
             setRunbooks(normalizeRunbooks(data.runbooks));
             localStorage.setItem('it_ops_runbooks', JSON.stringify(data.runbooks));
-          }
-          if (data.rules && Array.isArray(data.rules)) {
-            setRules(normalizeRules(data.rules));
-            localStorage.setItem('it_ops_rules', JSON.stringify(data.rules));
           }
           if (data.settings && typeof data.settings === 'object') {
             setSettings((prev) => ({ ...prev, ...normalizeSettings(data.settings) }));
@@ -336,7 +323,6 @@ export default function App() {
               const latest = await dataRes.json();
               if (latest.tasks) setTasks(normalizeTasks(latest.tasks));
               if (latest.runbooks) setRunbooks(normalizeRunbooks(latest.runbooks));
-              if (latest.rules) setRules(normalizeRules(latest.rules));
               if (latest.settings) setSettings(normalizeSettings(latest.settings));
               setLastSavedToServer(latest.lastSaved);
               lastSavedToServerRef.current = latest.lastSaved;
@@ -380,7 +366,8 @@ export default function App() {
           body: JSON.stringify({
             tasks,
             runbooks,
-            rules,
+            // Tagging rules no longer exist; keep the stored list empty.
+            rules: [],
             settings,
           }),
         });
@@ -405,7 +392,7 @@ export default function App() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [tasks, runbooks, rules, settings]);
+  }, [tasks, runbooks, settings]);
 
   const handleForceSaveToServer = async () => {
     try {
@@ -416,7 +403,7 @@ export default function App() {
         body: JSON.stringify({
           tasks,
           runbooks,
-          rules,
+          rules: [],
           settings,
         }),
       });
@@ -447,7 +434,6 @@ export default function App() {
         const data = await res.json();
         if (data.tasks) setTasks(normalizeTasks(data.tasks));
         if (data.runbooks) setRunbooks(normalizeRunbooks(data.runbooks));
-        if (data.rules) setRules(normalizeRules(data.rules));
         if (data.settings) setSettings(normalizeSettings(data.settings));
         setServerSyncStatus('synced');
         const savedTime = data.lastSaved || new Date().toISOString();
@@ -588,45 +574,10 @@ export default function App() {
         { id: `chk-${Date.now()}-2`, text: 'Investigate issue and apply fix', done: false },
         { id: `chk-${Date.now()}-3`, text: 'Confirm resolution with employee', done: false },
       ],
-      isAutoTagged: false,
     };
 
     setSelectedTask(newTask);
     setIsTaskModalOpen(true);
-  };
-
-  // Automated tagging batch scan
-  const handleAutoScanAll = () => {
-    setIsScanning(true);
-    let taggedCount = 0;
-
-    const updated = tasks.map((task) => {
-      const evaluation = evaluateTaskPriorityWithRules(
-        {
-          title: task.title,
-          description: task.description,
-          rawLogs: task.rawLogs,
-          affectedUsersEstimate: task.affectedUsersEstimate,
-        },
-        rules
-      );
-
-      if (evaluation.automatedTags.length > 0) {
-        taggedCount++;
-      }
-
-      return {
-        ...task,
-        automatedTags: evaluation.automatedTags,
-        category: evaluation.category,
-        isAutoTagged: true,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-
-    setTasks(updated);
-    setIsScanning(false);
-    showToast(`Auto-Tagging engine evaluated ${updated.length} tasks (${taggedCount} adjusted)`);
   };
 
   // Runbook Handlers
@@ -684,15 +635,12 @@ export default function App() {
   };
 
   // Data Management Handlers
-  const handleImportData = (data: { tasks?: Task[]; runbooks?: Runbook[]; rules?: TaggingRule[]; settings?: UserSettings }) => {
+  const handleImportData = (data: { tasks?: Task[]; runbooks?: Runbook[]; settings?: UserSettings }) => {
     if (data.tasks && Array.isArray(data.tasks)) {
       setTasks(normalizeTasks(data.tasks));
     }
     if (data.runbooks && Array.isArray(data.runbooks)) {
       setRunbooks(normalizeRunbooks(data.runbooks));
-    }
-    if (data.rules && Array.isArray(data.rules)) {
-      setRules(normalizeRules(data.rules));
     }
     if (data.settings) {
       setSettings(normalizeSettings(data.settings));
@@ -703,7 +651,6 @@ export default function App() {
   const handleResetToDefaults = () => {
     setTasks(DEFAULT_TASKS);
     setRunbooks(DEFAULT_RUNBOOKS);
-    setRules(DEFAULT_RULES);
     setSettings(DEFAULT_USER_SETTINGS);
     showToast('Workspace reset to factory sample data.');
   };
@@ -774,7 +721,6 @@ export default function App() {
         { id: 'chk-2', text: 'Reach out to employee or apply remediation runbook', done: false },
         { id: 'chk-3', text: 'Verify resolution with employee and close ticket', done: false },
       ],
-      isAutoTagged: false,
     };
 
     setTasks((prev) => [fullTask, ...prev]);
@@ -824,7 +770,6 @@ export default function App() {
             onUpdateSettings={updateSettings}
             tasks={tasks}
             runbooks={runbooks}
-            rules={rules}
             onImportData={handleImportData}
             onResetToDefaults={handleResetToDefaults}
             onClearCompletedTasks={handleClearCompletedTasks}
@@ -859,11 +804,9 @@ export default function App() {
                 onStatusChange={handleStatusChange}
                 onOpenRunbook={handleOpenRunbookFromAnywhere}
                 onNewTaskWithStatus={handleCreateNewTask}
-                onAutoScanAll={handleAutoScanAll}
                 onOpenQuickTriage={() => setIsQuickTriageOpen(true)}
                 onDeleteTask={handleDeleteTask}
                 onNavigateToHistory={() => setActiveView('history')}
-                isScanning={isScanning}
               />
             )}
 
@@ -907,20 +850,10 @@ export default function App() {
               />
             )}
 
-            {activeView === 'rules' && (
-              <PriorityRulesManager
-                rules={rules}
-                onSaveRules={setRules}
-                onRunBatchScan={handleAutoScanAll}
-                isScanning={isScanning}
-              />
-            )}
-
             {activeView === 'analytics' && (
               <AnalyticsDashboard
                 tasks={tasks}
                 runbooks={runbooks}
-                rules={rules}
                 onOpenRunbook={handleOpenRunbookFromAnywhere}
               />
             )}
@@ -931,7 +864,6 @@ export default function App() {
                 onUpdateSettings={updateSettings}
                 tasks={tasks}
                 runbooks={runbooks}
-                rules={rules}
                 onImportData={handleImportData}
                 onResetToDefaults={handleResetToDefaults}
                 onClearCompletedTasks={handleClearCompletedTasks}

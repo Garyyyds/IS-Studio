@@ -103,7 +103,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'list': return { icon: <ListOrdered className="w-3.5 h-3.5" />, label: 'List' };
       case 'history': return { icon: <History className="w-3.5 h-3.5" />, label: 'History' };
       case 'handbook': return { icon: <BookOpen className="w-3.5 h-3.5" />, label: 'Handbook' };
-      case 'rules': return { icon: <Zap className="w-3.5 h-3.5" />, label: 'Rules' };
       case 'analytics': return { icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Metrics' };
       case 'settings': return { icon: <Settings2 className="w-3.5 h-3.5" />, label: 'Settings' };
       default: return { icon: <Kanban className="w-3.5 h-3.5" />, label: 'Board' };
@@ -115,7 +114,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'list', label: 'Detailed List', icon: <ListOrdered className="w-3.5 h-3.5" />, visible: settings.visibleViews.list },
     { id: 'history', label: 'Ticket History', icon: <History className="w-3.5 h-3.5" />, visible: settings.visibleViews.history, count: resolvedTasksCount },
     { id: 'handbook', label: 'IT Handbook', icon: <BookOpen className="w-3.5 h-3.5" />, visible: settings.visibleViews.handbook },
-    { id: 'rules', label: 'Automation Rules', icon: <Zap className="w-3.5 h-3.5" />, visible: settings.visibleViews.rules },
     { id: 'analytics', label: 'Ops Metrics', icon: <BarChart3 className="w-3.5 h-3.5" />, visible: settings.visibleViews.analytics },
   ];
 

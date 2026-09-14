@@ -196,7 +196,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       status: 'backlog',
       automatedTags: ['User Request', systemRequested],
       manualTags: ['Portal Submission'],
-      isAutoTagged: false,
       checklist: [
         { id: 'step-1', text: 'Review user submitted request & assess impact', done: false },
         { id: 'step-2', text: 'Reach out to employee or apply remediation runbook', done: false },

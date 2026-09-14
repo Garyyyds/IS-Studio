@@ -109,7 +109,6 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
         command: item.command,
         done: false,
       })),
-      isAutoTagged: true,
     };
 
     onCreateTask(newTask);

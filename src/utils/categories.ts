@@ -1,4 +1,4 @@
-import { IT_CATEGORIES, ITCategory, Runbook, TaggingRule, Task, UserSettings } from '../types';
+import { IT_CATEGORIES, ITCategory, Runbook, Task, UserSettings } from '../types';
 
 // Data saved before categories followed the request form still carries the old
 // seven values. Two have a direct equivalent; the rest have none, so they read
@@ -29,14 +29,17 @@ export const normalizeTasks = (tasks: Task[]): Task[] => tasks.map(normalizeTask
 export const normalizeRunbooks = (runbooks: Runbook[]): Runbook[] =>
   runbooks.map((rb) => ({ ...rb, category: normalizeCategory(rb.category as string) }));
 
-export const normalizeRules = (rules: TaggingRule[]): TaggingRule[] =>
-  rules
-    // Environment no longer exists, so a rule that matched on it can never fire.
-    .filter((rule) => (rule.matchType as string) !== 'environment')
-    .map((rule) => (rule.category ? { ...rule, category: normalizeCategory(rule.category) } : rule));
-
 export function normalizeSettings<T extends Partial<UserSettings>>(settings: T): T {
-  return settings && settings.defaultCategory
-    ? { ...settings, defaultCategory: normalizeCategory(settings.defaultCategory) }
-    : settings;
+  if (!settings) return settings;
+  const next: any = { ...settings };
+  if (next.defaultCategory) next.defaultCategory = normalizeCategory(next.defaultCategory);
+  // Removed features: the Rules view and the card tag/checklist toggles.
+  if (next.defaultView === 'rules') next.defaultView = 'kanban';
+  if (next.visibleViews && 'rules' in next.visibleViews) {
+    const { rules: _rules, ...views } = next.visibleViews;
+    next.visibleViews = views;
+  }
+  delete next.showAutomatedTagsOnCards;
+  delete next.showChecklistProgressOnCards;
+  return next;
 }

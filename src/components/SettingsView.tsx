@@ -3,7 +3,6 @@ import {
   UserSettings, 
   Task, 
   Runbook, 
-  TaggingRule, 
   ITCategory,
   IT_CATEGORIES,
   StorageStatusInfo,
@@ -53,8 +52,7 @@ interface SettingsViewProps {
   onUpdateSettings: (newSettings: UserSettings) => void;
   tasks: Task[];
   runbooks: Runbook[];
-  rules: TaggingRule[];
-  onImportData: (data: { tasks?: Task[]; runbooks?: Runbook[]; rules?: TaggingRule[]; settings?: UserSettings }) => void;
+  onImportData: (data: { tasks?: Task[]; runbooks?: Runbook[]; settings?: UserSettings }) => void;
   onResetToDefaults: () => void;
   onClearCompletedTasks: () => void;
   serverSyncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
@@ -79,7 +77,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateSettings,
   tasks,
   runbooks,
-  rules,
   onImportData,
   onResetToDefaults,
   onClearCompletedTasks,
@@ -264,13 +261,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       category: 'Documentation',
     },
     {
-      id: 'rules',
-      title: 'Automated Tagging Rules',
-      description: 'Keyword and regex pattern engine that auto-tags and categorises incoming logs and error traces.',
-      icon: <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-      category: 'Automation',
-    },
-    {
       id: 'analytics',
       title: 'Performance & Metrics Dashboard',
       description: 'Resolution velocity, category breakdown charts, and frequent issue root-cause analysis.',
@@ -324,7 +314,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           list: false,
           history: false,
           handbook: false,
-          rules: false,
           analytics: false,
         },
         defaultView: 'kanban',
@@ -337,7 +326,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           list: true,
           history: true,
           handbook: true,
-          rules: true,
           analytics: true,
         },
       });
@@ -351,7 +339,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       exportedAt: new Date().toISOString(),
       tasks,
       runbooks,
-      rules,
       settings,
     };
 
@@ -1114,62 +1101,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     Display Preferences
                   </h4>
 
-                  {/* Show Automated Tags */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Show Tag Chips on Cards</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Render #tag chips directly on Kanban cards for quick filtering.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateSettings({
-                          ...settings,
-                          showAutomatedTagsOnCards: !settings.showAutomatedTagsOnCards,
-                        })
-                      }
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.showAutomatedTagsOnCards ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          settings.showAutomatedTagsOnCards ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Show Checklist Progress */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Show Checklist Progress Bar</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Render visual progress bar for sub-tasks and remediation steps on cards.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateSettings({
-                          ...settings,
-                          showChecklistProgressOnCards: !settings.showChecklistProgressOnCards,
-                        })
-                      }
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.showChecklistProgressOnCards ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          settings.showChecklistProgressOnCards ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
                   {/* Completed Ticket Retention Window on Board/List */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 gap-3">
                     <div>
@@ -1314,7 +1245,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
                           {storageInfo?.supabase?.connected
                             ? 'All changes made on any computer or phone are synced to your free Supabase cloud database in real-time.'
-                            : 'Sync all your tickets, SOP runbooks, rules, and settings across multiple PCs and devices using Supabase free tier (no credit card required).'}
+                            : 'Sync all your tickets, SOP runbooks and settings across multiple PCs and devices using Supabase free tier (no credit card required).'}
                         </p>
                       </div>
                     </div>
@@ -1487,7 +1418,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                       Last saved: <span className="font-mono text-slate-700 dark:text-slate-200 font-medium">{lastSavedToServer ? new Date(lastSavedToServer).toLocaleTimeString() : 'Just now'}</span>
                       <span className="mx-2 hidden sm:inline">•</span>
                       <span className="block sm:inline mt-0.5 sm:mt-0">
-                        Content: <strong className="text-slate-700 dark:text-slate-200 font-semibold">{tasks.length}</strong> tasks, <strong className="text-slate-700 dark:text-slate-200 font-semibold">{runbooks.length}</strong> runbooks, <strong className="text-slate-700 dark:text-slate-200 font-semibold">{rules.length}</strong> rules
+                        Content: <strong className="text-slate-700 dark:text-slate-200 font-semibold">{tasks.length}</strong> tasks and <strong className="text-slate-700 dark:text-slate-200 font-semibold">{runbooks.length}</strong> runbooks
                       </span>
                     </div>
 
@@ -1524,7 +1455,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                       <span>Export Offline Backup (JSON)</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Download all {tasks.length} tasks, {runbooks.length} runbooks, and automation rules in a portable JSON file.
+                      Download all {tasks.length} tasks, {runbooks.length} runbooks and settings in a portable JSON file.
                     </p>
                     <button
                       type="button"
@@ -1612,7 +1543,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                     <div>
                       <div className="text-xs font-bold text-rose-900 dark:text-rose-300">Reset to Factory Default Sample Data</div>
                       <div className="text-[11px] text-rose-700 dark:text-rose-400">
-                        Restores initial tasks, runbooks, and automation rules to default setup.
+                        Restores initial tasks, runbooks and settings to default setup.
                       </div>
                     </div>
                     {resetConfirmOpen ? (

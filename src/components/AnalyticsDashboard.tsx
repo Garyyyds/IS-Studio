@@ -17,12 +17,11 @@ import {
   Cpu,
   Terminal
 } from 'lucide-react';
-import { Task, Runbook, TaggingRule, ITCategory, IT_CATEGORIES } from '../types';
+import { Task, Runbook, ITCategory, IT_CATEGORIES } from '../types';
 
 interface AnalyticsDashboardProps {
   tasks: Task[];
   runbooks: Runbook[];
-  rules: TaggingRule[];
   onOpenRunbook: (id: string) => void;
 }
 
@@ -31,7 +30,6 @@ const ALL_CATEGORIES: ITCategory[] = [...IT_CATEGORIES];
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   tasks,
   runbooks,
-  rules,
   onOpenRunbook,
 }) => {
   // Status stats
@@ -97,7 +95,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       </div>
 
       {/* 4 Metric Cards - Grid with Equalized Height and Visual Anchor */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Metric 1: Resolution Velocity */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4.5 shadow-xs flex flex-col justify-between">
           <div>
@@ -155,26 +153,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </div>
         </div>
 
-        {/* Metric 4: Auto-Triage Rules */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4.5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Automated Rules
-              </span>
-              <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
-                {tasks.filter((t) => t.isAutoTagged).length}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">of {tasks.length} tagged</span>
-            </div>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3">
-            <div className="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${(tasks.filter((t) => t.isAutoTagged).length / totalTasks) * 100}%` }} />
-          </div>
-        </div>
       </div>
 
       {/* Symmetrical Dual Panel Layout (Both sides have balanced structure and equal visual weight) */}
