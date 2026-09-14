@@ -72,3 +72,4 @@ away later work permanently.
 | `11092026ver043` | 2026-09-11 | Fit the requisition form onto one page by measuring it and uniformly reducing the sheet, down to a legibility floor, falling back to full size over two pages; also fix bold labels being measured in the regular weight |
 | `14092026ver000` | 2026-09-14 | Merge helpdesk request fields (system, nature of request, location, phone/ext, HOD name and email) into the employee ticket form, add multi-file attachments stored in a private Supabase bucket, and show both in the admin ticket modal and Kanban cards |
 | `14092026ver001` | 2026-09-14 | Remove Nature of Request from the employee ticket form and the admin Request Details card; System now takes the full row |
+| `14092026ver002` | 2026-09-14 | Attachments label hint now reads (Optional) |

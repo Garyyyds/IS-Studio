@@ -575,7 +575,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
                     Attachments{' '}
                     <span className="font-normal text-slate-400">
-                      (optional, max {formatBytes(MAX_ATTACHMENT_BYTES)} each)
+                      (Optional)
                     </span>
                   </label>
                   <input
