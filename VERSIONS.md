@@ -73,3 +73,4 @@ away later work permanently.
 | `14092026ver000` | 2026-09-14 | Merge helpdesk request fields (system, nature of request, location, phone/ext, HOD name and email) into the employee ticket form, add multi-file attachments stored in a private Supabase bucket, and show both in the admin ticket modal and Kanban cards |
 | `14092026ver001` | 2026-09-14 | Remove Nature of Request from the employee ticket form and the admin Request Details card; System now takes the full row |
 | `14092026ver002` | 2026-09-14 | Attachments label hint now reads (Optional) |
+| `14092026ver003` | 2026-09-14 | Remove the Error Code, Log Output or URL field from the employee ticket form and the admin ticket modal |

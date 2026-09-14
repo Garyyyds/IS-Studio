@@ -5,9 +5,6 @@ import {
   CheckSquare, 
   Plus, 
   Trash2, 
-  Terminal, 
-  Copy, 
-  Check, 
   FileText, 
   AlertTriangle,
   User,
@@ -102,7 +99,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isReadOnly = userRole === 'user';
   const [formData, setFormData] = useState<Task>(task || emptyTask);
   const [newChecklistText, setNewChecklistText] = useState('');
-  const [copiedLogs, setCopiedLogs] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isEditingRequester, setIsEditingRequester] = useState(false);
 
@@ -114,14 +110,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   }, [task]);
 
   if (!isOpen) return null;
-
-  const handleCopyLogs = () => {
-    if (formData.rawLogs) {
-      navigator.clipboard.writeText(formData.rawLogs);
-      setCopiedLogs(true);
-      setTimeout(() => setCopiedLogs(false), 2000);
-    }
-  };
 
   const handleAddChecklist = (e: React.FormEvent) => {
     e.preventDefault();
@@ -509,34 +497,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Details of what happened, symptoms, what the user was doing, or specific error message..."
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:text-slate-700 dark:disabled:text-slate-300 disabled:cursor-not-allowed transition"
-              />
-            </div>
-
-            {/* Error Code, Log Output or URL (Same as user side) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Error Code, Log Output or URL (Optional)</span>
-                </label>
-                {formData.rawLogs && (
-                  <button
-                    type="button"
-                    onClick={handleCopyLogs}
-                    className="flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                  >
-                    {copiedLogs ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    <span>{copiedLogs ? 'Copied' : 'Copy Logs'}</span>
-                  </button>
-                )}
-              </div>
-              <textarea
-                rows={3}
-                disabled={isReadOnly}
-                value={formData.rawLogs || ''}
-                onChange={(e) => setFormData({ ...formData, rawLogs: e.target.value })}
-                placeholder="Paste any error message, terminal stack trace, HTTP 500 error, or relevant URL here..."
-                className="w-full font-mono bg-slate-950 text-emerald-400 border border-slate-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-90 disabled:cursor-not-allowed transition"
               />
             </div>
           </div>
