@@ -161,6 +161,8 @@ export interface UserSettings {
   themeMode: 'light' | 'dark' | 'system';
   workstationMode: 'personal' | 'team';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
+  /** Highest REQ number issued so far; numbers are never reused. */
+  lastTicketSequence?: number;
   showAutomatedTagsOnCards: boolean;
   showChecklistProgressOnCards: boolean;
   compactCards: boolean;

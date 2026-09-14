@@ -36,7 +36,8 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
 
   React.useEffect(() => {
     if (isOpen) {
-      setTicketNumber(`INC-${Math.floor(1000 + Math.random() * 9000)}`);
+      // Blank by default: the next REQ number is assigned when the ticket is created.
+      setTicketNumber('');
     } else {
       setResult(null);
       setError(null);
@@ -82,7 +83,8 @@ export const QuickTriageModal: React.FC<QuickTriageModalProps> = ({
   const handleCreateTaskFromTriage = () => {
     if (!result) return;
 
-    const finalTicketNumber = ticketNumber.trim() || `INC-${Date.now().toString().slice(-4)}`;
+    // Left blank unless typed in; the app gives it the next REQ number on save.
+    const finalTicketNumber = ticketNumber.trim();
 
     const newTask: Task = {
       id: `task-${Date.now()}`,
@@ -277,7 +279,7 @@ at pool.getConnection (/app/node_modules/pg-pool/index.js:52)`}
                     type="text"
                     value={ticketNumber}
                     onChange={(e) => setTicketNumber(e.target.value)}
-                    placeholder="e.g. INC-2045 or JIRA-100"
+                    placeholder="Auto (next REQ number)"
                     className="w-40 sm:w-48 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>

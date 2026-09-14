@@ -47,7 +47,8 @@ interface UserPortalViewProps {
   currentUser: AppUser;
   tasks: Task[];
   runbooks: Runbook[];
-  onSubmitTicket: (newTask: Partial<Task>) => void;
+  /** Creates the ticket and returns the number it was given. */
+  onSubmitTicket: (newTask: Partial<Task>) => string;
   onSelectTask: (task: Task) => void;
   onOpenRunbook: (runbookId: string) => void;
 }
@@ -189,10 +190,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       return;
     }
 
-    const ticketNumber = `REQ-${1000 + tasks.length + 1}`;
-
     const newTicket: Partial<Task> = {
-      ticketNumber,
       title: title.trim(),
       description: description.trim(),
       category,
@@ -227,7 +225,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       attachments: attachments.length ? attachments : undefined,
     };
 
-    onSubmitTicket(newTicket);
+    const ticketNumber = onSubmitTicket(newTicket);
     setSubmittedId(ticketNumber);
     setIsSubmitting(false);
 

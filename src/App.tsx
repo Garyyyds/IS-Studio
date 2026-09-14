@@ -33,6 +33,7 @@ import { AuthPage } from './components/AuthPage';
 import { UserPortalView } from './components/UserPortalView';
 import { SupportChatAssistant } from './components/SupportChatAssistant';
 import { evaluateTaskPriorityWithRules } from './utils/priorityEngine';
+import { formatTicketNumber, nextTicketSequence, sequenceOf } from './utils/ticketNumber';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
 import { Check, Zap, Info } from 'lucide-react';
 
@@ -473,10 +474,34 @@ export default function App() {
     setIsTaskModalOpen(true);
   };
 
+  // Records that a REQ number has been handed out, so it is never issued again.
+  const recordTicketNumber = (ticketNumber: string) => {
+    const sequence = sequenceOf(ticketNumber);
+    if (!sequence) return;
+    setSettings((prev) => ({ ...prev, lastTicketSequence: Math.max(prev.lastTicketSequence || 0, sequence) }));
+  };
+
+  const issueTicketNumber = () => {
+    const number = formatTicketNumber(nextTicketSequence(tasks, settings.lastTicketSequence));
+    recordTicketNumber(number);
+    return number;
+  };
+
   const handleSaveTask = (updatedTask: Task) => {
+    const isNew = !tasks.some((t) => t.id === updatedTask.id);
+    let ticketNumber = updatedTask.ticketNumber.trim();
+    if (isNew) {
+      // A blank number, or one another ticket already holds (e.g. two admins
+      // opening "new ticket" at once), gets the next free number on save.
+      if (!ticketNumber || tasks.some((t) => t.ticketNumber === ticketNumber)) {
+        ticketNumber = issueTicketNumber();
+      } else {
+        recordTicketNumber(ticketNumber);
+      }
+    }
     const finalTask: Task = {
       ...updatedTask,
-      ticketNumber: updatedTask.ticketNumber.trim() || `INC-${tasks.length + 1}`,
+      ticketNumber: ticketNumber || issueTicketNumber(),
       title: updatedTask.title.trim() || 'Untitled Incident',
     };
     setTasks((prev) => {
@@ -535,7 +560,7 @@ export default function App() {
   };
 
   const handleCreateNewTask = (status: TaskStatus = 'backlog') => {
-    const nextTicketNum = `REQ-${1000 + tasks.length + 1}`;
+    const nextTicketNum = formatTicketNumber(nextTicketSequence(tasks, settings.lastTicketSequence));
     const newTask: Task = {
       id: `task-${Date.now()}`,
       ticketNumber: nextTicketNum,
@@ -714,10 +739,10 @@ export default function App() {
     );
   }
 
-  const handleUserSubmitTicket = (ticketData: Partial<Task>) => {
+  const handleUserSubmitTicket = (ticketData: Partial<Task>): string => {
     const fullTask: Task = {
       id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      ticketNumber: ticketData.ticketNumber || `REQ-${1000 + tasks.length + 1}`,
+      ticketNumber: issueTicketNumber(),
       title: ticketData.title || 'Service Request',
       description: ticketData.description || '',
       rawLogs: ticketData.rawLogs,
@@ -757,6 +782,7 @@ export default function App() {
 
     setTasks((prev) => [fullTask, ...prev]);
     showToast(`Ticket ${fullTask.ticketNumber} submitted and synced.`);
+    return fullTask.ticketNumber;
   };
 
   const isEmployeeView = currentUser?.role === 'user';

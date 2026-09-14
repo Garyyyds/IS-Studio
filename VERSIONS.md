@@ -90,3 +90,4 @@ away later work permanently.
 | `14092026ver017` | 2026-09-14 | Remove the remediation checklist and resolution notes from the ticket modal (admin and employee) and the resolution note preview on My Tickets; status and technician stay |
 | `14092026ver018` | 2026-09-14 | Ticket PDF export on the admin side (ticket pop-up, List view, Ticket History) now prints the same IT Support Request form as the employee export; old incident post-mortem report removed |
 | `14092026ver019` | 2026-09-14 | Ticket pop-up regrouped like the form: Requestor Information (name, submitted, email, department, location, phone, HOD) then Request Details (category, affected device, summary, remarks, attachments); Affected Device moved out of the requester card |
+| `14092026ver020` | 2026-09-14 | Ticket numbers become REQ-0001 onwards from a shared counter that never reuses numbers; admin new ticket, portal submit and Quick Triage all use it |
