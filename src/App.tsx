@@ -43,6 +43,33 @@ export default function App() {
     return saved ? { ...DEFAULT_USER_SETTINGS, ...JSON.parse(saved) } : DEFAULT_USER_SETTINGS;
   });
 
+  // Theme is a personal preference, so it lives in this browser rather than in
+  // the workspace settings, which sync to every account through the server -
+  // otherwise one person switching to dark mode would switch everyone.
+  const [themeMode, setThemeMode] = useState<UserSettings['themeMode']>(() => {
+    const own = localStorage.getItem('it_ops_theme_mode');
+    if (own === 'light' || own === 'dark' || own === 'system') return own;
+    // First run after this change: carry over whatever this browser last used.
+    try {
+      const legacy = JSON.parse(localStorage.getItem('it_ops_settings') || '{}').themeMode;
+      if (legacy === 'light' || legacy === 'dark' || legacy === 'system') return legacy;
+    } catch {}
+    return 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('it_ops_theme_mode', themeMode);
+  }, [themeMode]);
+
+  // What screens that show or change the theme receive: the shared settings
+  // with this browser's theme laid over them. A theme change is kept local and
+  // never written into the shared settings.
+  const viewSettings: UserSettings = { ...settings, themeMode };
+  const updateSettings = (next: UserSettings) => {
+    if (next.themeMode && next.themeMode !== themeMode) setThemeMode(next.themeMode);
+    setSettings((prev) => ({ ...next, themeMode: prev.themeMode }));
+  };
+
   // Navigation View State initialized with user's defaultView
   const [activeView, setActiveView] = useState<ActiveTab>(() => {
     const saved = localStorage.getItem('it_ops_settings');
@@ -175,7 +202,7 @@ export default function App() {
   useEffect(() => {
     const applyTheme = () => {
       const root = document.documentElement;
-      const mode = settings.themeMode || 'light';
+      const mode = themeMode || 'light';
       const isDark =
         mode === 'dark' ||
         (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -189,13 +216,13 @@ export default function App() {
 
     applyTheme();
 
-    if (settings.themeMode === 'system') {
+    if (themeMode === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleSystemChange = () => applyTheme();
       mediaQuery.addEventListener('change', handleSystemChange);
       return () => mediaQuery.removeEventListener('change', handleSystemChange);
     }
-  }, [settings.themeMode]);
+  }, [themeMode]);
 
   useEffect(() => {
     localStorage.setItem('it_ops_tasks', JSON.stringify(tasks));
@@ -681,8 +708,8 @@ export default function App() {
     return (
       <AuthPage
         onLoginSuccess={handleLoginSuccess}
-        themeMode={settings.themeMode || 'light'}
-        onToggleTheme={(newMode) => setSettings((prev) => ({ ...prev, themeMode: newMode }))}
+        themeMode={themeMode || 'light'}
+        onToggleTheme={(newMode) => setThemeMode(newMode)}
       />
     );
   }
@@ -750,8 +777,8 @@ export default function App() {
         setActiveTab={setActiveView}
         tasks={tasks}
         runbookCount={runbooks.length}
-        settings={settings}
-        onUpdateSettings={setSettings}
+        settings={viewSettings}
+        onUpdateSettings={updateSettings}
         onOpenNewTask={() => handleCreateNewTask('backlog')}
         onOpenNewRunbook={() => handleOpenRunbookEditor()}
         onOpenQuickTriage={() => setIsQuickTriageOpen(true)}
@@ -766,7 +793,30 @@ export default function App() {
 
       {/* Primary Workspace View */}
       <main className="flex-1 overflow-y-auto">
-        {isEmployeeView ? (
+        {isEmployeeView && activeView === 'settings' ? (
+          // Employees get the personal sections only; workspace-wide options
+          // (views, defaults, storage) stay with IT.
+          <SettingsView
+            settings={viewSettings}
+            onUpdateSettings={updateSettings}
+            tasks={tasks}
+            runbooks={runbooks}
+            rules={rules}
+            onImportData={handleImportData}
+            onResetToDefaults={handleResetToDefaults}
+            onClearCompletedTasks={handleClearCompletedTasks}
+            currentUser={currentUser}
+            onUpdateCurrentUser={(updatedUser) => {
+              setCurrentUser(updatedUser);
+              localStorage.setItem('it_ops_current_user', JSON.stringify(updatedUser));
+            }}
+            onSignOut={handleSignOut}
+            activeSection={settingsSection}
+            onSectionChange={setSettingsSection}
+            allowedSections={['profile', 'theme']}
+            onBack={() => setActiveView('kanban')}
+          />
+        ) : isEmployeeView ? (
           <UserPortalView
             currentUser={currentUser}
             tasks={tasks}
@@ -854,8 +904,8 @@ export default function App() {
 
             {activeView === 'settings' && (
               <SettingsView
-                settings={settings}
-                onUpdateSettings={setSettings}
+                settings={viewSettings}
+                onUpdateSettings={updateSettings}
                 tasks={tasks}
                 runbooks={runbooks}
                 rules={rules}

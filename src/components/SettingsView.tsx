@@ -42,7 +42,8 @@ import {
   Building2,
   LogOut,
   RefreshCcw,
-  Shield
+  Shield,
+  ArrowLeft,
 } from 'lucide-react';
 
 export type SettingsSection = 'profile' | 'theme' | 'views' | 'workstation' | 'defaults' | 'data';
@@ -67,6 +68,10 @@ interface SettingsViewProps {
   onSignOut?: () => void;
   activeSection?: SettingsSection;
   onSectionChange?: (section: SettingsSection) => void;
+  /** Limits the page to these sections, e.g. an employee's profile and theme. */
+  allowedSections?: SettingsSection[];
+  /** Shown as a Back button in the header when set. */
+  onBack?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -88,6 +93,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateCurrentUser,
   onSignOut,
   activeSection: activeSectionProp,
+  allowedSections,
+  onBack,
   onSectionChange,
 }) => {
   const [internalSection, setInternalSection] = useState<SettingsSection>(activeSectionProp || 'profile');
@@ -98,7 +105,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }, [activeSectionProp]);
 
-  const activeSection = activeSectionProp || internalSection;
+  const requestedSection = activeSectionProp || internalSection;
+  const isAllowed = (section: SettingsSection) => !allowedSections || allowedSections.includes(section);
+  // A section outside the allowed set falls back to the first one allowed.
+  const activeSection =
+    isAllowed(requestedSection) || !allowedSections?.length ? requestedSection : allowedSections[0];
+  const isPersonalOnly = Boolean(allowedSections);
 
   const handleSelectSection = (sec: SettingsSection) => {
     setInternalSection(sec);
@@ -172,11 +184,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         });
       }
 
-      // Also sync operator name in workstation settings if needed
-      onUpdateSettings({
-        ...settings,
-        operatorName: profileName.trim(),
-      });
+      // Also sync operator name in workstation settings if needed. That setting
+      // is shared by the whole workspace, so only the full settings page does it.
+      if (!isPersonalOnly) {
+        onUpdateSettings({
+          ...settings,
+          operatorName: profileName.trim(),
+        });
+      }
 
       setNewPassword('');
       setConfirmPassword('');
@@ -386,27 +401,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <Sliders className="w-4 h-4" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Workspace Settings & Customization
+              {isPersonalOnly ? 'My Settings' : 'Workspace Settings & Customization'}
             </h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Choose your theme mode, configure visible views, customize workstation defaults, and manage offline data backups.
+            {isPersonalOnly
+              ? 'Update your profile and choose how the app looks on this device.'
+              : 'Choose your theme mode, configure visible views, customize workstation defaults, and manage offline data backups.'}
           </p>
         </div>
 
-        {/* Quick Mode Indicator */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors self-start sm:self-auto"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Portal</span>
+          </button>
+        )}
+
+        {/* Quick Mode Indicator - a workspace setting, so full settings only */}
+        {!isPersonalOnly && (
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300">
           <span className="text-slate-400 dark:text-slate-500 font-medium">Mode:</span>
           <span className="font-semibold text-indigo-700 dark:text-indigo-400">
             {settings.workstationMode === 'personal' ? 'Personal Workstation' : 'Team SRE'}
           </span>
         </div>
+        )}
       </div>
 
       {/* Settings Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Navigation Sidebar */}
         <div className="space-y-1.5">
+          {isAllowed('profile') && (
           <button
             onClick={() => handleSelectSection('profile')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -418,7 +449,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>User Profile</span>
           </button>
+          )}
 
+          {isAllowed('theme') && (
           <button
             onClick={() => handleSelectSection('theme')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -430,7 +463,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Palette className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Theme & Appearance</span>
           </button>
+          )}
 
+          {isAllowed('views') && (
           <button
             onClick={() => handleSelectSection('views')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -442,7 +477,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Eye className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <span>Navigation & View Visibility</span>
           </button>
+          )}
 
+          {isAllowed('workstation') && (
           <button
             onClick={() => handleSelectSection('workstation')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -454,7 +491,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <span>Workstation Style</span>
           </button>
+          )}
 
+          {isAllowed('defaults') && (
           <button
             onClick={() => handleSelectSection('defaults')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -466,7 +505,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Task Defaults</span>
           </button>
+          )}
 
+          {isAllowed('data') && (
           <button
             onClick={() => handleSelectSection('data')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-left cursor-pointer ${
@@ -478,6 +519,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <HardDrive className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span>Backup & Data Storage</span>
           </button>
+          )}
         </div>
 
         {/* Settings Content Area */}
@@ -736,7 +778,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span>Workspace Color & Theme Mode</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Select your visual presentation theme. Changes take effect instantly and persist across browser sessions.
+                    Select your visual presentation theme. Changes take effect instantly and are saved on this device only.
                   </p>
                 </div>
 

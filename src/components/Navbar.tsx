@@ -249,22 +249,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Plus className="w-4 h-4" />
                 </button>
-
-                {/* Settings Logo / Gear */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('settings')}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer shrink-0 ${
-                    activeTab === 'settings'
-                      ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400'
-                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                  }`}
-                  title="Settings"
-                >
-                  <Settings2 className="w-4 h-4" />
-                </button>
               </>
             )}
+
+            {/* Settings - admins see every section, employees their own profile and theme */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer shrink-0 ${
+                activeTab === 'settings'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400'
+                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              }`}
+              title="Settings"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
 
             {/* Quick Theme Mode Switcher */}
             {onUpdateSettings && (
