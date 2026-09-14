@@ -961,7 +961,6 @@ export default function App() {
         <SupportChatAssistant
           currentUser={currentUser}
           tasks={tasks}
-          onOpenRunbook={handleOpenRunbookFromAnywhere}
           onRaiseTicket={handleRaiseTicketFromChat}
         />
       )}

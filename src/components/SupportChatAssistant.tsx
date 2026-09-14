@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   XCircle,
   LifeBuoy,
-  ExternalLink,
   RotateCcw,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -25,15 +24,9 @@ export interface TicketPrefill {
 interface SupportChatAssistantProps {
   currentUser: AppUser;
   tasks: Task[];
-  /** Opens an IT Handbook guide cited as a source. */
-  onOpenRunbook?: (runbookId: string) => void;
   /** Opens the IT Support Request form filled in from the conversation. */
   onRaiseTicket?: (prefill: TicketPrefill) => void;
 }
-
-type Source =
-  | { kind: 'guide'; id: string; code: string; title: string }
-  | { kind: 'web'; title: string; url: string };
 
 // What the employee can do next, shown as buttons under an assistant message.
 type NextStep = 'confirm-knowledge' | 'offer-web' | 'confirm-web' | 'raise-ticket';
@@ -44,7 +37,6 @@ interface ChatMessage {
   content: string;
   /** Which attempt produced this answer. */
   attempt?: 1 | 2;
-  sources?: Source[];
   webSearchUsed?: boolean;
   nextStep?: NextStep;
   /** Set once one of the buttons has been used, so it cannot be pressed twice. */
@@ -71,6 +63,7 @@ const MAX_SUMMARY_REPLY_CHARS = 500;
  */
 function summarizeCase(question: string, messages: ChatMessage[]): string {
   const lines = [`Issue: ${question}`];
+  let attempt1Written = false;
   // Only the current case: everything after the message that asked it.
   const start = messages.map((m) => m.role === 'user' && m.content === question).lastIndexOf(true);
   for (const m of messages.slice(start + 1)) {
@@ -78,13 +71,14 @@ function summarizeCase(question: string, messages: ChatMessage[]): string {
       if (!m.fromButton) lines.push(`User added: ${m.content}`);
       continue;
     }
-    if (!m.attempt) continue;
-    const label =
-      m.attempt === 1
-        ? 'Attempt 1 (IT guides' + (m.sources?.length ? ', ' + m.sources.map((s) => (s.kind === 'guide' ? s.code : s.title)).join(', ') : '') + ')'
-        : 'Attempt 2 (' + (m.webSearchUsed ? 'web search' : 'general AI knowledge') + ')';
-    const reply = m.content.length > MAX_SUMMARY_REPLY_CHARS ? m.content.slice(0, MAX_SUMMARY_REPLY_CHARS - 3) + '...' : m.content;
-    lines.push('', `${label}:`, reply);
+    // Attempt 1 is recorded as one line however many times it answered.
+    if (m.attempt === 1) {
+      if (!attempt1Written) lines.push('Attempt 1: Failed to resolve');
+      attempt1Written = true;
+    } else if (m.attempt === 2) {
+      const reply = m.content.length > MAX_SUMMARY_REPLY_CHARS ? m.content.slice(0, MAX_SUMMARY_REPLY_CHARS - 3) + '...' : m.content;
+      lines.push('', 'Attempt 2 (' + (m.webSearchUsed ? 'web search' : 'general AI knowledge') + '):', reply);
+    }
   }
   lines.push('', 'Result: not resolved after both attempts.');
   return lines.join('\n');
@@ -101,7 +95,6 @@ const newId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}
 export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   currentUser,
   tasks,
-  onOpenRunbook,
   onRaiseTicket,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -176,7 +169,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
 
       if (mode === 'knowledge') {
         if (data.found) {
-          add({ role: 'assistant', content: data.reply, attempt: 1, sources: data.sources, nextStep: 'confirm-knowledge' });
+          add({ role: 'assistant', content: data.reply, attempt: 1, nextStep: 'confirm-knowledge' });
           setStage('knowledge');
         } else {
           add({
@@ -192,7 +185,6 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
           role: 'assistant',
           content: data.reply,
           attempt: 2,
-          sources: data.sources,
           webSearchUsed: data.webSearchUsed,
           nextStep: 'confirm-web',
         });
@@ -341,44 +333,6 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     }
   };
 
-  const renderSources = (m: ChatMessage) => {
-    if (!m.sources?.length) return null;
-    return (
-      <div className="space-y-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sources</span>
-        <ul className="space-y-1">
-          {m.sources.map((source, i) => (
-            <li key={i} className="min-w-0">
-              {source.kind === 'guide' ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenRunbook?.(source.id)}
-                  className="flex items-center gap-1.5 max-w-full text-left text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                  title={`${source.code}: ${source.title}`}
-                >
-                  <BookOpen className="w-3 h-3 shrink-0" />
-                  <span className="font-mono shrink-0">{source.code}</span>
-                  <span className="truncate">{source.title}</span>
-                </button>
-              ) : (
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 max-w-full text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                  title={source.title}
-                >
-                  <ExternalLink className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{source.title}</span>
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  };
-
   const attemptLabel = (m: ChatMessage) => {
     if (m.attempt === 1) {
       return (
@@ -491,7 +445,6 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
                       <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
                         {m.content}
                       </p>
-                      {renderSources(m)}
                       {renderNextStep(m)}
                     </div>
                   )}

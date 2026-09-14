@@ -1282,7 +1282,6 @@ app.post('/api/ai/chat', async (req, res) => {
     if (mode === 'knowledge') {
       const runbooks = await readRunbooksForChat();
       const knowledge = knowledgeBaseText(runbooks);
-      const byCode = new Map(runbooks.map((r: any) => [String(r.code), r]));
 
       const prompt = `You are the IT Assistant in a company's employee IT portal. This is ATTEMPT 1:
 you may answer ONLY from the company IT knowledge base and the employee's ticket
@@ -1304,10 +1303,8 @@ Rules:
 - Set "found" to true only if the knowledge base (or, for a question about their
   tickets, the ticket list) genuinely covers this issue. A guide about a
   different problem does not count.
-- If found, answer using only that material and list the guide codes you used in
-  "sourceCodes" (for example "SOP-NET-004"). Use an empty list for ticket-status
-  answers.
-- If not found, set "found" to false, leave "sourceCodes" empty, and set "reply"
+- If found, answer using only that material.
+- If not found, set "found" to false and set "reply"
   to "Not covered in the IT guides." with nothing else.
 ${EMPLOYEE_SAFETY_RULES}`;
 
@@ -1320,9 +1317,8 @@ ${EMPLOYEE_SAFETY_RULES}`;
             properties: {
               found: { type: Type.BOOLEAN, description: 'Whether the knowledge base covers the issue' },
               reply: { type: Type.STRING, description: 'Plain-text reply to the employee' },
-              sourceCodes: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Guide codes used' },
             },
-            required: ['found', 'reply', 'sourceCodes'],
+            required: ['found', 'reply'],
           },
         },
       });
@@ -1338,15 +1334,7 @@ ${EMPLOYEE_SAFETY_RULES}`;
         return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
       }
 
-      // Only guides that really exist are shown as sources, so a made-up code
-      // can never appear as a link.
-      const sources = (Array.isArray(parsed.sourceCodes) ? parsed.sourceCodes : [])
-        .map((code: any) => byCode.get(String(code).trim()))
-        .filter(Boolean)
-        .filter((rb: any, i: number, all: any[]) => all.indexOf(rb) === i)
-        .map((rb: any) => ({ kind: 'guide', id: rb.id, code: rb.code, title: rb.title }));
-
-      return res.json({ mode, found: Boolean(parsed.found), reply, sources });
+      return res.json({ mode, found: Boolean(parsed.found), reply });
     }
 
     // ---- Attempt 2: search the web ----
@@ -1383,15 +1371,11 @@ ${EMPLOYEE_SAFETY_RULES}`;
       return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
     }
 
+    // Search counts as used only when the answer is actually grounded in pages.
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    const seen = new Set<string>();
-    const sources = chunks
-      .map((c: any) => c?.web)
-      .filter((w: any) => w?.uri && !seen.has(w.uri) && seen.add(w.uri))
-      .slice(0, 5)
-      .map((w: any) => ({ kind: 'web', title: w.title || w.uri, url: w.uri }));
+    const grounded = chunks.some((c: any) => c?.web?.uri);
 
-    res.json({ mode, found: true, reply, sources, webSearchUsed: webSearchUsed && sources.length > 0 });
+    res.json({ mode, found: true, reply, webSearchUsed: webSearchUsed && grounded });
   } catch (error: any) {
     console.error('Support chat error:', error);
     sendAiError(res, error, 'Failed to reach the IT assistant');
