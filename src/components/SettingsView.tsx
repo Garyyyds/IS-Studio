@@ -632,23 +632,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         />
                       </div>
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Designation
-                      </label>
-                      <div className="relative">
-                        <User className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                        {/* Read-only like role: IT assigns it on the account. */}
-                        <input
-                          type="text"
-                          readOnly
-                          value={currentUser?.designation || 'Not assigned'}
-                          className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed"
-                          title="Designation is assigned to your account by IT"
-                        />
-                      </div>
-                    </div>
                   </div>
 
                   {/* Password & Security Subsection */}
@@ -1413,7 +1396,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                         <button
                           type="button"
                           onClick={() => {
-                            const sql = storageInfo?.supabase?.sqlSetup || `-- 1. Workspace operational data\nCREATE TABLE IF NOT EXISTS workspace_data (\n  id TEXT PRIMARY KEY DEFAULT 'default',\n  tasks JSONB DEFAULT '[]'::jsonb,\n  runbooks JSONB DEFAULT '[]'::jsonb,\n  rules JSONB DEFAULT '[]'::jsonb,\n  settings JSONB DEFAULT '{}'::jsonb,\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE workspace_data ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow workspace sync" ON workspace_data;\nCREATE POLICY "Allow workspace sync" ON workspace_data FOR ALL USING (true) WITH CHECK (true);\n\n-- 2. User Accounts & Role Permissions\nCREATE TABLE IF NOT EXISTS app_users (\n  id TEXT PRIMARY KEY,\n  email TEXT UNIQUE NOT NULL,\n  password TEXT NOT NULL,\n  name TEXT NOT NULL,\n  role TEXT NOT NULL DEFAULT 'user',\n  department TEXT DEFAULT 'General',\n  designation TEXT,\n  avatar TEXT,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE app_users ADD COLUMN IF NOT EXISTS designation TEXT;\n\nALTER TABLE app_users ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow user sync" ON app_users;\nCREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);`;
+                            const sql = storageInfo?.supabase?.sqlSetup || `-- 1. Workspace operational data\nCREATE TABLE IF NOT EXISTS workspace_data (\n  id TEXT PRIMARY KEY DEFAULT 'default',\n  tasks JSONB DEFAULT '[]'::jsonb,\n  runbooks JSONB DEFAULT '[]'::jsonb,\n  rules JSONB DEFAULT '[]'::jsonb,\n  settings JSONB DEFAULT '{}'::jsonb,\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE workspace_data ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow workspace sync" ON workspace_data;\nCREATE POLICY "Allow workspace sync" ON workspace_data FOR ALL USING (true) WITH CHECK (true);\n\n-- 2. User Accounts & Role Permissions\nCREATE TABLE IF NOT EXISTS app_users (\n  id TEXT PRIMARY KEY,\n  email TEXT UNIQUE NOT NULL,\n  password TEXT NOT NULL,\n  name TEXT NOT NULL,\n  role TEXT NOT NULL DEFAULT 'user',\n  department TEXT DEFAULT 'General',\n  avatar TEXT,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE app_users ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow user sync" ON app_users;\nCREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);`;
                             navigator.clipboard.writeText(sql);
                             setCopiedSql(true);
                             setTimeout(() => setCopiedSql(false), 2500);

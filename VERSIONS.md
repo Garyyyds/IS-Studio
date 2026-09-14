@@ -82,3 +82,4 @@ away later work permanently.
 | `14092026ver009` | 2026-09-14 | Fix blank page: Vite watch ignore now anchored to the root data folder, so edits in src/data are no longer missed and served stale |
 | `14092026ver010` | 2026-09-14 | IT Support Request: add Designation to the form, ticket and admin view; PDF header becomes logo \| address \| Date, Section A shows Designation |
 | `14092026ver011` | 2026-09-14 | Designation moves onto the user account (read-only like role, refreshed on load, printed on the PDF); support form drops Category and renames System to Category; setup SQL adds designation column |
+| `14092026ver012` | 2026-09-14 | Remove the account designation concept: settings field, ticket field, admin detail row, PDF row and setup SQL column; support PDF regroups Section A and moves Location beside Attachments |

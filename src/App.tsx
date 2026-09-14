@@ -124,7 +124,7 @@ export default function App() {
   };
 
   // Re-read the account once per sign-in, so changes IT makes to it (such as a
-  // designation) show up without signing out. Failures keep the saved copy.
+  // role or department) show up without signing out. Failures keep the saved copy.
   useEffect(() => {
     if (!currentUser?.id) return;
     let cancelled = false;
@@ -713,7 +713,6 @@ export default function App() {
       deviceInfo: ticketData.deviceInfo,
       isUserSubmitted: true,
       systemRequested: ticketData.systemRequested,
-      requesterDesignation: ticketData.requesterDesignation,
       userLocation: ticketData.userLocation,
       userPhoneExt: ticketData.userPhoneExt,
       hodName: ticketData.hodName,

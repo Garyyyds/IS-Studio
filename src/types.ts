@@ -31,8 +31,6 @@ export interface AppUser {
   name: string;
   role: UserRole; // 'admin' = IT Operations / Admin, 'user' = Employee / Requester
   department?: string;
-  /** Job title, e.g. "IT Executive IV". Assigned by IT like role; not self-edited. */
-  designation?: string;
   avatar?: string;
   createdAt?: string;
 }
@@ -71,7 +69,6 @@ export interface Task {
   isUserSubmitted?: boolean;
   /** Portal request details, as captured by the employee submission form. */
   systemRequested?: string;
-  requesterDesignation?: string;
   userLocation?: string;
   userPhoneExt?: string;
   hodName?: string;

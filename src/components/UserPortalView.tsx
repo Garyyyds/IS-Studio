@@ -148,7 +148,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       await exportSupportRequestPdf({
         requestDate: new Date().toISOString().slice(0, 10),
         requesterName: currentUser.name,
-        designation: currentUser.designation || '',
         requesterEmail: currentUser.email,
         department: currentUser.department || '',
         location: userLocation.trim(),
@@ -217,7 +216,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
       systemRequested,
-      requesterDesignation: currentUser.designation || undefined,
       userLocation: userLocation.trim(),
       userPhoneExt: userPhoneExt.trim(),
       hodName: hodName.trim(),

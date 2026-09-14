@@ -512,13 +512,9 @@ CREATE TABLE IF NOT EXISTS app_users (
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user', -- 'admin' for IT Staff, 'user' for Normal Employee
   department TEXT DEFAULT 'General',
-  designation TEXT,
   avatar TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Added after the table first shipped; a no-op on fresh installs.
-ALTER TABLE app_users ADD COLUMN IF NOT EXISTS designation TEXT;
 
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow user sync" ON app_users;
@@ -883,7 +879,7 @@ app.get('/api/auth/users', async (req, res) => {
 
 // API: Current account details
 // The browser keeps the signed-in user in localStorage, so fields IT changes on
-// the account (designation, role, department) would otherwise only appear after
+// the account (role, department) would otherwise only appear after
 // signing out and back in. The app calls this on load to pick them up.
 app.post('/api/auth/me', async (req, res) => {
   try {
