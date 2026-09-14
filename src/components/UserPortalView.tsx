@@ -420,7 +420,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Cannot connect to Singapore Office VPN, or Need Figma Enterprise Access"
+                  placeholder="e.g. No Internet connection"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
@@ -490,7 +490,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     required
                     value={userLocation}
                     onChange={(e) => setUserLocation(e.target.value)}
-                    placeholder="e.g. HQ, EA2, KLO, ED Shop"
+                    placeholder="e.g. HQ, KLO"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -504,7 +504,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     required
                     value={userPhoneExt}
                     onChange={(e) => setUserPhoneExt(e.target.value)}
-                    placeholder="e.g. ext 1234"
+                    placeholder="e.g. 1234"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -520,7 +520,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     required
                     value={hodName}
                     onChange={(e) => setHodName(e.target.value)}
-                    placeholder="Head of Department name"
+                    placeholder="Name"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
