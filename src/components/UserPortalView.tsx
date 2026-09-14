@@ -53,6 +53,8 @@ interface UserPortalViewProps {
   onOpenRunbook: (runbookId: string) => void;
   /** Changes each time the user asks to go home; the portal resets to its start page. */
   homeSignal?: number;
+  /** When the IT Assistant hands over, opens the IT Support Request pre-filled. */
+  ticketPrefill?: { summary: string; description: string; key: number } | null;
 }
 
 export const UserPortalView: React.FC<UserPortalViewProps> = ({
@@ -63,6 +65,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   onSelectTask,
   onOpenRunbook,
   homeSignal = 0,
+  ticketPrefill = null,
 }) => {
   const [activeTab, setActiveTab] = useState<'my-tickets' | 'create-form' | 'help'>('create-form');
   // null shows the picker; a value opens that form.
@@ -92,6 +95,17 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   const [exportError, setExportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  // The IT Assistant could not fix it: open the request form with what the
+  // employee already described, so they only add the remaining details.
+  useEffect(() => {
+    if (!ticketPrefill) return;
+    setActiveTab('create-form');
+    setSelectedForm('request');
+    setSubmittedId(null);
+    setTitle(ticketPrefill.summary);
+    setDescription(ticketPrefill.description);
+  }, [ticketPrefill?.key]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // My Tickets Filter

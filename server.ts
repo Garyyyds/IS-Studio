@@ -245,14 +245,20 @@ async function generateWithRetry(ai: any, request: any): Promise<any> {
       return response;
     } catch (err: any) {
       lastError = err;
-      const canFallBack = isDailyQuotaError(err) || aiErrorStatus(err) === 404;
+      // 503 means the model is overloaded; its own retries are already spent by
+      // the time we get here, so another model is the best chance of an answer.
+      const canFallBack = isDailyQuotaError(err) || aiErrorStatus(err) === 404 || aiErrorStatus(err) === 503;
       const nextModel = GEMINI_MODELS[i + 1];
 
       if (!canFallBack || !nextModel) throw err;
 
       console.warn(
         'Gemini model ' + model + ' unavailable (' +
-        (isDailyQuotaError(err) ? 'daily quota spent' : 'not available for this key') +
+        (isDailyQuotaError(err)
+          ? 'daily quota spent'
+          : aiErrorStatus(err) === 503
+            ? 'overloaded'
+            : 'not available for this key') +
         '); falling back to ' + nextModel
       );
     }
@@ -1163,16 +1169,81 @@ Make the handbook thorough, unambiguous, and formatted for junior and senior eng
 
 
 // API: Employee support chat assistant
-// Answers IT questions for the employee portal. Unlike the triage and runbook
-// routes this returns prose rather than JSON, so no responseSchema is set.
-// Ticket context is supplied by the client and is already scoped to the signed-
-// in requester; the prompt forbids inventing ticket state on top of that.
+// --- IT Assistant: knowledge base first, then the web, then a ticket ---
+// Every new question starts at attempt 1, which answers only from the IT
+// Handbook guides (and the employee's own open tickets). If the guides do not
+// cover it, or the employee says the answer did not help, attempt 2 searches
+// the web. If that still does not solve it, the client points them at an IT
+// Support Request. The client decides which attempt a message belongs to; this
+// route just answers in the mode it is asked for.
 const CHAT_MAX_HISTORY = 12;
 const CHAT_MAX_MESSAGE_CHARS = 2000;
+// Keeps the guide text sent per question bounded as the handbook grows.
+const CHAT_KNOWLEDGE_MAX_CHARS = 60000;
+
+// Guides are read on the server, from storage, rather than taken from the
+// browser: the full steps are needed, and the browser copy may be stale.
+async function readRunbooksForChat(): Promise<any[]> {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('workspace_data').select('runbooks').eq('id', 'default').maybeSingle();
+      if (!error && data && Array.isArray(data.runbooks)) return data.runbooks;
+    } catch (err) {
+      console.warn('Chat knowledge base: Supabase read failed, using local copy:', err);
+    }
+  }
+  const stored = getStoredData();
+  return Array.isArray(stored?.runbooks) ? stored.runbooks : [];
+}
+
+// Plain-text rendering of the guides an employee may be walked through. Steps
+// flagged dangerous and raw commands are left out: the assistant talks to
+// employees, who should only ever be given safe self-service actions.
+function knowledgeBaseText(runbooks: any[]): string {
+  const blocks: string[] = [];
+  let used = 0;
+  for (const rb of runbooks.filter((r) => r && r.status !== 'draft' && r.status !== 'deprecated')) {
+    const lines: string[] = [];
+    lines.push(`[${rb.code}] ${rb.title}`);
+    if (rb.category) lines.push(`Category: ${rb.category}`);
+    if (rb.symptom) lines.push(`Symptom: ${rb.symptom}`);
+    if (Array.isArray(rb.triggerAlertPatterns) && rb.triggerAlertPatterns.length) {
+      lines.push(`Typical error messages: ${rb.triggerAlertPatterns.join(' | ')}`);
+    }
+    if (rb.rootCauseAnalysis) lines.push(`Usual cause: ${rb.rootCauseAnalysis}`);
+    (rb.diagnosticSteps || []).forEach((s: any, i: number) => {
+      lines.push(`Check ${i + 1}: ${s.title}${s.explanation ? ' - ' + s.explanation : ''}`);
+    });
+    (rb.remediationSteps || [])
+      .filter((s: any) => !s.dangerous)
+      .forEach((s: any, i: number) => {
+        lines.push(`Fix ${i + 1}: ${s.title}${s.instruction ? ' - ' + s.instruction : ''}${s.verification ? ' (Confirm: ' + s.verification + ')' : ''}`);
+      });
+    const block = lines.join('\n');
+    if (used + block.length > CHAT_KNOWLEDGE_MAX_CHARS) break;
+    blocks.push(block);
+    used += block.length;
+  }
+  return blocks.join('\n\n');
+}
+
+const EMPLOYEE_SAFETY_RULES = `- You are talking to an employee, not an IT engineer. They cannot run
+  administrative commands and do not have server access.
+- Give only safe self-service steps: restart, reconnect, sign out and back in,
+  check a cable, clear a browser cache, change a setting they can reach.
+- Never give destructive actions, admin or root commands, registry edits,
+  database queries, or anything needing elevated privileges. If the fix needs
+  IT, say so.
+- Never invent a ticket number, a policy, a deadline, or a person's name.
+- Be warm, brief and plain-spoken: two or three short paragraphs at most, and a
+  short numbered list for steps.
+- Plain text only. No markdown headings, no code fences, no asterisks.`;
 
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { message, history, user, tickets, runbooks } = req.body;
+    const { message, question, history, user, tickets } = req.body;
+    const mode: 'knowledge' | 'web' = req.body.mode === 'web' ? 'web' : 'knowledge';
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
@@ -1188,21 +1259,12 @@ app.post('/api/ai/chat', async (req, res) => {
     const ticketLines = Array.isArray(tickets) && tickets.length
       ? tickets
           .slice(0, 15)
-          .map((t: any) =>
-            '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status
-          )
+          .map((t: any) => '- ' + t.ticketNumber + ': "' + t.title + '" | status ' + t.status)
           .join('\n')
       : 'None open.';
 
-    const runbookLines = Array.isArray(runbooks) && runbooks.length
-      ? runbooks
-          .slice(0, 20)
-          .map((r: any) => '- ' + r.code + ': ' + r.title + (r.symptom ? ' — ' + r.symptom : ''))
-          .join('\n')
-      : 'No published guides available.';
-
-    // Only the last few turns are sent. Enough for follow-up questions like
-    // "what about the second one?" without growing the prompt without bound.
+    // Only the last few turns are sent: enough for follow-ups like "what about
+    // the second one?" without growing the prompt without bound.
     const priorTurns = Array.isArray(history)
       ? history
           .slice(-CHAT_MAX_HISTORY)
@@ -1210,44 +1272,123 @@ app.post('/api/ai/chat', async (req, res) => {
           .join('\n')
       : '';
 
-    const prompt = `You are the IT Support Assistant inside an employee IT service portal.
-You are talking to an employee, not an IT engineer. They cannot run administrative
-commands and do not have server access.
+    const originalQuestion = typeof question === 'string' && question.trim() ? question.trim() : message.trim();
+    const who = `${user?.name || 'Employee'}${user?.department ? ' (' + user.department + ')' : ''}`;
 
-Employee: ${user?.name || 'Employee'}${user?.department ? ' (' + user.department + ')' : ''}
+    // ---- Attempt 1: company knowledge base only ----
+    if (mode === 'knowledge') {
+      const runbooks = await readRunbooksForChat();
+      const knowledge = knowledgeBaseText(runbooks);
+      const byCode = new Map(runbooks.map((r: any) => [String(r.code), r]));
+
+      const prompt = `You are the IT Assistant in a company's employee IT portal. This is ATTEMPT 1:
+you may answer ONLY from the company IT knowledge base and the employee's ticket
+list below. Do not use outside or general knowledge.
+
+Employee: ${who}
 
 Their open tickets:
 ${ticketLines}
 
-Published IT self-help guides:
-${runbookLines}
+COMPANY IT KNOWLEDGE BASE:
+${knowledge || '(The knowledge base is empty.)'}
 
 ${priorTurns ? 'Conversation so far:\n' + priorTurns + '\n' : ''}
-Employee's new message: ${message}
+The employee's issue: ${originalQuestion}
+${message.trim() !== originalQuestion ? 'Their latest message: ' + message.trim() : ''}
 
-How to answer:
-- Be warm, brief and plain-spoken. Two or three short paragraphs at most, and
-  prefer a short numbered list when giving steps.
-- Give safe self-service steps an ordinary employee can do themselves: restart,
-  reconnect to Wi-Fi, clear a cache, check a cable, sign out and back in.
-- Never provide destructive actions, admin/root commands, registry edits,
-  database queries, or anything requiring elevated privileges. If the fix needs
-  IT, say so and tell them to raise a ticket in the portal.
-- Only state ticket status using the ticket list above. If they ask about a
-  ticket that is not listed, say you cannot see it and suggest checking "My
-  Service Requests".
-- Never invent a ticket number, a policy, a deadline, or a person's name.
-- If you genuinely do not know, say so and point them to raising a ticket.
-- Reply in plain text. No markdown headings, no code fences, no asterisks.`;
+Rules:
+- Set "found" to true only if the knowledge base (or, for a question about their
+  tickets, the ticket list) genuinely covers this issue. A guide about a
+  different problem does not count.
+- If found, answer using only that material and list the guide codes you used in
+  "sourceCodes" (for example "SOP-NET-004"). Use an empty list for ticket-status
+  answers.
+- If not found, set "found" to false, leave "sourceCodes" empty, and make "reply"
+  one short friendly sentence saying the company guides do not cover this yet.
+${EMPLOYEE_SAFETY_RULES}`;
 
-    const response = await generateWithRetry(ai, { contents: prompt });
+      const response = await generateWithRetry(ai, {
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              found: { type: Type.BOOLEAN, description: 'Whether the knowledge base covers the issue' },
+              reply: { type: Type.STRING, description: 'Plain-text reply to the employee' },
+              sourceCodes: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Guide codes used' },
+            },
+            required: ['found', 'reply', 'sourceCodes'],
+          },
+        },
+      });
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(response.text || '{}');
+      } catch {
+        return res.status(502).json({ error: 'The assistant returned an unreadable reply. Please try again.' });
+      }
+      const reply = String(parsed.reply || '').trim();
+      if (!reply) {
+        return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
+      }
+
+      // Only guides that really exist are shown as sources, so a made-up code
+      // can never appear as a link.
+      const sources = (Array.isArray(parsed.sourceCodes) ? parsed.sourceCodes : [])
+        .map((code: any) => byCode.get(String(code).trim()))
+        .filter(Boolean)
+        .filter((rb: any, i: number, all: any[]) => all.indexOf(rb) === i)
+        .map((rb: any) => ({ kind: 'guide', id: rb.id, code: rb.code, title: rb.title }));
+
+      return res.json({ mode, found: Boolean(parsed.found), reply, sources });
+    }
+
+    // ---- Attempt 2: search the web ----
+    const webPrompt = `You are the IT Assistant in a company's employee IT portal. This is ATTEMPT 2:
+the company's own IT guides did not solve this, so research the issue on the web
+and give the most reliable, widely recommended fix.
+
+Employee: ${who}
+
+${priorTurns ? 'Conversation so far:\n' + priorTurns + '\n' : ''}
+The employee's issue: ${originalQuestion}
+${message.trim() !== originalQuestion ? 'Their latest message: ' + message.trim() : ''}
+
+Rules:
+- Prefer official vendor documentation (Microsoft, Google, Apple, the software
+  maker) over forums.
+- If the steps would need an administrator, say so plainly instead.
+${EMPLOYEE_SAFETY_RULES}`;
+
+    let response: any;
+    let webSearchUsed = true;
+    try {
+      response = await generateWithRetry(ai, { contents: webPrompt, config: { tools: [{ googleSearch: {} }] } });
+    } catch (searchError: any) {
+      // Web search is not available on every key or model. Rather than failing
+      // the attempt, answer from general knowledge and say so in the UI.
+      console.warn('Chat web search unavailable, answering without it:', searchError?.message || searchError);
+      webSearchUsed = false;
+      response = await generateWithRetry(ai, { contents: webPrompt });
+    }
 
     const reply = response.text?.trim();
     if (!reply) {
       return res.status(502).json({ error: 'The assistant returned an empty reply. Please try again.' });
     }
 
-    res.json({ reply });
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const seen = new Set<string>();
+    const sources = chunks
+      .map((c: any) => c?.web)
+      .filter((w: any) => w?.uri && !seen.has(w.uri) && seen.add(w.uri))
+      .slice(0, 5)
+      .map((w: any) => ({ kind: 'web', title: w.title || w.uri, url: w.uri }));
+
+    res.json({ mode, found: true, reply, sources, webSearchUsed: webSearchUsed && sources.length > 0 });
   } catch (error: any) {
     console.error('Support chat error:', error);
     sendAiError(res, error, 'Failed to reach the IT assistant');

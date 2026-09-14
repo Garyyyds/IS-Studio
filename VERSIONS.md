@@ -100,3 +100,4 @@ away later work permanently.
 | `14092026ver027` | 2026-09-14 | Employee portal: remove the My Tickets count badge (duplicated the Open Requests stat and sat misaligned) |
 | `14092026ver028` | 2026-09-14 | IT Service Desk logo returns home on both sides; remove the (1) from My Service Requests; remove assignee profile pictures (My Tickets, List view) keeping the assignee name |
 | `14092026ver029` | 2026-09-14 | Employee portal tabs become three equal-width segments with centred labels so spacing looks even whichever tab is selected |
+| `14092026ver030` | 2026-09-14 | IT Assistant escalation: attempt 1 answers only from the IT Handbook guides with sources, attempt 2 searches the web (falls back to labelled general AI knowledge), then hands over to a pre-filled IT Support Request; Gemini falls back to the next model when one is overloaded |

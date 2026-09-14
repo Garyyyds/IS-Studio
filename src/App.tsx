@@ -139,6 +139,12 @@ export default function App() {
 
   // Bumped by the logo so the employee portal returns to its start page.
   const [portalHomeSignal, setPortalHomeSignal] = useState(0);
+  // Set when the IT Assistant hands a conversation over to a support request.
+  const [ticketPrefill, setTicketPrefill] = useState<{ summary: string; description: string; key: number } | null>(null);
+  const handleRaiseTicketFromChat = (prefill: { summary: string; description: string }) => {
+    setActiveView(settings.defaultView || 'kanban');
+    setTicketPrefill({ ...prefill, key: Date.now() });
+  };
   const handleGoHome = () => {
     setActiveView(settings.defaultView || 'kanban');
     setPortalHomeSignal((n) => n + 1);
@@ -798,6 +804,7 @@ export default function App() {
             onSelectTask={handleSelectTask}
             onOpenRunbook={handleOpenRunbookFromAnywhere}
             homeSignal={portalHomeSignal}
+            ticketPrefill={ticketPrefill}
           />
         ) : (
           <>
@@ -954,7 +961,8 @@ export default function App() {
         <SupportChatAssistant
           currentUser={currentUser}
           tasks={tasks}
-          runbooks={runbooks}
+          onOpenRunbook={handleOpenRunbookFromAnywhere}
+          onRaiseTicket={handleRaiseTicketFromChat}
         />
       )}
     </div>
