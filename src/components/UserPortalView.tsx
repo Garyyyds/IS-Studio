@@ -29,6 +29,10 @@ import {
   Paperclip,
   X,
   Loader2,
+  MapPin,
+  Phone,
+  UserCheck,
+  Tag,
 } from 'lucide-react';
 import { Task, Runbook, AppUser, ITCategory, EnvironmentType, TaskStatus } from '../types';
 import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
@@ -523,6 +527,39 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     {ticket.description}
                   </p>
 
+                  {/* What the employee entered on the IT Support Request, so the
+                      status card shows the same details IT is working from. */}
+                  {(() => {
+                    const details = [
+                      { label: 'Category', value: ticket.systemRequested, Icon: Tag },
+                      { label: 'Affected Device', value: ticket.deviceInfo, Icon: Laptop },
+                      { label: 'Location', value: ticket.userLocation, Icon: MapPin },
+                      { label: 'Phone / Ext', value: ticket.userPhoneExt, Icon: Phone },
+                      { label: 'HOD', value: ticket.hodName, Icon: UserCheck },
+                      {
+                        label: 'Attachments',
+                        value: ticket.attachments?.length
+                          ? `${ticket.attachments.length} file${ticket.attachments.length > 1 ? 's' : ''}`
+                          : '',
+                        Icon: Paperclip,
+                      },
+                    ].filter((d) => d.value);
+                    if (!details.length) return null;
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80">
+                        {details.map(({ label, value, Icon }) => (
+                          <div key={label} className="min-w-0">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{label}</span>
+                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                              <Icon className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate" title={value}>{value}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   {/* Resolution Notes preview if resolved */}
                   {ticket.status === 'done' && ticket.resolutionNotes && (
                     <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 text-xs text-emerald-800 dark:text-emerald-200">
@@ -534,8 +571,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
                     <div className="flex items-center gap-3">
                       <span>Submitted on {new Date(ticket.createdAt).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>Category: <strong>{ticket.category}</strong></span>
                     </div>
 
                     <div className="flex items-center gap-2">

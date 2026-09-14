@@ -85,3 +85,4 @@ away later work permanently.
 | `14092026ver012` | 2026-09-14 | Remove the account designation concept: settings field, ticket field, admin detail row, PDF row and setup SQL column; support PDF regroups Section A and moves Location beside Attachments |
 | `14092026ver013` | 2026-09-14 | IT Support Request PDF: Request Date and Location back in Section A, header returns to logo \| address |
 | `14092026ver014` | 2026-09-14 | Employees get My Settings (User Profile, Theme & Appearance) via the navbar gear; theme is now per browser instead of shared workspace-wide, and employee profile saves no longer rename the workspace operator |
+| `14092026ver015` | 2026-09-14 | My Tickets cards show the IT Support Request details (category, affected device, location, phone/ext, HOD, attachment count); drop the internal category from the card footer |
