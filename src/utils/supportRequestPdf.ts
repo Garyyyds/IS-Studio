@@ -43,15 +43,15 @@ export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
   const ctx = createFormDoc();
   const { doc, margin } = ctx;
 
-  // Request date sits in the masthead, beside the address.
-  await drawHeaderBand(ctx, undefined, { label: 'Date:', value: data.requestDate });
+  await drawHeaderBand(ctx);
   drawTitleBar(ctx, SUPPORT_REQUEST_TITLE);
 
   // --- Section A: who is asking, and who approves ---
   drawSectionHeader(ctx, SUPPORT_SECTION_A_TITLE);
   drawInfoRows(ctx, [
-    ['Requestor Name:', data.requesterName, 'Department:', data.department],
-    ['Email:', data.requesterEmail, 'Phone/Ext:', data.phoneExt],
+    ['Requestor Name:', data.requesterName, 'Request Date:', data.requestDate],
+    ['Email:', data.requesterEmail, 'Department:', data.department],
+    ['Location:', data.location, 'Phone/Ext:', data.phoneExt],
     ['HOD Name:', data.hodName, 'HOD Email:', data.hodEmail],
   ]);
 
@@ -59,15 +59,7 @@ export async function exportSupportRequestPdf(data: SupportRequestPdfData) {
 
   // --- Section B: what the request is ---
   drawSectionHeader(ctx, SUPPORT_SECTION_B_TITLE);
-  drawInfoRows(ctx, [
-    ['Category:', data.category, 'Affected Device:', data.affectedDevice],
-    [
-      'Location:',
-      data.location,
-      'Attachments:',
-      data.attachmentNames.length ? String(data.attachmentNames.length) : 'None',
-    ],
-  ]);
+  drawInfoRows(ctx, [['Category:', data.category, 'Affected Device:', data.affectedDevice]]);
 
   ctx.y += 8;
   drawRuledRemarks(ctx, 'Summary:', data.summary, 1);
