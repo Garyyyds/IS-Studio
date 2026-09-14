@@ -49,6 +49,8 @@ interface ChatMessage {
   nextStep?: NextStep;
   /** Set once one of the buttons has been used, so it cannot be pressed twice. */
   stepTaken?: boolean;
+  /** A reply sent by pressing a button, left out of the ticket summary. */
+  fromButton?: boolean;
 }
 
 /**
@@ -61,6 +63,32 @@ interface ChatMessage {
 type Stage = 'none' | 'knowledge' | 'web' | 'ticket';
 
 const MAX_MESSAGE_CHARS = 2000;
+const MAX_SUMMARY_REPLY_CHARS = 500;
+
+/**
+ * Remarks for the ticket, built from the conversation without another AI call:
+ * the issue, what the employee added, and the steps each attempt gave.
+ */
+function summarizeCase(question: string, messages: ChatMessage[]): string {
+  const lines = [`Issue: ${question}`];
+  // Only the current case: everything after the message that asked it.
+  const start = messages.map((m) => m.role === 'user' && m.content === question).lastIndexOf(true);
+  for (const m of messages.slice(start + 1)) {
+    if (m.role === 'user') {
+      if (!m.fromButton) lines.push(`User added: ${m.content}`);
+      continue;
+    }
+    if (!m.attempt) continue;
+    const label =
+      m.attempt === 1
+        ? 'Attempt 1 (IT guides' + (m.sources?.length ? ', ' + m.sources.map((s) => (s.kind === 'guide' ? s.code : s.title)).join(', ') : '') + ')'
+        : 'Attempt 2 (' + (m.webSearchUsed ? 'web search' : 'general AI knowledge') + ')';
+    const reply = m.content.length > MAX_SUMMARY_REPLY_CHARS ? m.content.slice(0, MAX_SUMMARY_REPLY_CHARS - 3) + '...' : m.content;
+    lines.push('', `${label}:`, reply);
+  }
+  lines.push('', 'Result: not resolved after both attempts.');
+  return lines.join('\n');
+}
 
 const SUGGESTED_QUESTIONS = [
   'No Internet connection',
@@ -154,7 +182,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
           add({
             role: 'assistant',
             attempt: 1,
-            content: `${data.reply}\n\nI can try a second attempt and search the web for a fix.`,
+            content: 'Not covered in the IT guides.',
             nextStep: 'offer-web',
           });
           setStage('knowledge');
@@ -198,8 +226,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
 
   const handleSolved = (messageId: string) => {
     markStepTaken(messageId);
-    add({ role: 'user', content: 'Yes, that solved it.' });
-    add({ role: 'assistant', content: 'Great, glad that sorted it. Ask me anytime if something else comes up.' });
+    add({ role: 'user', content: 'Yes, that solved it.', fromButton: true });
+    add({ role: 'assistant', content: 'Case closed.' });
     setStage('none');
     setCaseQuestion('');
   };
@@ -207,17 +235,16 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   const handleTryWeb = async (messageId: string, userSaid: string) => {
     markStepTaken(messageId);
     const history = [...messages];
-    add({ role: 'user', content: userSaid });
+    add({ role: 'user', content: userSaid, fromButton: true });
     await ask('web', caseQuestion, userSaid, history);
   };
 
   const handleStillNotWorking = (messageId: string) => {
     markStepTaken(messageId);
-    add({ role: 'user', content: 'No, it is still not working.' });
+    add({ role: 'user', content: 'No, it is still not working.', fromButton: true });
     add({
       role: 'assistant',
-      content:
-        "Sorry that didn't fix it. This needs the IT team, so please submit an official IT Support Request. I'll fill in what we've tried so far.",
+      content: 'Please submit an IT Support Request. The details are filled in for you.',
       nextStep: 'raise-ticket',
     });
     setStage('ticket');
@@ -226,15 +253,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   const handleRaiseTicket = (messageId: string) => {
     markStepTaken(messageId);
     const summary = caseQuestion.length > 120 ? caseQuestion.slice(0, 117) + '...' : caseQuestion;
-    const description = [
-      caseQuestion,
-      '',
-      'Already tried with the IT Assistant:',
-      '1. Company IT guides (attempt 1)',
-      '2. Web search (attempt 2)',
-      'The issue is still not resolved.',
-    ].join('\n');
-    onRaiseTicket?.({ summary, description });
+    onRaiseTicket?.({ summary, description: summarizeCase(caseQuestion, messages) });
     setIsOpen(false);
   };
 

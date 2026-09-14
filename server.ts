@@ -1236,8 +1236,11 @@ const EMPLOYEE_SAFETY_RULES = `- You are talking to an employee, not an IT engin
   database queries, or anything needing elevated privileges. If the fix needs
   IT, say so.
 - Never invent a ticket number, a policy, a deadline, or a person's name.
-- Be warm, brief and plain-spoken: two or three short paragraphs at most, and a
-  short numbered list for steps.
+- Reply with the instructions only: a numbered list of at most 6 short steps,
+  one action per step. If the fix needs IT, add one final line saying so.
+- No greeting, no apology, no restating the question, no sympathy, no sign-off,
+  no "I hope this helps" or offers of further help. Start with step 1.
+- A ticket-status answer is one line, e.g. "REQ-0003 is In Progress."
 - Plain text only. No markdown headings, no code fences, no asterisks.`;
 
 app.post('/api/ai/chat', async (req, res) => {
@@ -1304,8 +1307,8 @@ Rules:
 - If found, answer using only that material and list the guide codes you used in
   "sourceCodes" (for example "SOP-NET-004"). Use an empty list for ticket-status
   answers.
-- If not found, set "found" to false, leave "sourceCodes" empty, and make "reply"
-  one short friendly sentence saying the company guides do not cover this yet.
+- If not found, set "found" to false, leave "sourceCodes" empty, and set "reply"
+  to "Not covered in the IT guides." with nothing else.
 ${EMPLOYEE_SAFETY_RULES}`;
 
       const response = await generateWithRetry(ai, {
