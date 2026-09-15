@@ -111,3 +111,4 @@ away later work permanently.
 | `15092026ver003` | 2026-09-15 | Form Inbox Done button moves a form to a new Form History workspace, where admins pick one of the four form types to see only that type's completed records; employees' My Forms now shows In Progress or Completed |
 | `15092026ver004` | 2026-09-15 | My Forms on the employee portal now opens on a picker of the four form types with submitted and in-progress counts, and each type lists only its own forms, matching Form History |
 | `15092026ver005` | 2026-09-15 | My Forms and Form History header buttons standardised: Refresh and Back share the same size and style, with Back first |
+| `15092026ver006` | 2026-09-15 | Ticket History: removed the Avg Resolution Time card; the three remaining summary cards share the row |

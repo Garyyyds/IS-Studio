@@ -69,25 +69,10 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
     const recent = allResolvedTasks.filter((t) => isTaskRecentlyCompleted(t, retentionMinutes)).length;
     const archived = allResolvedTasks.filter((t) => isTaskArchived(t, retentionMinutes)).length;
 
-    let totalDurationMs = 0;
-
-    allResolvedTasks.forEach((t) => {
-      const duration = getTimeToResolve(t);
-      totalDurationMs += duration.durationMs;
-    });
-
-    const avgDurationMs = total > 0 ? totalDurationMs / total : 0;
-    const avgDurationMinutes = Math.round(avgDurationMs / (1000 * 60));
-    const avgDurationFormatted =
-      avgDurationMinutes < 60
-        ? `${avgDurationMinutes}m`
-        : `${Math.floor(avgDurationMinutes / 60)}h ${avgDurationMinutes % 60}m`;
-
     return {
       total,
       recent,
       archived,
-      avgDurationFormatted,
     };
   }, [allResolvedTasks, retentionMinutes]);
 
@@ -267,7 +252,7 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
         </div>
 
         {/* Metrics Overview Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200/60 dark:border-slate-700/60">
             <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Total Resolved</div>
             <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
@@ -298,15 +283,6 @@ export const TicketHistoryView: React.FC<TicketHistoryViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200/60 dark:border-slate-700/60">
-            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Avg Resolution Time</div>
-            <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-              {metrics.avgDurationFormatted}
-            </div>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Across all resolved tickets
-            </div>
-          </div>
         </div>
       </div>
 
