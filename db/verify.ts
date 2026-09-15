@@ -20,14 +20,14 @@
  * a number or date that does not parse. Everything else is a MISMATCH, and the
  * script exits with code 1 if there is any.
  *
- * Environment: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MIGRATION_COMPANY_CODE (default EDC).
+ * Environment: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MIGRATION_COMPANY_CODE (default EDGC).
  */
 import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 type Row = Record<string, any>;
 
-const COMPANY_CODE = (process.env.MIGRATION_COMPANY_CODE || 'EDC').trim().toUpperCase();
+const COMPANY_CODE = (process.env.MIGRATION_COMPANY_CODE || 'EDGC').trim().toUpperCase();
 const SAMPLE = { tickets: 20, runbooks: 10, forms: 10 };
 
 // ---------------------------------------------------------------------------

@@ -20,14 +20,14 @@
  *  - numbers that do not parse are left empty and listed, never written as 0.
  *
  * Environment: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (from .env), plus
- *   MIGRATION_COMPANY_CODE  default EDC
+ *   MIGRATION_COMPANY_CODE  default EDGC
  *   MIGRATION_COMPANY_NAME  used only when the company is first created; defaults to the code
  */
 import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const COMPANY_CODE = (process.env.MIGRATION_COMPANY_CODE || 'EDC').trim().toUpperCase();
+const COMPANY_CODE = (process.env.MIGRATION_COMPANY_CODE || 'EDGC').trim().toUpperCase();
 const COMPANY_NAME = (process.env.MIGRATION_COMPANY_NAME || COMPANY_CODE).trim();
 const BATCH = 500;
 const TICKET_STATUSES = ['backlog', 'investigating', 'in_progress', 'blocked', 'testing', 'done'];
@@ -124,7 +124,7 @@ function parseDate(value: unknown, where: string): string | null {
 const yesNo = (v: unknown): 'yes' | 'no' | null => (v === 'yes' || v === 'no' ? v : null);
 const format = (v: unknown): 'hardcopy' | 'softcopy' | null => (v === 'hardcopy' || v === 'softcopy' ? v : null);
 
-/** "REQ-0042" or "REQ-EDC-0042" -> { prefix: 'REQ', number: 42 }. */
+/** "REQ-0042" or "REQ-EDGC-0042" -> { prefix: 'REQ', number: 42 }. */
 function splitDocumentNumber(value: string): { prefix: string; number: number } | null {
   const m = value.trim().match(/^([A-Za-z]+)-(?:[A-Za-z0-9]+-)?(\d+)$/);
   return m ? { prefix: m[1].toUpperCase(), number: Number(m[2]) } : null;
