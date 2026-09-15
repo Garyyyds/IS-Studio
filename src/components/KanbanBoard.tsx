@@ -11,7 +11,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Task, Runbook, TaskStatus, ITCategory, IT_CATEGORIES, UserSettings } from '../types';
-import { TaskCard } from './TaskCard';
+import { TaskCard, TICKET_DRAG_TYPE } from './TaskCard';
 import { isTaskRecentlyCompleted, DEFAULT_COMPLETED_RETENTION_MINUTES } from '../utils/ticketRetention';
 
 interface KanbanBoardProps {
@@ -103,6 +103,40 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<ITCategory | 'ALL'>('ALL');
   const [showAllDone, setShowAllDone] = useState(false);
   const [mobileSelectedColumn, setMobileSelectedColumn] = useState<TaskStatus | 'ALL'>('ALL');
+  // Drag and drop between lanes: the ticket being dragged and the lane under it.
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropColumn, setDropColumn] = useState<TaskStatus | null>(null);
+
+  const draggingTask = draggingTaskId ? tasks.find((t) => t.id === draggingTaskId) : undefined;
+
+  const endDrag = () => {
+    setDraggingTaskId(null);
+    setDropColumn(null);
+  };
+
+  const isTicketDrag = (e: React.DragEvent) => e.dataTransfer.types.includes(TICKET_DRAG_TYPE);
+
+  const handleColumnDragOver = (e: React.DragEvent, status: TaskStatus) => {
+    if (!isTicketDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dropColumn !== status) setDropColumn(status);
+  };
+
+  const handleColumnDragLeave = (e: React.DragEvent, status: TaskStatus) => {
+    // Leaving for a card inside the same lane is not leaving the lane.
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    if (dropColumn === status) setDropColumn(null);
+  };
+
+  const handleColumnDrop = (e: React.DragEvent, status: TaskStatus) => {
+    if (!isTicketDrag(e)) return;
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData(TICKET_DRAG_TYPE);
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && task.status !== status) onStatusChange(task.id, status);
+    endDrag();
+  };
 
   const retentionMinutes = settings?.completedTicketRetentionMinutes ?? DEFAULT_COMPLETED_RETENTION_MINUTES;
 
@@ -259,15 +293,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   ? 'All resolved tickets'
                   : `Recent < ${retentionMinutes}m • Older archived`
                 : col.subtitle;
+              // Highlight a lane only when dropping would actually move the ticket.
+              const isDropTarget = dropColumn === col.id && draggingTask !== undefined && draggingTask.status !== col.id;
 
               return (
                 <div
                   key={col.id}
+                  data-lane={col.id}
+                  onDragOver={(e) => handleColumnDragOver(e, col.id)}
+                  onDragLeave={(e) => handleColumnDragLeave(e, col.id)}
+                  onDrop={(e) => handleColumnDrop(e, col.id)}
                   className={`flex-1 flex flex-col ${
                     mobileSelectedColumn !== 'ALL'
                       ? 'w-full min-w-full sm:min-w-[280px] sm:max-w-[340px]'
                       : 'min-w-[280px] max-w-[340px]'
-                  } bg-slate-200/50 dark:bg-slate-900/40 rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-xs`}
+                  } rounded-xl border overflow-hidden shadow-xs transition-colors ${
+                    isDropTarget
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                      : 'bg-slate-200/50 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800/80'
+                  }`}
                 >
                   {/* Column Header */}
                   <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
@@ -323,7 +367,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     {columnTasks.length === 0 ? (
                       <div className="h-40 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 p-4 text-center bg-white/40 dark:bg-slate-900/30">
                         <Layers className="w-5 h-5 mb-1.5 opacity-30 text-slate-400 dark:text-slate-600" />
-                        <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">No tasks in this lane</span>
+                        <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                          {isDropTarget ? 'Drop to move here' : 'No tasks in this lane'}
+                        </span>
                       </div>
                     ) : (
                       columnTasks.map((task) => (
@@ -334,6 +380,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           onSelect={onSelectTask}
                           onStatusChange={onStatusChange}
                           onDelete={onDeleteTask}
+                          onDragStart={setDraggingTaskId}
+                          onDragEnd={endDrag}
                         />
                       ))
                     )}

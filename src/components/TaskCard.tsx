@@ -28,7 +28,13 @@ interface TaskCardProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onOpenRunbook?: (runbookId: string) => void;
   onDelete?: (taskId: string) => void;
+  /** Makes the card draggable onto another board lane. */
+  onDragStart?: (taskId: string) => void;
+  onDragEnd?: () => void;
 }
+
+/** Drag data type for a ticket card, so other drags (text, files) are ignored. */
+export const TICKET_DRAG_TYPE = 'application/x-is-studio-ticket';
 
 const STATUS_ORDER: TaskStatus[] = [
   'backlog',
@@ -47,8 +53,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onStatusChange,
   onOpenRunbook,
   onDelete,
+  onDragStart,
+  onDragEnd,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggable = Boolean(onDragStart);
 
   const currentStatusIndex = STATUS_ORDER.indexOf(task.status);
   const canMoveLeft = currentStatusIndex > 0;
@@ -59,8 +69,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <div 
-      className={`group relative rounded-xl border p-3.5 shadow-xs transition-all hover:shadow-md cursor-pointer bg-white dark:bg-slate-900 overflow-hidden`}
+      className={`group relative rounded-xl border p-3.5 shadow-xs transition-all hover:shadow-md bg-white dark:bg-slate-900 overflow-hidden ${
+        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${isDragging ? 'opacity-40' : ''}`}
       onClick={() => onSelect(task)}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!onDragStart) return;
+        e.dataTransfer.setData(TICKET_DRAG_TYPE, task.id);
+        e.dataTransfer.effectAllowed = 'move';
+        setIsDragging(true);
+        onDragStart(task.id);
+      }}
+      onDragEnd={() => {
+        setIsDragging(false);
+        onDragEnd?.();
+      }}
     >
       {/* Top Row: ticket ID and due info */}
       <div className="flex items-center justify-between gap-2 mb-2">

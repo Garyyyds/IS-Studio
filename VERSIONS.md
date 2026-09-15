@@ -106,3 +106,4 @@ away later work permanently.
 | `14092026ver033` | 2026-09-14 | IT Assistant usage window: the first question starts a 10-minute session with a countdown; when it ends the chat shows Session ended, please try again in 30 minutes, enforced by the server per user (an open case can still be sent as an IT Support Request) |
 | `14092026ver034` | 2026-09-14 | IT Assistant answers always show one numbered step per line (attempt 1 no longer runs steps together); docs list the working 7-model Gemini chain and the retired 2.5 models are removed |
 | `15092026ver000` | 2026-09-15 | IT Assistant usage window extended from 10 to 30 minutes (still followed by a 30-minute lock) |
+| `15092026ver001` | 2026-09-15 | Board tickets can be dragged onto any lane to change their progress; the lane under the ticket highlights and empty lanes say Drop to move here (arrow buttons kept for touch screens) |
