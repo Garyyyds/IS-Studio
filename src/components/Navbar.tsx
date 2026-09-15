@@ -305,7 +305,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* User Profile Avatar Quick Access & Sign Out */}
+            {/* Profile Quick Access & Sign Out */}
             {currentUser && (
               <div className="flex items-center gap-1 sm:gap-1.5 pl-1 sm:pl-1.5 border-l border-slate-200 dark:border-slate-800 shrink-0">
                 <button
@@ -317,17 +317,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setActiveTab('settings');
                     }
                   }}
-                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/20 transition cursor-pointer overflow-hidden flex items-center justify-center p-0.5 bg-slate-100 dark:bg-slate-800 shrink-0"
+                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/20 transition cursor-pointer flex items-center justify-center bg-slate-100 dark:bg-slate-800 shrink-0"
                   title={`User Profile: ${currentUser.name} (Click to open Profile Settings)`}
                   aria-label="User Profile Settings"
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                    {currentUser.avatar ? (
-                      <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                    )}
-                  </div>
+                  <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                 </button>
 
                 {onSignOut && (

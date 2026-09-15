@@ -1049,7 +1049,6 @@ app.post('/api/auth/register', async (req, res) => {
       name: String(name).trim(),
       role: cleanRole,
       department: department?.trim() || (cleanRole === 'admin' ? 'IT Operations & SRE' : 'General Staff'),
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanEmail)}`,
       created_at: new Date().toISOString()
     };
 
@@ -1078,7 +1077,6 @@ app.post('/api/auth/register', async (req, res) => {
             name: newUser.name,
             role: newUser.role,
             department: newUser.department,
-            avatar: newUser.avatar,
             created_at: newUser.created_at
           });
         if (error) {
@@ -1163,7 +1161,7 @@ app.post('/api/auth/me', async (req, res) => {
 // API: Update User Profile
 app.post('/api/auth/profile', async (req, res) => {
   try {
-    const { id, email, name, department, avatar, newPassword } = req.body;
+    const { id, email, name, department, newPassword } = req.body;
     if (!email && !id) {
       return res.status(400).json({ error: 'User identifier required' });
     }
@@ -1176,7 +1174,6 @@ app.post('/api/auth/profile', async (req, res) => {
         const updatePayload: any = {};
         if (name) updatePayload.name = name.trim();
         if (department !== undefined) updatePayload.department = department.trim();
-        if (avatar) updatePayload.avatar = avatar;
         if (newPassword && newPassword.length >= 6) updatePayload.password = await hashPassword(newPassword);
 
         let query = supabase.from('app_users').update(updatePayload);
@@ -1207,7 +1204,6 @@ app.post('/api/auth/profile', async (req, res) => {
     if (userIdx >= 0) {
       if (name) localUsers[userIdx].name = name.trim();
       if (department !== undefined) localUsers[userIdx].department = department.trim();
-      if (avatar) localUsers[userIdx].avatar = avatar;
       if (newPassword && newPassword.length >= 6) localUsers[userIdx].password = await hashPassword(newPassword);
       stored.users = localUsers;
       saveStoredData(stored);

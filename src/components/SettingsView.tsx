@@ -38,7 +38,6 @@ import {
   Mail,
   Building2,
   LogOut,
-  RefreshCcw,
   Shield,
   ArrowLeft,
   Inbox,
@@ -122,7 +121,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // User Profile Form State
   const [profileName, setProfileName] = useState(currentUser?.name || '');
   const [profileDepartment, setProfileDepartment] = useState(currentUser?.department || 'IT Operations');
-  const [profileAvatar, setProfileAvatar] = useState(currentUser?.avatar || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -132,7 +130,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (currentUser) {
       setProfileName(currentUser.name || '');
       setProfileDepartment(currentUser.department || 'IT Operations');
-      setProfileAvatar(currentUser.avatar || '');
     }
   }, [currentUser]);
 
@@ -164,7 +161,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           email: currentUser?.email,
           name: profileName.trim(),
           department: profileDepartment.trim(),
-          avatar: profileAvatar,
           newPassword: newPassword ? newPassword : undefined,
         }),
       });
@@ -180,7 +176,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           ...currentUser,
           name: profileName.trim(),
           department: profileDepartment.trim(),
-          avatar: profileAvatar,
         });
       }
 
@@ -202,22 +197,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     } finally {
       setIsSavingProfile(false);
     }
-  };
-
-  const AVATAR_PRESETS = [
-    'https://api.dicebear.com/7.x/bottts/svg?seed=Gary',
-    'https://api.dicebear.com/7.x/bottts/svg?seed=TechOps',
-    'https://api.dicebear.com/7.x/bottts/svg?seed=CyberAdmin',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Gary',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-  ];
-
-  const handleRandomizeAvatar = () => {
-    const randomSeed = Math.random().toString(36).substring(2, 8);
-    const styles = ['bottts', 'avataaars'];
-    const style = styles[Math.floor(Math.random() * styles.length)];
-    setProfileAvatar(`https://api.dicebear.com/7.x/${style}/svg?seed=${randomSeed}`);
   };
 
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -526,7 +505,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <span>User Profile & Identity</span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Manage your operator identity, profile picture, department assignment, and security credentials.
+                      Manage your name, department assignment, and security credentials.
                     </p>
                   </div>
                   {currentUser?.role === 'admin' ? (
@@ -544,63 +523,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                 {/* Profile Form */}
                 <form onSubmit={handleSaveProfile} className="space-y-5">
-                  {/* Avatar Picker Section */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-                      Profile Avatar
-                    </label>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                      {/* Current Avatar Preview */}
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xs">
-                        {profileAvatar ? (
-                          <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-8 h-8 text-slate-500" />
-                        )}
-                      </div>
-
-                      {/* Avatar Presets & Randomizer */}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {AVATAR_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setProfileAvatar(preset)}
-                              className={`w-9 h-9 rounded-full overflow-hidden border-2 transition cursor-pointer p-0.5 bg-slate-100 dark:bg-slate-800 ${
-                                profileAvatar === preset
-                                  ? 'border-indigo-600 ring-2 ring-indigo-500/30'
-                                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                              }`}
-                            >
-                              <img src={preset} alt={`Avatar preset ${idx}`} className="w-full h-full object-cover rounded-full" />
-                            </button>
-                          ))}
-
-                          <button
-                            type="button"
-                            onClick={handleRandomizeAvatar}
-                            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition cursor-pointer"
-                            title="Generate a random avatar seed"
-                          >
-                            <RefreshCcw className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                            <span>Randomize</span>
-                          </button>
-                        </div>
-
-                        <input
-                          type="text"
-                          value={profileAvatar}
-                          onChange={(e) => setProfileAvatar(e.target.value)}
-                          placeholder="Or paste custom image/avatar URL..."
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Account Details Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Full Name / Display Identity

@@ -152,7 +152,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           name: 'Alex Mercer',
           role: 'admin',
           department: 'IT Operations & SRE',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         };
         setSuccessMsg('Signed in as Alex Mercer');
         setTimeout(() => onLoginSuccess(fallbackAdmin), 300);
@@ -164,7 +163,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           name: 'Sarah Chen',
           role: 'user',
           department: 'Product & Design',
-          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
         };
         setSuccessMsg('Signed in as Sarah Chen (Employee Portal)');
         setTimeout(() => onLoginSuccess(fallbackUser), 300);
@@ -220,7 +218,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         name: regName.trim(),
         role: regRole,
         department: regDepartment,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(regEmail)}`
       };
       setSuccessMsg(`Account created for ${newFallbackUser.name}! Please sign in with your credentials.`);
       setLoginEmail(regEmail.trim());
