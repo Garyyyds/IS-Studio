@@ -28,6 +28,7 @@
   },
   "include": [
     "src",
+    "db",
     "server.ts",
     "vite.config.ts"
   ],
