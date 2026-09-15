@@ -7,6 +7,14 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import {
+  CHAT_KNOWLEDGE_MAX_CHARS,
+  CHARS_PER_TOKEN,
+  type ChatKnowledgeMode,
+  isActiveRunbook,
+  knowledgeBaseText,
+  selectScopedRunbooks,
+} from './src/utils/knowledgeBase';
 
 dotenv.config();
 
@@ -1466,49 +1474,78 @@ function chatSessionEndedMessage(retryInMs: number): string {
   const minutes = Math.max(1, Math.ceil(retryInMs / 60000));
   return `Session ended. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
 }
-// Guides are read on the server, from storage, rather than taken from the
-// browser: the full steps are needed, and the browser copy may be stale.
-async function readRunbooksForChat(): Promise<any[]> {
+// Guides and the workspace settings are read on the server, from storage, in
+// one query. Guides are never taken from the browser (the full steps are needed
+// and the browser copy may be stale), and neither is the knowledge mode: the
+// employee portal calls /api/ai/chat, and an employee must not be able to
+// switch the workspace to full mode and spend the daily AI quota.
+async function readChatWorkspace(): Promise<{ runbooks: any[]; settings: any }> {
   const supabase = getSupabase();
   if (supabase) {
     try {
-      const { data, error } = await supabase.from('workspace_data').select('runbooks').eq('id', 'default').maybeSingle();
-      if (!error && data && Array.isArray(data.runbooks)) return data.runbooks;
+      const { data, error } = await supabase
+        .from('workspace_data')
+        .select('runbooks, settings')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (!error && data) {
+        return {
+          runbooks: Array.isArray(data.runbooks) ? data.runbooks : [],
+          settings: data.settings && typeof data.settings === 'object' ? data.settings : {},
+        };
+      }
     } catch (err) {
       console.warn('Chat knowledge base: Supabase read failed, using local copy:', err);
     }
   }
   const stored = getStoredData();
-  return Array.isArray(stored?.runbooks) ? stored.runbooks : [];
+  return {
+    runbooks: Array.isArray(stored?.runbooks) ? stored.runbooks : [],
+    settings: stored?.settings && typeof stored.settings === 'object' ? stored.settings : {},
+  };
 }
 
-// Plain-text rendering of the guides an employee may be walked through. Steps
-// flagged dangerous and raw commands are left out: the assistant talks to
-// employees, who should only ever be given safe self-service actions.
-// Every active guide is included, with no size cap, so no guide is left out as
-// the handbook grows. Each question then sends the whole handbook to Gemini.
-function knowledgeBaseText(runbooks: any[]): string {
-  const blocks: string[] = [];
-  for (const rb of runbooks.filter((r) => r && r.status !== 'draft' && r.status !== 'deprecated')) {
-    const lines: string[] = [];
-    lines.push(`[${rb.code}] ${rb.title}`);
-    if (rb.category) lines.push(`Category: ${rb.category}`);
-    if (rb.symptom) lines.push(`Symptom: ${rb.symptom}`);
-    if (Array.isArray(rb.triggerAlertPatterns) && rb.triggerAlertPatterns.length) {
-      lines.push(`Typical error messages: ${rb.triggerAlertPatterns.join(' | ')}`);
+/**
+ * Builds the attempt-1 knowledge base without any AI call. Scoped (the default,
+ * and what settings saved before the option existed get) sends only the guides
+ * relevant to the question; full sends every active guide.
+ */
+function buildChatKnowledge(
+  runbooks: any[],
+  settings: any,
+  input: { category?: string; originalQuestion: string; latestMessage: string }
+): string {
+  const mode: ChatKnowledgeMode = settings?.chatKnowledgeMode === 'full' ? 'full' : 'scoped';
+
+  if (mode === 'full') {
+    const active = runbooks.filter(isActiveRunbook);
+    const text = knowledgeBaseText(active);
+    if (text.length > CHAT_KNOWLEDGE_MAX_CHARS) {
+      console.warn(
+        `Chat knowledge base (full mode): ${text.length} characters across ${active.length} guides is over ` +
+          `${CHAT_KNOWLEDGE_MAX_CHARS}. Nothing is trimmed in full mode, but every question sends all of it.`
+      );
     }
-    if (rb.rootCauseAnalysis) lines.push(`Usual cause: ${rb.rootCauseAnalysis}`);
-    (rb.diagnosticSteps || []).forEach((s: any, i: number) => {
-      lines.push(`Check ${i + 1}: ${s.title}${s.explanation ? ' - ' + s.explanation : ''}`);
-    });
-    (rb.remediationSteps || [])
-      .filter((s: any) => !s.dangerous)
-      .forEach((s: any, i: number) => {
-        lines.push(`Fix ${i + 1}: ${s.title}${s.instruction ? ' - ' + s.instruction : ''}${s.verification ? ' (Confirm: ' + s.verification + ')' : ''}`);
-      });
-    blocks.push(lines.join('\n'));
+    console.log(
+      `[chat kb] mode=full category=- considered=${active.length} sent=${active.length} chars=${text.length} ` +
+        `(~${Math.round(text.length / CHARS_PER_TOKEN)} tokens)`
+    );
+    return text;
   }
-  return blocks.join('\n\n');
+
+  const selection = selectScopedRunbooks(runbooks, input);
+  if (selection.trimmedByCap > 0) {
+    console.warn(
+      `Chat knowledge base (scoped mode): character cap of ${CHAT_KNOWLEDGE_MAX_CHARS} reached; ` +
+        `${selection.trimmedByCap} relevant guide(s) excluded, least relevant first.`
+    );
+  }
+  console.log(
+    `[chat kb] mode=scoped category=${input.category || '-'} considered=${selection.considered} ` +
+      `sent=${selection.selected.length} chars=${selection.text.length} ` +
+      `(~${Math.round(selection.text.length / CHARS_PER_TOKEN)} tokens)`
+  );
+  return selection.text;
 }
 
 const EMPLOYEE_SAFETY_RULES = `- You are talking to an employee, not an IT engineer. They cannot run
@@ -1580,8 +1617,18 @@ app.post('/api/ai/chat', async (req, res) => {
 
     // ---- Attempt 1: company knowledge base only ----
     if (mode === 'knowledge') {
-      const runbooks = await readRunbooksForChat();
-      const knowledge = knowledgeBaseText(runbooks);
+      // The category chip the employee picked, if any. Only narrows which guides
+      // are searched; "Not sure" sends nothing and every guide is considered.
+      const category =
+        typeof req.body.category === 'string' && req.body.category.trim() && req.body.category.length <= 60
+          ? req.body.category.trim()
+          : undefined;
+      const { runbooks, settings } = await readChatWorkspace();
+      const knowledge = buildChatKnowledge(runbooks, settings, {
+        category,
+        originalQuestion,
+        latestMessage: message.trim(),
+      });
 
       const prompt = `You are the IT Assistant in a company's employee IT portal. This is ATTEMPT 1:
 you may answer ONLY from the company IT knowledge base and the employee's ticket

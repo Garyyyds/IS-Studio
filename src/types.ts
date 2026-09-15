@@ -152,6 +152,12 @@ export interface UserSettings {
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
   /** Highest REQ number issued so far; numbers are never reused. */
   lastTicketSequence?: number;
+  /**
+   * How much of the IT Handbook the IT Assistant reads per question. 'scoped'
+   * (the default, also used when unset) sends only relevant guides; 'full'
+   * sends every active guide. Read by the server from saved settings only.
+   */
+  chatKnowledgeMode?: 'scoped' | 'full';
   operatorName: string;
   defaultCategory: ITCategory;
 }

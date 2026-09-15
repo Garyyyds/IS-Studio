@@ -45,7 +45,10 @@ import {
   ArrowLeft,
   Inbox,
   Archive,
+  Filter,
+  MessageCircle,
 } from 'lucide-react';
+import { CHARS_PER_TOKEN, isActiveRunbook, knowledgeBaseText } from '../utils/knowledgeBase';
 
 export type SettingsSection = 'profile' | 'theme' | 'views' | 'defaults' | 'data';
 
@@ -1042,7 +1045,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span>Task Defaults</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Default values for new tickets and runbooks, and how long resolved tickets stay on the board.
+                    Default values for new tickets and runbooks, how long resolved tickets stay on the board, and how much of the IT Handbook the IT Assistant reads.
                   </p>
                 </div>
 
@@ -1118,6 +1121,89 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <option value={1440}>24 Hours (1 Day)</option>
                     </select>
                   </div>
+
+                  {/* IT Assistant knowledge base mode */}
+                  {(() => {
+                    const mode = settings.chatKnowledgeMode === 'full' ? 'full' : 'scoped';
+                    const activeGuides = runbooks.filter(isActiveRunbook);
+                    const handbookChars = knowledgeBaseText(activeGuides).length;
+                    const options = [
+                      {
+                        id: 'scoped' as const,
+                        title: 'Scoped (recommended)',
+                        description:
+                          'Send only the guides relevant to the question. Faster and much cheaper as the handbook grows.',
+                        icon: <Filter className="w-4 h-4" />,
+                        iconClass: 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300',
+                      },
+                      {
+                        id: 'full' as const,
+                        title: 'Full access',
+                        description:
+                          'Send the whole handbook every message. Highest coverage, slow and expensive at scale.',
+                        icon: <BookOpen className="w-4 h-4" />,
+                        iconClass: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+                      },
+                    ];
+                    return (
+                      <div data-chat-knowledge-setting className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <MessageCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                              <span>IT Assistant Knowledge Base</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              How many IT Handbook guides the employee IT Assistant reads for each question.
+                            </div>
+                          </div>
+                          <span
+                            data-handbook-size
+                            className="self-start text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono font-bold whitespace-nowrap"
+                            title="Size of the whole handbook as sent in full access mode"
+                          >
+                            {activeGuides.length} active guide{activeGuides.length === 1 ? '' : 's'} · ~
+                            {handbookChars.toLocaleString()} chars (~{Math.round(handbookChars / CHARS_PER_TOKEN).toLocaleString()} tokens)
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="IT Assistant knowledge base">
+                          {options.map((option) => {
+                            const selected = mode === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                data-knowledge-mode={option.id}
+                                onClick={() => onUpdateSettings({ ...settings, chatKnowledgeMode: option.id })}
+                                className={`text-left p-4 rounded-xl border cursor-pointer transition ${
+                                  selected
+                                    ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20'
+                                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.iconClass}`}>
+                                    {option.icon}
+                                  </div>
+                                  {selected && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Active
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-white">{option.title}</h4>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                  {option.description}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
               </div>
             </div>
           )}

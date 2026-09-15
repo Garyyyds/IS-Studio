@@ -15,7 +15,8 @@ import {
   Clock,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AppUser, Task } from '../types';
+import { AppUser, IT_CATEGORIES, Runbook, Task } from '../types';
+import { activeGuideCountsByCategory } from '../utils/knowledgeBase';
 
 export interface TicketPrefill {
   summary: string;
@@ -25,6 +26,8 @@ export interface TicketPrefill {
 interface SupportChatAssistantProps {
   currentUser: AppUser;
   tasks: Task[];
+  /** Used only to offer category chips for categories that have guides. */
+  runbooks: Runbook[];
   /** Opens the IT Support Request form filled in from the conversation. */
   onRaiseTicket?: (prefill: TicketPrefill) => void;
 }
@@ -115,6 +118,7 @@ const newId = () =>`msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   currentUser,
   tasks,
+  runbooks,
   onRaiseTicket,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -126,6 +130,11 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   const [stage, setStage] = useState<Stage>('none');
   // The question that opened the current case; every attempt answers this.
   const [caseQuestion, setCaseQuestion] = useState('');
+  // Category chip picked before the first message. 'unsure' is the explicit
+  // "Not sure" chip; it and no choice both send no category.
+  const [chosenCategory, setChosenCategory] = useState<string | 'unsure' | null>(null);
+  // The category the current case searches within, fixed when the case starts.
+  const [caseCategory, setCaseCategory] = useState<string | undefined>(undefined);
   const [session, setSession] = useState<Session>({ status: 'new' });
   const [now, setNow] = useState(() => Date.now());
 
@@ -191,6 +200,10 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
 
   const sessionEnded = session.status === 'ended';
 
+  // Only categories with at least one active guide are worth narrowing to.
+  const guideCounts = activeGuideCountsByCategory(runbooks);
+  const availableCategories: string[] = IT_CATEGORIES.filter((category) => (guideCounts[category] || 0) > 0);
+
   // Escape closes the panel, matching the app's modals.
   useEffect(() => {
     if (!isOpen) return;
@@ -208,7 +221,13 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, stepTaken: true } : m)));
 
   /** Calls the assistant in one mode and appends its answer. */
-  const ask = async (mode: 'knowledge' | 'web', question: string, message: string, history: ChatMessage[]) => {
+  const ask = async (
+    mode: 'knowledge' | 'web',
+    question: string,
+    message: string,
+    history: ChatMessage[],
+    category?: string
+  ) => {
     setError(null);
     setIsLoading(true);
     setLoadingLabel(mode === 'knowledge' ? 'Checking IT guides' : 'Searching the web');
@@ -220,6 +239,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
           mode,
           question,
           message,
+          // Narrows which IT guides are searched; the web attempt ignores it.
+          ...(mode === 'knowledge' && category ? { category } : {}),
           history: history.map((m) => ({ role: m.role, content: m.content })),
           user: { id: currentUser.id, email: currentUser.email, name: currentUser.name, department: currentUser.department },
           tickets: myOpenTickets.map((t) => ({ ticketNumber: t.ticketNumber, title: t.title, status: t.status })),
@@ -284,10 +305,15 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     // is a new issue and starts again at attempt 1. Otherwise it is a follow-up
     // answered in the attempt currently running.
     if (stage === 'none' || stage === 'ticket') {
+      // Chips are offered before the first message only, so a later case in the
+      // same conversation searches every category rather than an old choice.
+      const category =
+        history.length === 0 && chosenCategory && chosenCategory !== 'unsure' ? chosenCategory : undefined;
       setCaseQuestion(trimmed);
-      await ask('knowledge', trimmed, trimmed, []);
+      setCaseCategory(category);
+      await ask('knowledge', trimmed, trimmed, [], category);
     } else {
-      await ask(stage === 'web' ? 'web' : 'knowledge', caseQuestion, trimmed, history);
+      await ask(stage === 'web' ? 'web' : 'knowledge', caseQuestion, trimmed, history, caseCategory);
     }
   };
 
@@ -297,6 +323,7 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     add({ role: 'assistant', content: 'Case closed.' });
     setStage('none');
     setCaseQuestion('');
+    setCaseCategory(undefined);
   };
 
   const handleTryWeb = async (messageId: string, userSaid: string) => {
@@ -328,6 +355,8 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
     setMessages([]);
     setStage('none');
     setCaseQuestion('');
+    setChosenCategory(null);
+    setCaseCategory(undefined);
     setError(null);
     inputRef.current?.focus();
   };
@@ -507,6 +536,33 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
                     company IT guides first, then search the web if needed, and help you raise a ticket if
                     it's still not fixed.
                   </p>
+                  {availableCategories.length > 0 && (
+                    <div className="space-y-1.5" data-category-chips>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">What is it about?</p>
+                      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Issue category">
+                        {[...availableCategories, 'unsure'].map((value) => {
+                          const selected = chosenCategory === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              disabled={sessionEnded}
+                              onClick={() => setChosenCategory(selected ? null : value)}
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                selected
+                                  ? 'border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                              }`}
+                            >
+                              {value === 'unsure' ? 'Not sure' : value}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {SUGGESTED_QUESTIONS.map((question) => (
                       <button
