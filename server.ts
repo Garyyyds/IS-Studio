@@ -1184,7 +1184,7 @@ const CHAT_MAX_MESSAGE_CHARS = 2000;
 // CHAT_COOLDOWN_SECONDS before a new session can start. Enforced here, not in
 // the browser, so reloading the page or opening another tab does not reset it.
 // Kept in memory, so restarting the server clears every window.
-const CHAT_SESSION_MS = (Number(process.env.CHAT_SESSION_SECONDS) || 10 * 60) * 1000;
+const CHAT_SESSION_MS = (Number(process.env.CHAT_SESSION_SECONDS) || 30 * 60) * 1000;
 const CHAT_COOLDOWN_MS = (Number(process.env.CHAT_COOLDOWN_SECONDS) || 30 * 60) * 1000;
 const chatSessionStarts = new Map<string, number>();
 
