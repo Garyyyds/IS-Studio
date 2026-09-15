@@ -17,6 +17,7 @@ import {
 } from './src/utils/knowledgeBase';
 import { checkGeneratedSop, type GeneratedSop } from './src/utils/sopDraft';
 import { IT_CATEGORIES } from './src/types';
+import { RepositoryError, WorkspaceRepository } from './db/repository';
 
 dotenv.config();
 
@@ -339,288 +340,187 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// API: Retrieve persistent data (from Supabase if configured, otherwise local server file)
+// --- Workspace data: tickets, IT Handbook, settings and forms ---
+// Stored in the normalised tables from db/schema.sql (see db/repository.ts).
+// Each change saves only the record it touches, so browsers no longer re-post
+// the whole workspace and overwrite each other. workspace_data is no longer
+// read or written; it stays in Supabase untouched until it is retired.
+const WORKSPACE_COMPANY_CODE = (process.env.WORKSPACE_COMPANY_CODE || process.env.MIGRATION_COMPANY_CODE || 'EDGC').trim();
+
+let repository: WorkspaceRepository | null = null;
+function getRepository(): WorkspaceRepository {
+  const supabase = getSupabase();
+  if (!supabase) {
+    throw new RepositoryError(503, 'Storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  if (!repository) repository = new WorkspaceRepository(supabase, WORKSPACE_COMPANY_CODE);
+  return repository;
+}
+
+// The signed-in account, sent by the browser, for the ticket status history.
+const actorId = (req: express.Request) => {
+  const id = req.get('x-user-id');
+  return id && id.length <= 64 ? id : undefined;
+};
+
+function sendDataError(res: express.Response, err: unknown, action: string, fallback: string) {
+  if (err instanceof RepositoryError) return res.status(err.status).json({ error: err.message });
+  console.error(`Error in ${action}:`, err);
+  res.status(500).json({ error: fallback });
+}
+
 app.get('/api/data', async (req, res) => {
   try {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('workspace_data')
-          .select('*')
-          .eq('id', 'default')
-          .maybeSingle();
-
-        if (!error && data) {
-          // Keep local backup in sync
-          saveStoredData({
-            tasks: data.tasks || [],
-            runbooks: data.runbooks || [],
-            rules: data.rules || [],
-            settings: data.settings || {},
-          });
-
-          return res.json({
-            success: true,
-            storageType: 'supabase',
-            tasks: data.tasks || [],
-            runbooks: data.runbooks || [],
-            rules: data.rules || [],
-            settings: data.settings || {},
-            lastSaved: data.updated_at || new Date().toISOString(),
-            filePath: 'supabase:workspace_data',
-          });
-        }
-        if (error) {
-          console.warn('Supabase query notice (falling back to server file):', error.message);
-        }
-      } catch (sbErr) {
-        console.warn('Supabase connection attempt notice:', sbErr);
-      }
-    }
-
-    const data = getStoredData();
-    if (!data) {
-      return res.status(404).json({ error: 'No data file found' });
-    }
-    res.json({
-      success: true,
-      storageType: 'file',
-      tasks: data.tasks || [],
-      runbooks: data.runbooks || [],
-      rules: data.rules || [],
-      settings: data.settings || {},
-      lastSaved: data.lastSaved || new Date().toISOString(),
-      filePath: 'data/server-storage.json'
-    });
-  } catch (err: any) {
-    console.error('Error in GET /api/data:', err);
-    res.status(500).json({ error: 'Failed to read server storage data' });
+    const workspace = await getRepository().loadWorkspace();
+    res.json({ success: true, storageType: 'supabase', filePath: 'supabase:tables', ...workspace });
+  } catch (err) {
+    sendDataError(res, err, 'GET /api/data', 'Could not load the workspace.');
   }
 });
 
-// API: Save updated workspace data (to Supabase cloud and local file backup)
-app.post('/api/data', async (req, res) => {
+// The old whole-workspace save. Refused so an out-of-date browser tab cannot
+// write; reloading the page picks up the per-record saves.
+app.post('/api/data', (req, res) => {
+  res.status(410).json({ error: 'This version of the page is out of date. Reload the page to keep working.' });
+});
+
+app.put('/api/tickets/:id', async (req, res) => {
   try {
-    const { tasks, runbooks, rules, settings } = req.body;
-    if (tasks === undefined && runbooks === undefined && rules === undefined && settings === undefined) {
-      return res.status(400).json({ error: 'No data provided to save' });
+    const task = req.body?.task;
+    if (!task || typeof task !== 'object' || task.id !== req.params.id) {
+      return res.status(400).json({ error: 'The ticket to save is missing.' });
     }
-    const current = getStoredData() || {};
-    const updatedTasks = tasks !== undefined ? tasks : (current.tasks || []);
-    const updatedRunbooks = runbooks !== undefined ? runbooks : (current.runbooks || []);
-    const updatedRules = rules !== undefined ? rules : (current.rules || []);
-    const updatedSettings = settings !== undefined ? settings : (current.settings || {});
-
-    // Save locally first
-    const updatedLocal = saveStoredData({
-      tasks: updatedTasks,
-      runbooks: updatedRunbooks,
-      rules: updatedRules,
-      settings: updatedSettings,
-    });
-
-    let storageType = 'file';
-    let supabaseStatus = 'not_configured';
-    const supabase = getSupabase();
-
-    if (supabase) {
-      try {
-        const { error } = await supabase
-          .from('workspace_data')
-          .upsert({
-            id: 'default',
-            tasks: updatedTasks,
-            runbooks: updatedRunbooks,
-            rules: updatedRules,
-            settings: updatedSettings,
-            updated_at: updatedLocal.lastSaved,
-          }, { onConflict: 'id' });
-
-        if (error) {
-          console.warn('Supabase upsert error:', error.message);
-          supabaseStatus = `error: ${error.message}`;
-        } else {
-          storageType = 'supabase';
-          supabaseStatus = 'synced';
-        }
-      } catch (sbErr: any) {
-        console.warn('Supabase upsert exception:', sbErr);
-        supabaseStatus = `failed: ${sbErr.message}`;
-      }
+    const baseUpdatedAt = typeof req.body.baseUpdatedAt === 'string' ? req.body.baseUpdatedAt : undefined;
+    const result = await getRepository().saveTicket(task, { actorId: actorId(req), baseUpdatedAt });
+    if ('conflict' in result) {
+      return res.status(409).json({
+        error: `${result.conflict.ticketNumber} was changed by someone else while you had it open. Their version is now shown; make your change again.`,
+        task: result.conflict,
+      });
     }
+    res.json({ task: result.task });
+  } catch (err) {
+    sendDataError(res, err, 'PUT /api/tickets/:id', 'Could not save the ticket.');
+  }
+});
 
-    res.json({
-      success: true,
-      storageType,
-      supabaseStatus,
-      savedAt: updatedLocal.lastSaved,
-      filePath: storageType === 'supabase' ? 'supabase:workspace_data' : 'data/server-storage.json',
-      counts: {
-        tasks: updatedTasks.length,
-        runbooks: updatedRunbooks.length,
-        rules: updatedRules.length
-      }
+app.delete('/api/tickets/:id', async (req, res) => {
+  try {
+    const removed = await getRepository().deleteTickets([req.params.id]);
+    res.json({ success: true, removed });
+  } catch (err) {
+    sendDataError(res, err, 'DELETE /api/tickets/:id', 'Could not delete the ticket.');
+  }
+});
+
+app.post('/api/tickets/delete', async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id: unknown) => typeof id === 'string') : [];
+    const removed = await getRepository().deleteTickets(ids);
+    res.json({ success: true, removed });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/tickets/delete', 'Could not delete the tickets.');
+  }
+});
+
+app.put('/api/runbooks/:id', async (req, res) => {
+  try {
+    const runbook = req.body?.runbook;
+    if (!runbook || typeof runbook !== 'object' || runbook.id !== req.params.id) {
+      return res.status(400).json({ error: 'The guide to save is missing.' });
+    }
+    res.json({ runbook: await getRepository().saveRunbook(runbook) });
+  } catch (err) {
+    sendDataError(res, err, 'PUT /api/runbooks/:id', 'Could not save the guide.');
+  }
+});
+
+app.delete('/api/runbooks/:id', async (req, res) => {
+  try {
+    const removed = await getRepository().deleteRunbook(req.params.id);
+    res.json({ success: true, removed });
+  } catch (err) {
+    sendDataError(res, err, 'DELETE /api/runbooks/:id', 'Could not delete the guide.');
+  }
+});
+
+app.put('/api/settings', async (req, res) => {
+  try {
+    const settings = req.body?.settings;
+    if (!settings || typeof settings !== 'object') return res.status(400).json({ error: 'No settings to save.' });
+    res.json({ settings: await getRepository().saveSettings(settings) });
+  } catch (err) {
+    sendDataError(res, err, 'PUT /api/settings', 'Could not save the settings.');
+  }
+});
+
+// Settings > Data: restore an exported backup. Adds or updates; deletes nothing.
+app.post('/api/workspace/import', async (req, res) => {
+  try {
+    const counts = await getRepository().importWorkspace(req.body || {});
+    res.json({ success: true, ...counts, ...(await getRepository().loadWorkspace()) });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/workspace/import', 'Could not import the backup.');
+  }
+});
+
+// Settings > Data: delete every ticket and guide and load the sample data sent.
+app.post('/api/workspace/reset', async (req, res) => {
+  try {
+    const body = req.body || {};
+    await getRepository().resetWorkspace({
+      tasks: Array.isArray(body.tasks) ? body.tasks : [],
+      runbooks: Array.isArray(body.runbooks) ? body.runbooks : [],
+      settings: body.settings && typeof body.settings === 'object' ? body.settings : {},
     });
-  } catch (err: any) {
-    console.error('Error in POST /api/data:', err);
-    res.status(500).json({ error: 'Failed to write storage data' });
+    res.json({ success: true, ...(await getRepository().loadWorkspace()) });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/workspace/reset', 'Could not reset the workspace.');
   }
 });
 
 // --- Form Inbox: forms employees submit to IT ---
-// Kept apart from the workspace autosave on purpose. Every browser re-posts the
-// whole workspace on each save, last write wins, so a stale tab or an older
-// deployment would otherwise wipe submissions it never loaded. Each change here
-// is a small read-modify-write on its own record instead.
-// In Supabase that record is a second workspace_data row (id 'form-submissions')
-// holding { submissions, counters } in its settings column, which needs no
-// schema change; /api/data only ever reads the 'default' row. Without Supabase
-// it is data/form-submissions.json.
-const FORM_STORE_ROW_ID = 'form-submissions';
-const FORM_STORE_FILE = path.join(DATA_DIR, 'form-submissions.json');
-const FORM_TYPES: Record<string, { prefix: string }> = {
-  'user-id': { prefix: 'UID' },
-  requisition: { prefix: 'IRQ' },
-  disposal: { prefix: 'DSP' },
-  allocation: { prefix: 'ALC' },
-};
+const FORM_TYPES = ['user-id', 'requisition', 'disposal', 'allocation'];
 const FORM_MAX_BYTES = 200 * 1024;
-
-type FormStore = { submissions: any[]; counters: Record<string, number> };
-
-async function readFormStore(): Promise<{ store: FormStore; storageType: 'supabase' | 'file' }> {
-  const empty = (): FormStore => ({ submissions: [], counters: {} });
-  const supabase = getSupabase();
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('workspace_data')
-      .select('settings')
-      .eq('id', FORM_STORE_ROW_ID)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    const saved = data?.settings || {};
-    return {
-      store: {
-        submissions: Array.isArray(saved.submissions) ? saved.submissions : [],
-        counters: saved.counters && typeof saved.counters === 'object' ? saved.counters : {},
-      },
-      storageType: 'supabase',
-    };
-  }
-  try {
-    if (fs.existsSync(FORM_STORE_FILE)) {
-      const saved = JSON.parse(fs.readFileSync(FORM_STORE_FILE, 'utf-8'));
-      return { store: { ...empty(), ...saved }, storageType: 'file' };
-    }
-  } catch (err) {
-    console.error('Error reading form-submissions.json:', err);
-  }
-  return { store: empty(), storageType: 'file' };
-}
-
-async function writeFormStore(store: FormStore, storageType: 'supabase' | 'file') {
-  if (storageType === 'supabase') {
-    const supabase = getSupabase();
-    const { error } = await supabase!
-      .from('workspace_data')
-      .upsert(
-        { id: FORM_STORE_ROW_ID, settings: store, updated_at: new Date().toISOString() },
-        { onConflict: 'id' }
-      );
-    if (error) throw new Error(error.message);
-    return;
-  }
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(FORM_STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
-}
-
-// Requests touching the store run one at a time, so two submissions arriving
-// together cannot both read the same list and drop one of them.
-let formStoreQueue: Promise<unknown> = Promise.resolve();
-function withFormStore<T>(change: (store: FormStore) => T): Promise<T> {
-  const run = formStoreQueue.then(async () => {
-    const { store, storageType } = await readFormStore();
-    const result = change(store);
-    await writeFormStore(store, storageType);
-    return result;
-  });
-  formStoreQueue = run.catch(() => {});
-  return run;
-}
 
 app.get('/api/forms', async (req, res) => {
   try {
-    const { store, storageType } = await readFormStore();
     // ?email= narrows the list to one employee's own forms for the portal.
-    const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
-    const submissions = email
-      ? store.submissions.filter((s: any) => String(s.submittedBy?.email || '').toLowerCase() === email)
-      : store.submissions;
-    res.json({ submissions, storageType });
-  } catch (err: any) {
-    console.error('Error in GET /api/forms:', err);
-    res.status(500).json({ error: 'Could not load submitted forms.' });
+    const email = typeof req.query.email === 'string' ? req.query.email.trim() : '';
+    const submissions = await getRepository().listForms(email || undefined);
+    res.json({ submissions, storageType: 'supabase' });
+  } catch (err) {
+    sendDataError(res, err, 'GET /api/forms', 'Could not load submitted forms.');
   }
 });
 
 app.post('/api/forms', async (req, res) => {
   try {
     const { type, data, attachments, submittedBy } = req.body || {};
-    if (!FORM_TYPES[type]) {
-      return res.status(400).json({ error: 'Unknown form type.' });
-    }
-    if (!data || typeof data !== 'object') {
-      return res.status(400).json({ error: 'The form is empty.' });
-    }
-    if (!submittedBy?.email) {
-      return res.status(400).json({ error: 'Sign in again before submitting.' });
-    }
+    if (!FORM_TYPES.includes(type)) return res.status(400).json({ error: 'Unknown form type.' });
+    if (!data || typeof data !== 'object') return res.status(400).json({ error: 'The form is empty.' });
+    if (!submittedBy?.email) return res.status(400).json({ error: 'Sign in again before submitting.' });
     if (JSON.stringify(data).length > FORM_MAX_BYTES) {
       return res.status(413).json({ error: 'The form is too large to submit.' });
     }
-
-    const submission = await withFormStore((store) => {
-      const sequence = (Number(store.counters[type]) || 0) + 1;
-      store.counters[type] = sequence;
-      const created = {
-        id: `form-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        formNumber: `${FORM_TYPES[type].prefix}-${String(sequence).padStart(4, '0')}`,
-        type,
-        submittedAt: new Date().toISOString(),
-        submittedBy: {
-          id: String(submittedBy.id || ''),
-          name: String(submittedBy.name || ''),
-          email: String(submittedBy.email),
-          department: submittedBy.department ? String(submittedBy.department) : undefined,
-        },
-        data,
-        attachments: Array.isArray(attachments) && attachments.length ? attachments : undefined,
-      };
-      store.submissions.unshift(created);
-      return created;
+    const submission = await getRepository().createForm({
+      type,
+      data,
+      attachments: Array.isArray(attachments) ? attachments : [],
+      submittedBy: { id: submittedBy.id ? String(submittedBy.id) : undefined, email: String(submittedBy.email) },
     });
-
     res.json({ submission });
-  } catch (err: any) {
-    console.error('Error in POST /api/forms:', err);
-    res.status(500).json({ error: 'Could not submit the form. Please try again.' });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/forms', 'Could not submit the form. Please try again.');
   }
 });
 
 // Marks a form as opened, so it stops showing as new.
 app.post('/api/forms/:id/viewed', async (req, res) => {
   try {
-    const submission = await withFormStore((store) => {
-      const found = store.submissions.find((s: any) => s.id === req.params.id);
-      if (found && !found.viewedAt) found.viewedAt = new Date().toISOString();
-      return found;
-    });
-    if (!submission) return res.status(404).json({ error: 'Form not found.' });
-    res.json({ submission });
-  } catch (err: any) {
-    console.error('Error in POST /api/forms/:id/viewed:', err);
-    res.status(500).json({ error: 'Could not update the form.' });
+    res.json({ submission: await getRepository().markFormViewed(req.params.id) });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/forms/:id/viewed', 'Could not update the form.');
   }
 });
 
@@ -629,21 +529,9 @@ app.post('/api/forms/:id/viewed', async (req, res) => {
 app.post('/api/forms/:id/complete', async (req, res) => {
   try {
     const completedBy = typeof req.body?.completedBy === 'string' ? req.body.completedBy.trim() : '';
-    const submission = await withFormStore((store) => {
-      const found = store.submissions.find((s: any) => s.id === req.params.id);
-      if (found && !found.completedAt && !found.rejectedAt) {
-        const now = new Date().toISOString();
-        found.completedAt = now;
-        found.completedBy = completedBy || undefined;
-        if (!found.viewedAt) found.viewedAt = now;
-      }
-      return found;
-    });
-    if (!submission) return res.status(404).json({ error: 'Form not found.' });
-    res.json({ submission });
-  } catch (err: any) {
-    console.error('Error in POST /api/forms/:id/complete:', err);
-    res.status(500).json({ error: 'Could not mark the form as done.' });
+    res.json({ submission: await getRepository().completeForm(req.params.id, { id: actorId(req), name: completedBy }) });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/forms/:id/complete', 'Could not mark the form as done.');
   }
 });
 
@@ -659,126 +547,71 @@ app.post('/api/forms/:id/reject', async (req, res) => {
     if (reason.length > FORM_REJECTION_MAX_CHARS) {
       return res.status(400).json({ error: `Keep the reason under ${FORM_REJECTION_MAX_CHARS} characters.` });
     }
-
-    const outcome = await withFormStore((store) => {
-      const found = store.submissions.find((s: any) => s.id === req.params.id);
-      if (!found) return { status: 404, error: 'Form not found.' };
-      if (found.type !== 'requisition') return { status: 400, error: 'Only requisition forms can be rejected.' };
-      if (found.completedAt) return { status: 409, error: 'This form is already marked Done.' };
-      if (!found.rejectedAt) {
-        const now = new Date().toISOString();
-        found.rejectedAt = now;
-        found.rejectedBy = rejectedBy || undefined;
-        found.rejectionReason = reason;
-        if (!found.viewedAt) found.viewedAt = now;
-      }
-      return { status: 200, submission: found };
-    });
-    if (outcome.status !== 200) return res.status(outcome.status).json({ error: outcome.error });
-    res.json({ submission: outcome.submission });
-  } catch (err: any) {
-    console.error('Error in POST /api/forms/:id/reject:', err);
-    res.status(500).json({ error: 'Could not reject the form.' });
+    res.json({ submission: await getRepository().rejectForm(req.params.id, reason, { id: actorId(req), name: rejectedBy }) });
+  } catch (err) {
+    sendDataError(res, err, 'POST /api/forms/:id/reject', 'Could not reject the form.');
   }
 });
 
 app.delete('/api/forms/:id', async (req, res) => {
   try {
-    const removed = await withFormStore((store) => {
-      const before = store.submissions.length;
-      store.submissions = store.submissions.filter((s: any) => s.id !== req.params.id);
-      return store.submissions.length < before;
-    });
-    if (!removed) return res.status(404).json({ error: 'Form not found.' });
+    if (!(await getRepository().deleteForm(req.params.id))) return res.status(404).json({ error: 'Form not found.' });
     res.json({ success: true });
-  } catch (err: any) {
-    console.error('Error in DELETE /api/forms/:id:', err);
-    res.status(500).json({ error: 'Could not delete the form.' });
+  } catch (err) {
+    sendDataError(res, err, 'DELETE /api/forms/:id', 'Could not delete the form.');
   }
 });
 
-// API: Storage and Supabase status check
+// API: Storage and Supabase status check. lastSaved is the newest change to any
+// ticket, guide or setting, which other open browsers poll to notice updates.
 app.get('/api/data/status', async (req, res) => {
+  const supabaseConfigured = Boolean(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
+  let supabaseConnected = false;
+  let supabaseError: string | null = null;
+  let lastSaved: string | null = null;
+  const counts = { tasks: 0, runbooks: 0, forms: 0, users: 0 };
+
   try {
-    const supabase = getSupabase();
-    const supabaseConfigured = Boolean(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
-    let supabaseConnected = false;
-    let supabaseError: string | null = null;
-
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('workspace_data')
-          .select('id, updated_at')
-          .eq('id', 'default')
-          .maybeSingle();
-
-        if (!error) {
-          supabaseConnected = true;
-        } else {
-          supabaseError = error.message;
-        }
-      } catch (err: any) {
-        supabaseError = err.message;
-      }
-    }
-
-    const exists = fs.existsSync(STORAGE_FILE);
-    const stats = exists ? fs.statSync(STORAGE_FILE) : null;
-    const data = getStoredData();
-
-    res.json({
-      exists: true,
-      storageType: supabaseConnected ? 'supabase' : 'file',
-      supabase: {
-        configured: supabaseConfigured,
-        connected: supabaseConnected,
-        error: supabaseError,
-        urlPreview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/^(https?:\/\/)([^.]+).*/, '$1$2.supabase.co') : null,
-        sqlSetup: `-- 1. Workspace operational data (Tickets, SOP Runbooks, Tagging Rules, Settings)
-CREATE TABLE IF NOT EXISTS workspace_data (
-  id TEXT PRIMARY KEY DEFAULT 'default',
-  tasks JSONB DEFAULT '[]'::jsonb,
-  runbooks JSONB DEFAULT '[]'::jsonb,
-  rules JSONB DEFAULT '[]'::jsonb,
-  settings JSONB DEFAULT '{}'::jsonb,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE workspace_data ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow workspace sync" ON workspace_data;
-CREATE POLICY "Allow workspace sync" ON workspace_data FOR ALL USING (true) WITH CHECK (true);
-
--- 2. User Accounts & Role Permissions (Admin vs Employee Requester)
-CREATE TABLE IF NOT EXISTS app_users (
-  id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user', -- 'admin' for IT Staff, 'user' for Normal Employee
-  department TEXT DEFAULT 'General',
-  avatar TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow user sync" ON app_users;
-CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);`
-      },
-      filePath: supabaseConnected ? 'supabase:workspace_data' : 'data/server-storage.json',
-      sizeBytes: stats ? stats.size : 0,
-      lastModified: stats ? stats.mtime.toISOString() : null,
-      lastSaved: data?.lastSaved,
-      counts: {
-        tasks: data?.tasks?.length || 0,
-        runbooks: data?.runbooks?.length || 0,
-        rules: data?.rules?.length || 0,
-        users: data?.users?.length || DEFAULT_USERS.length,
-      }
-    });
+    const repo = getRepository();
+    const companyId = await repo.companyId();
+    lastSaved = await repo.lastChanged();
+    const supabase = getSupabase()!;
+    const count = async (table: string, byCompany: boolean) => {
+      let q = supabase.from(table).select('id', { count: 'exact', head: true });
+      if (byCompany) q = q.eq('company_id', companyId);
+      const { count: n } = await q;
+      return n || 0;
+    };
+    [counts.tasks, counts.runbooks, counts.forms, counts.users] = await Promise.all([
+      count('tickets', true),
+      count('runbooks', false),
+      count('form_submissions', true),
+      count('app_users', false),
+    ]);
+    supabaseConnected = true;
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to inspect file status' });
+    supabaseError = err?.message || String(err);
   }
+
+  res.json({
+    exists: true,
+    storageType: supabaseConnected ? 'supabase' : 'file',
+    supabase: {
+      configured: supabaseConfigured,
+      connected: supabaseConnected,
+      error: supabaseError,
+      urlPreview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/^(https?:\/\/)([^.]+).*/, '$1$2.supabase.co') : null,
+      sqlSetup:
+        '-- The workspace tables are created by db/schema.sql in the project.\n' +
+        '-- Run it in the Supabase SQL Editor, then any files in db/patches/.\n' +
+        '-- Existing data is copied in with: npx tsx db/migrate.ts, then checked with: npx tsx db/verify.ts',
+    },
+    filePath: 'supabase:tables',
+    sizeBytes: 0,
+    lastModified: lastSaved,
+    lastSaved,
+    counts,
+  });
 });
 
 // API: User Authentication - Login
@@ -1543,29 +1376,14 @@ function chatSessionEndedMessage(retryInMs: number): string {
 // employee portal calls /api/ai/chat, and an employee must not be able to
 // switch the workspace to full mode and spend the daily AI quota.
 async function readChatWorkspace(): Promise<{ runbooks: any[]; settings: any }> {
-  const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('workspace_data')
-        .select('runbooks, settings')
-        .eq('id', 'default')
-        .maybeSingle();
-      if (!error && data) {
-        return {
-          runbooks: Array.isArray(data.runbooks) ? data.runbooks : [],
-          settings: data.settings && typeof data.settings === 'object' ? data.settings : {},
-        };
-      }
-    } catch (err) {
-      console.warn('Chat knowledge base: Supabase read failed, using local copy:', err);
-    }
+  try {
+    const repo = getRepository();
+    const [runbooks, settings] = await Promise.all([repo.loadRunbooks(), repo.loadSettings()]);
+    return { runbooks, settings };
+  } catch (err) {
+    console.warn('Chat knowledge base: could not read the handbook:', err);
+    return { runbooks: [], settings: {} };
   }
-  const stored = getStoredData();
-  return {
-    runbooks: Array.isArray(stored?.runbooks) ? stored.runbooks : [],
-    settings: stored?.settings && typeof stored.settings === 'object' ? stored.settings : {},
-  };
 }
 
 /**

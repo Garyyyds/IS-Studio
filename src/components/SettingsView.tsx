@@ -74,6 +74,9 @@ interface SettingsViewProps {
   onBack?: () => void;
 }
 
+/** Shown when the server cannot be reached to supply its own setup notes. */
+const SQL_SETUP_HINT = '-- Run db/schema.sql from the project in the Supabase SQL Editor, then any files in db/patches/.';
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   onUpdateSettings,
@@ -1161,7 +1164,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="pt-2 text-[11px] text-slate-600 dark:text-slate-400 border-t border-emerald-200/60 dark:border-emerald-900/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
                         <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        <span>Connected to table: <strong>workspace_data</strong></span>
+                        <span>Connected to the workspace tables (tickets, runbooks, forms, settings)</span>
                       </div>
                       {storageInfo.supabase.urlPreview && (
                         <p className="font-mono text-slate-500 text-[10px]">
@@ -1197,46 +1200,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </div>
                         </li>
                         <li>
-                          Run this SQL query in your Supabase <strong>SQL Editor</strong> to create the storage table:
+                          Create the workspace tables in your Supabase <strong>SQL Editor</strong>:
                         </li>
                       </ol>
 
                       <div className="relative">
                         <pre className="p-2.5 rounded-lg bg-slate-900 text-slate-200 font-mono text-[10px] overflow-x-auto leading-relaxed border border-slate-800">
-{storageInfo?.supabase?.sqlSetup || `-- 1. Workspace operational data
-CREATE TABLE IF NOT EXISTS workspace_data (
-  id TEXT PRIMARY KEY DEFAULT 'default',
-  tasks JSONB DEFAULT '[]'::jsonb,
-  runbooks JSONB DEFAULT '[]'::jsonb,
-  rules JSONB DEFAULT '[]'::jsonb,
-  settings JSONB DEFAULT '{}'::jsonb,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE workspace_data ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow workspace sync" ON workspace_data;
-CREATE POLICY "Allow workspace sync" ON workspace_data FOR ALL USING (true) WITH CHECK (true);
-
--- 2. User Accounts & Role Permissions
-CREATE TABLE IF NOT EXISTS app_users (
-  id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user',
-  department TEXT DEFAULT 'General',
-  avatar TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow user sync" ON app_users;
-CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);`}
+{storageInfo?.supabase?.sqlSetup || SQL_SETUP_HINT}
                         </pre>
                         <button
                           type="button"
                           onClick={() => {
-                            const sql = storageInfo?.supabase?.sqlSetup || `-- 1. Workspace operational data\nCREATE TABLE IF NOT EXISTS workspace_data (\n  id TEXT PRIMARY KEY DEFAULT 'default',\n  tasks JSONB DEFAULT '[]'::jsonb,\n  runbooks JSONB DEFAULT '[]'::jsonb,\n  rules JSONB DEFAULT '[]'::jsonb,\n  settings JSONB DEFAULT '{}'::jsonb,\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE workspace_data ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow workspace sync" ON workspace_data;\nCREATE POLICY "Allow workspace sync" ON workspace_data FOR ALL USING (true) WITH CHECK (true);\n\n-- 2. User Accounts & Role Permissions\nCREATE TABLE IF NOT EXISTS app_users (\n  id TEXT PRIMARY KEY,\n  email TEXT UNIQUE NOT NULL,\n  password TEXT NOT NULL,\n  name TEXT NOT NULL,\n  role TEXT NOT NULL DEFAULT 'user',\n  department TEXT DEFAULT 'General',\n  avatar TEXT,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nALTER TABLE app_users ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow user sync" ON app_users;\nCREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (true);`;
+                            const sql = storageInfo?.supabase?.sqlSetup || SQL_SETUP_HINT;
                             navigator.clipboard.writeText(sql);
                             setCopiedSql(true);
                             setTimeout(() => setCopiedSql(false), 2500);
@@ -1275,13 +1250,10 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                       </div>
                       <div>
                         <div className="text-xs font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
-                          <span>Local Server Storage File:</span>
-                          <code className="text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono font-semibold">
-                            data/server-storage.json
-                          </code>
+                          <span>Saving:</span>
                         </div>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                          Always kept up-to-date as a secondary local container cache and backup file.
+                          Each ticket, guide and setting is saved on its own as soon as you change it.
                         </p>
                       </div>
                     </div>
@@ -1300,7 +1272,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                             ? 'bg-rose-500'
                             : 'bg-emerald-500 animate-pulse'
                         }`} />
-                        {serverSyncStatus === 'syncing' ? 'Saving...' : serverSyncStatus === 'error' ? 'Connection Error' : 'File Saved'}
+                        {serverSyncStatus === 'syncing' ? 'Saving...' : serverSyncStatus === 'error' ? 'Connection Error' : 'All Saved'}
                       </span>
                     </div>
                   </div>
@@ -1322,7 +1294,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                           className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
                         >
                           <Save className="w-3.5 h-3.5" />
-                          <span>Save to File Now</span>
+                          <span>Check Connection</span>
                         </button>
                       )}
                       {onReloadFromServer && (
@@ -1332,7 +1304,7 @@ CREATE POLICY "Allow user sync" ON app_users FOR ALL USING (true) WITH CHECK (tr
                           className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-xs transition cursor-pointer flex items-center gap-1.5"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Reload from File</span>
+                          <span>Reload Latest</span>
                         </button>
                       )}
                     </div>

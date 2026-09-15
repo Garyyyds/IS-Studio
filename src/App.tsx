@@ -7,7 +7,8 @@ import {
   UserSettings,
   ActiveTab,
   StorageStatusInfo,
-  AppUser
+  AppUser,
+  StaffMember
 } from './types';
 import { 
   DEFAULT_TASKS, 
@@ -30,10 +31,26 @@ import { UserPortalView } from './components/UserPortalView';
 import { SupportChatAssistant } from './components/SupportChatAssistant';
 import { FormInboxView } from './components/FormInboxView';
 import { FormHistoryView } from './components/FormHistoryView';
-import { formatTicketNumber, nextTicketSequence, sequenceOf } from './utils/ticketNumber';
-import { normalizeRunbooks, normalizeSettings, normalizeTasks } from './utils/categories';
+import { normalizeRunbooks, normalizeSettings, normalizeTask, normalizeTasks } from './utils/categories';
+import {
+  deleteRunbook,
+  deleteTickets,
+  importWorkspace,
+  loadWorkspace,
+  resetWorkspace,
+  saveRunbook,
+  saveSettings,
+  saveTicket,
+  TicketConflictError,
+  type WorkspaceSnapshot,
+} from './utils/workspaceApi';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
 import { Check, Zap, Info } from 'lucide-react';
+
+/** Replaces the item with the same id, or adds it to the front. */
+function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
+  return list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [item, ...list];
+}
 
 export default function App() {
   // Settings State with LocalStorage
@@ -64,10 +81,6 @@ export default function App() {
   // with this browser's theme laid over them. A theme change is kept local and
   // never written into the shared settings.
   const viewSettings: UserSettings = { ...settings, themeMode };
-  const updateSettings = (next: UserSettings) => {
-    if (next.themeMode && next.themeMode !== themeMode) setThemeMode(next.themeMode);
-    setSettings((prev) => ({ ...next, themeMode: prev.themeMode }));
-  };
 
   // Navigation View State initialized with user's defaultView
   const [activeView, setActiveView] = useState<ActiveTab>(() => {
@@ -243,13 +256,24 @@ export default function App() {
     localStorage.removeItem('it_ops_rules');
   }, []);
 
-  // Server-side & Supabase Cloud Storage State
+  // Server storage state. Each change saves only the record it touches (see
+  // utils/workspaceApi), so two people working on different tickets no longer
+  // overwrite each other's work.
   const [serverSyncStatus, setServerSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [lastSavedToServer, setLastSavedToServer] = useState<string | null>(null);
   const [storageInfo, setStorageInfo] = useState<StorageStatusInfo | null>(null);
+  // IT accounts tickets can be assigned to.
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const isLoadedFromServerRef = useRef(false);
   const lastSavedToServerRef = useRef<string | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSavesRef = useRef(0);
+  const settingsSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ticketSaveQueueRef = useRef(new Map<string, Promise<Task | undefined>>());
+
+  const noteServerTime = (time: string) => {
+    setLastSavedToServer(time);
+    lastSavedToServerRef.current = time;
+  };
 
   const fetchStorageStatus = async () => {
     try {
@@ -263,210 +287,151 @@ export default function App() {
     }
   };
 
-  // Load freshest persistent data from server/Supabase on initial mount
+  const applyWorkspace = (data: WorkspaceSnapshot) => {
+    if (Array.isArray(data.tasks)) setTasks(normalizeTasks(data.tasks));
+    if (Array.isArray(data.runbooks)) setRunbooks(normalizeRunbooks(data.runbooks));
+    if (data.settings && typeof data.settings === 'object') {
+      setSettings((prev) => ({ ...prev, ...normalizeSettings(data.settings) }));
+    }
+    if (Array.isArray(data.staff)) setStaff(data.staff);
+    noteServerTime(data.lastSaved || new Date().toISOString());
+    setServerSyncStatus('synced');
+  };
+
+  const reloadWorkspace = async () => {
+    const data = await loadWorkspace();
+    applyWorkspace(data);
+    return data;
+  };
+
+  // Load the workspace on first mount.
   useEffect(() => {
     let isMounted = true;
-
-    async function loadFromServer() {
-      try {
-        setServerSyncStatus('syncing');
-        const [dataRes] = await Promise.all([
-          fetch('/api/data'),
-          fetchStorageStatus()
-        ]);
-
-        if (dataRes.ok) {
-          const data = await dataRes.json();
-          if (!isMounted) return;
-
-          if (data.tasks && Array.isArray(data.tasks)) {
-            setTasks(normalizeTasks(data.tasks));
-            localStorage.setItem('it_ops_tasks', JSON.stringify(data.tasks));
-          }
-          if (data.runbooks && Array.isArray(data.runbooks)) {
-            setRunbooks(normalizeRunbooks(data.runbooks));
-            localStorage.setItem('it_ops_runbooks', JSON.stringify(data.runbooks));
-          }
-          if (data.settings && typeof data.settings === 'object') {
-            setSettings((prev) => ({ ...prev, ...normalizeSettings(data.settings) }));
-            localStorage.setItem('it_ops_settings', JSON.stringify(data.settings));
-          }
-
-          setServerSyncStatus('synced');
-          const savedTime = data.lastSaved || new Date().toISOString();
-          setLastSavedToServer(savedTime);
-          lastSavedToServerRef.current = savedTime;
-        } else {
-          if (isMounted) setServerSyncStatus('idle');
-        }
-      } catch (err) {
-        console.warn('Could not load from server/cloud, using local cache:', err);
-        if (isMounted) setServerSyncStatus('idle');
-      } finally {
+    setServerSyncStatus('syncing');
+    fetchStorageStatus();
+    loadWorkspace()
+      .then((data) => {
+        if (isMounted) applyWorkspace(data);
+      })
+      .catch((err) => {
+        console.warn('Could not load the workspace from the server, showing the cached copy:', err);
+        if (isMounted) setServerSyncStatus('error');
+      })
+      .finally(() => {
         isLoadedFromServerRef.current = true;
-      }
-    }
-
-    loadFromServer();
-
+      });
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cross-device sync check (listens on window focus and periodic 20s interval)
+  // Picks up other people's changes: on window focus and every 20s.
   useEffect(() => {
     let isMounted = true;
 
     const checkRemoteSync = async () => {
-      if (!isLoadedFromServerRef.current || serverSyncStatus === 'syncing') return;
-
+      // Skipped while this browser is saving, so a reload cannot undo a change in flight.
+      if (!isLoadedFromServerRef.current || pendingSavesRef.current > 0) return;
       try {
         const res = await fetch('/api/data/status');
         if (!res.ok) return;
         const status = await res.json();
+        if (!isMounted) return;
         setStorageInfo(status);
-
-        if (status.lastSaved && lastSavedToServerRef.current) {
-          const remoteTime = new Date(status.lastSaved).getTime();
-          const localTime = new Date(lastSavedToServerRef.current).getTime();
-
-          // If another device made newer saves (more than 2.5s difference)
-          if (remoteTime > localTime + 2500) {
-            const dataRes = await fetch('/api/data');
-            if (dataRes.ok && isMounted) {
-              const latest = await dataRes.json();
-              if (latest.tasks) setTasks(normalizeTasks(latest.tasks));
-              if (latest.runbooks) setRunbooks(normalizeRunbooks(latest.runbooks));
-              if (latest.settings) setSettings(normalizeSettings(latest.settings));
-              setLastSavedToServer(latest.lastSaved);
-              lastSavedToServerRef.current = latest.lastSaved;
-              setServerSyncStatus('synced');
-            }
-          }
+        const remoteTime = status.lastSaved ? new Date(status.lastSaved).getTime() : 0;
+        const localTime = lastSavedToServerRef.current ? new Date(lastSavedToServerRef.current).getTime() : 0;
+        if (remoteTime > localTime + 2500 && pendingSavesRef.current === 0) {
+          const latest = await loadWorkspace();
+          if (isMounted && pendingSavesRef.current === 0) applyWorkspace(latest);
         }
       } catch (err) {
         // Silent poll error
       }
     };
 
-    const handleFocus = () => {
-      checkRemoteSync();
-    };
-
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', checkRemoteSync);
     const interval = setInterval(checkRemoteSync, 20000);
-
     return () => {
       isMounted = false;
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', checkRemoteSync);
       clearInterval(interval);
     };
-  }, [serverSyncStatus]);
-
-  // Debounced auto-save to server and cloud whenever state changes
-  useEffect(() => {
-    if (!isLoadedFromServerRef.current) return;
-
-    setServerSyncStatus('syncing');
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tasks,
-            runbooks,
-            // Tagging rules no longer exist; keep the stored list empty.
-            rules: [],
-            settings,
-          }),
-        });
-
-        if (res.ok) {
-          const result = await res.json();
-          setServerSyncStatus('synced');
-          const savedTime = result.savedAt || new Date().toISOString();
-          setLastSavedToServer(savedTime);
-          lastSavedToServerRef.current = savedTime;
-        } else {
-          setServerSyncStatus('error');
-        }
-      } catch (err) {
-        console.error('Error auto-syncing storage:', err);
-        setServerSyncStatus('error');
-      }
-    }, 600);
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [tasks, runbooks, settings]);
-
-  const handleForceSaveToServer = async () => {
-    try {
-      setServerSyncStatus('syncing');
-      const res = await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tasks,
-          runbooks,
-          rules: [],
-          settings,
-        }),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        setServerSyncStatus('synced');
-        const savedTime = result.savedAt || new Date().toISOString();
-        setLastSavedToServer(savedTime);
-        lastSavedToServerRef.current = savedTime;
-        await fetchStorageStatus();
-        showToast(result.storageType === 'supabase' ? 'Synced to Supabase Cloud Database' : 'Saved to server file data/server-storage.json');
-      } else {
-        setServerSyncStatus('error');
-        showToast('Failed to save data');
-      }
-    } catch (err) {
-      setServerSyncStatus('error');
-      showToast('Error connecting to storage backend');
-    }
-  };
-
-  const handleReloadFromServer = async () => {
-    try {
-      setServerSyncStatus('syncing');
-      const res = await fetch('/api/data');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.tasks) setTasks(normalizeTasks(data.tasks));
-        if (data.runbooks) setRunbooks(normalizeRunbooks(data.runbooks));
-        if (data.settings) setSettings(normalizeSettings(data.settings));
-        setServerSyncStatus('synced');
-        const savedTime = data.lastSaved || new Date().toISOString();
-        setLastSavedToServer(savedTime);
-        lastSavedToServerRef.current = savedTime;
-        await fetchStorageStatus();
-        showToast(data.storageType === 'supabase' ? 'Reloaded freshest data from Supabase Cloud' : 'Reloaded freshest data from server file');
-      } else {
-        showToast('No server data found');
-      }
-    } catch (err) {
-      showToast('Error reloading from storage');
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  /**
+   * Runs one save. Screens are updated before the save finishes; if it fails,
+   * the workspace is reloaded so they show what is really stored.
+   */
+  const runSave = async <T,>(save: () => Promise<T>, failure: string): Promise<T | undefined> => {
+    pendingSavesRef.current += 1;
+    setServerSyncStatus('syncing');
+    try {
+      const result = await save();
+      if (pendingSavesRef.current === 1) setServerSyncStatus('synced');
+      noteServerTime(new Date().toISOString());
+      return result;
+    } catch (err: any) {
+      setServerSyncStatus('error');
+      if (err instanceof TicketConflictError) {
+        setTasks((prev) => upsertById(prev, normalizeTask(err.current)));
+        showToast(err.message);
+      } else {
+        showToast(`${failure}: ${err?.message || 'unknown error'}`);
+        loadWorkspace().then(applyWorkspace).catch(() => {});
+      }
+      return undefined;
+    } finally {
+      pendingSavesRef.current -= 1;
+    }
+  };
+
+  // Workspace settings are shared, so only IT saves them, and a theme change
+  // (kept per browser) never does.
+  useEffect(() => {
+    return () => {
+      if (settingsSaveTimeoutRef.current) clearTimeout(settingsSaveTimeoutRef.current);
+    };
+  }, []);
+  const updateSettings = (next: UserSettings) => {
+    if (next.themeMode && next.themeMode !== themeMode) setThemeMode(next.themeMode);
+    const { themeMode: _nextTheme, ...nextShared } = next;
+    const { themeMode: _currentTheme, ...currentShared } = settings;
+    const merged = { ...next, themeMode: settings.themeMode };
+    setSettings(merged);
+    if (JSON.stringify(nextShared) === JSON.stringify(currentShared) || currentUser?.role !== 'admin') return;
+    // Typing in a settings box saves once the typing pauses.
+    if (settingsSaveTimeoutRef.current) clearTimeout(settingsSaveTimeoutRef.current);
+    settingsSaveTimeoutRef.current = setTimeout(() => {
+      runSave(() => saveSettings(merged), 'Could not save settings');
+    }, 600);
+  };
+
+  const handleForceSaveToServer = async () => {
+    // Every change is already saved as it is made; this confirms the connection.
+    const saved = await runSave(() => saveSettings(settings), 'Could not reach storage');
+    if (saved) {
+      await fetchStorageStatus();
+      showToast('All changes are saved to Supabase');
+    }
+  };
+
+  const handleReloadFromServer = async () => {
+    setServerSyncStatus('syncing');
+    try {
+      await reloadWorkspace();
+      await fetchStorageStatus();
+      showToast('Reloaded the latest data from Supabase');
+    } catch (err: any) {
+      setServerSyncStatus('error');
+      showToast(err?.message || 'Error reloading from storage');
+    }
   };
 
   // Task Handlers
@@ -475,96 +440,89 @@ export default function App() {
     setIsTaskModalOpen(true);
   };
 
-  // Records that a REQ number has been handed out, so it is never issued again.
-  const recordTicketNumber = (ticketNumber: string) => {
-    const sequence = sequenceOf(ticketNumber);
-    if (!sequence) return;
-    setSettings((prev) => ({ ...prev, lastTicketSequence: Math.max(prev.lastTicketSequence || 0, sequence) }));
-  };
-
-  const issueTicketNumber = () => {
-    const number = formatTicketNumber(nextTicketSequence(tasks, settings.lastTicketSequence));
-    recordTicketNumber(number);
-    return number;
+  /**
+   * Saves one ticket. `baseUpdatedAt` is the ticket's updatedAt when the change
+   * started; if someone saved it since, the save is refused and their version shown.
+   * New tickets get their REQ number from the server.
+   */
+  const persistTask = (task: Task, baseUpdatedAt: string | undefined, successToast?: (saved: Task) => string) => {
+    const draft: Task = { ...task, title: task.title.trim() || 'Untitled Incident', ticketNumber: task.ticketNumber.trim() };
+    setTasks((prev) => upsertById(prev, draft));
+    // Saves to the same ticket go one after another (e.g. two quick drags), each
+    // based on the version the previous one stored, so they are not mistaken
+    // for someone else's change.
+    const prior = ticketSaveQueueRef.current.get(task.id);
+    const run = (async () => {
+      const previous = prior ? await prior : undefined;
+      const base = previous && baseUpdatedAt ? previous.updatedAt : baseUpdatedAt;
+      const saved = await runSave(() => saveTicket(draft, base), 'Could not save the ticket');
+      if (saved) {
+        setTasks((prev) => upsertById(prev, normalizeTask(saved)));
+        if (successToast) showToast(successToast(saved));
+      }
+      return saved;
+    })();
+    ticketSaveQueueRef.current.set(task.id, run);
+    run.finally(() => {
+      if (ticketSaveQueueRef.current.get(task.id) === run) ticketSaveQueueRef.current.delete(task.id);
+    });
+    return run;
   };
 
   const handleSaveTask = (updatedTask: Task) => {
-    const isNew = !tasks.some((t) => t.id === updatedTask.id);
-    let ticketNumber = updatedTask.ticketNumber.trim();
-    if (isNew) {
-      // A blank number, or one another ticket already holds (e.g. two admins
-      // opening "new ticket" at once), gets the next free number on save.
-      if (!ticketNumber || tasks.some((t) => t.ticketNumber === ticketNumber)) {
-        ticketNumber = issueTicketNumber();
-      } else {
-        recordTicketNumber(ticketNumber);
-      }
-    }
-    const finalTask: Task = {
-      ...updatedTask,
-      ticketNumber: ticketNumber || issueTicketNumber(),
-      title: updatedTask.title.trim() || 'Untitled Incident',
-    };
-    setTasks((prev) => {
-      const exists = prev.some((t) => t.id === finalTask.id);
-      if (exists) {
-        return prev.map((t) => (t.id === finalTask.id ? finalTask : t));
-      }
-      return [finalTask, ...prev];
-    });
-    showToast(`Saved task ${finalTask.ticketNumber}`);
+    const existing = tasks.find((t) => t.id === updatedTask.id);
+    // An edited ticket carries the updatedAt it was opened with.
+    persistTask(
+      existing ? { ...updatedTask, ticketNumber: existing.ticketNumber } : updatedTask,
+      existing ? updatedTask.updatedAt : undefined,
+      (saved) => `Saved task ${saved.ticketNumber}`
+    );
   };
 
   const handleDeleteTask = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    showToast('Task removed from queue.');
+    runSave(() => deleteTickets([taskId]), 'Could not delete the ticket').then((done) => {
+      if (done) showToast('Task removed from queue.');
+    });
   };
 
   const handleBatchDeleteTasks = (taskIds: string[]) => {
     setTasks((prev) => prev.filter((t) => !taskIds.includes(t.id)));
-    showToast(`Removed ${taskIds.length} tasks from queue.`);
+    runSave(() => deleteTickets(taskIds), 'Could not delete the tickets').then((done) => {
+      if (done) showToast(`Removed ${taskIds.length} tasks from queue.`);
+    });
   };
 
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const isResolving = newStatus === 'done' && t.status !== 'done';
-          return {
-            ...t,
-            status: newStatus,
-            resolvedAt: isResolving ? new Date().toISOString() : (newStatus !== 'done' ? undefined : t.resolvedAt),
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return t;
-      })
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t || t.status === newStatus) return;
+    const isResolving = newStatus === 'done' && t.status !== 'done';
+    persistTask(
+      {
+        ...t,
+        status: newStatus,
+        resolvedAt: isResolving ? new Date().toISOString() : newStatus !== 'done' ? undefined : t.resolvedAt,
+        updatedAt: new Date().toISOString(),
+      },
+      t.updatedAt
     );
   };
 
   const handleReopenTask = (taskId: string, targetStatus: TaskStatus = 'investigating') => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            status: targetStatus,
-            resolvedAt: undefined,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return t;
-      })
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    persistTask(
+      { ...t, status: targetStatus, resolvedAt: undefined, updatedAt: new Date().toISOString() },
+      t.updatedAt,
+      (saved) => `Reopened ticket ${saved.ticketNumber} back to ${targetStatus}`
     );
-    const targetTask = tasks.find((t) => t.id === taskId);
-    showToast(`Reopened ticket ${targetTask?.ticketNumber || ''} back to ${targetStatus}`);
   };
 
   const handleCreateNewTask = (status: TaskStatus = 'backlog') => {
-    const nextTicketNum = formatTicketNumber(nextTicketSequence(tasks, settings.lastTicketSequence));
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      ticketNumber: nextTicketNum,
+      // Given the next REQ number when saved.
+      ticketNumber: '',
       title: '',
       description: '',
       status,
@@ -576,11 +534,8 @@ export default function App() {
       requesterDepartment: currentUser?.department || 'General',
       deviceInfo: '',
       isUserSubmitted: true,
-      assignee: {
-        name: settings.operatorName || 'Alex Rivera',
-        role: 'IT Support Engineer',
-        email: 'alex.rivera@internal.corp',
-      },
+      assigneeId: '',
+      assignee: { name: 'Unassigned', role: '', email: '' },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       checklist: [
@@ -600,24 +555,25 @@ export default function App() {
     setIsRunbookEditorOpen(true);
   };
 
-  const handleSaveRunbook = (savedRunbook: Runbook) => {
-    setRunbooks((prev) => {
-      const exists = prev.some((r) => r.id === savedRunbook.id);
-      if (exists) {
-        return prev.map((r) => (r.id === savedRunbook.id ? savedRunbook : r));
-      }
-      return [savedRunbook, ...prev];
-    });
-    showToast(`Handbook updated: ${savedRunbook.code}`);
+  const handleSaveRunbook = async (savedRunbook: Runbook) => {
+    setRunbooks((prev) => upsertById(prev, savedRunbook));
+    const stored = await runSave(() => saveRunbook(savedRunbook), 'Could not save the guide');
+    if (stored) {
+      setRunbooks((prev) => upsertById(prev, stored));
+      showToast(`Handbook updated: ${stored.code}`);
+    }
   };
 
   const handleDeleteRunbook = (id: string) => {
     const toDelete = runbooks.find((r) => r.id === id);
     setRunbooks((prev) => prev.filter((r) => r.id !== id));
+    // The server drops the guide's ticket links along with it.
     setTasks((prev) =>
       prev.map((t) => (t.linkedRunbookId === id ? { ...t, linkedRunbookId: undefined } : t))
     );
-    showToast(`Deleted SOP: ${toDelete?.code || 'Runbook'}`);
+    runSave(() => deleteRunbook(id), 'Could not delete the guide').then((done) => {
+      if (done) showToast(`Deleted SOP: ${toDelete?.code || 'Runbook'}`);
+    });
   };
 
   const handleOpenRunbookFromAnywhere = (runbookId: string) => {
@@ -635,17 +591,21 @@ export default function App() {
 
   // The SOP writer can split one set of notes into several SOPs. A ticket they
   // were written from is linked to the first.
-  const handleRunbooksGenerated = (newRunbooks: Runbook[]) => {
+  const handleRunbooksGenerated = async (newRunbooks: Runbook[]) => {
     if (!newRunbooks.length) return;
     setRunbooks((prev) => [...newRunbooks, ...prev]);
-    if (taskForAiRunbook) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskForAiRunbook.id ? { ...t, linkedRunbookId: newRunbooks[0].id } : t))
-      );
-    }
-    const drafts = newRunbooks.filter((rb) => rb.status === 'draft').length;
+    const sourceTask = taskForAiRunbook ? tasks.find((t) => t.id === taskForAiRunbook.id) : undefined;
+    const stored = await runSave(async () => {
+      const saved: Runbook[] = [];
+      for (const rb of newRunbooks) saved.push(await saveRunbook(rb));
+      return saved;
+    }, 'Could not add the SOPs to the handbook');
+    if (!stored) return;
+    setRunbooks((prev) => stored.reduce((list, rb) => upsertById(list, rb), prev));
+    if (sourceTask) await persistTask({ ...sourceTask, linkedRunbookId: stored[0].id }, sourceTask.updatedAt);
+    const drafts = stored.filter((rb) => rb.status === 'draft').length;
     showToast(
-      `Added ${newRunbooks.map((rb) => rb.code).join(', ')} to the handbook` +
+      `Added ${stored.map((rb) => rb.code).join(', ')} to the handbook` +
         (drafts ? ` (${drafts} draft${drafts > 1 ? 's' : ''} to confirm)` : '')
     );
   };
@@ -656,30 +616,40 @@ export default function App() {
   };
 
   // Data Management Handlers
-  const handleImportData = (data: { tasks?: Task[]; runbooks?: Runbook[]; settings?: UserSettings }) => {
-    if (data.tasks && Array.isArray(data.tasks)) {
-      setTasks(normalizeTasks(data.tasks));
+  const handleImportData = async (data: { tasks?: Task[]; runbooks?: Runbook[]; settings?: UserSettings }) => {
+    const result = await runSave(
+      () =>
+        importWorkspace({
+          tasks: Array.isArray(data.tasks) ? normalizeTasks(data.tasks) : undefined,
+          runbooks: Array.isArray(data.runbooks) ? normalizeRunbooks(data.runbooks) : undefined,
+          settings: data.settings ? normalizeSettings(data.settings) : undefined,
+        }),
+      'Could not import the backup'
+    );
+    if (result) {
+      applyWorkspace(result);
+      showToast('Workspace data successfully imported and synced.');
     }
-    if (data.runbooks && Array.isArray(data.runbooks)) {
-      setRunbooks(normalizeRunbooks(data.runbooks));
-    }
-    if (data.settings) {
-      setSettings(normalizeSettings(data.settings));
-    }
-    showToast('Workspace data successfully imported and synced.');
   };
 
-  const handleResetToDefaults = () => {
-    setTasks(DEFAULT_TASKS);
-    setRunbooks(DEFAULT_RUNBOOKS);
-    setSettings(DEFAULT_USER_SETTINGS);
-    showToast('Workspace reset to factory sample data.');
+  const handleResetToDefaults = async () => {
+    const result = await runSave(
+      () => resetWorkspace({ tasks: DEFAULT_TASKS, runbooks: DEFAULT_RUNBOOKS, settings: DEFAULT_USER_SETTINGS }),
+      'Could not reset the workspace'
+    );
+    if (result) {
+      applyWorkspace(result);
+      showToast('Workspace reset to factory sample data.');
+    }
   };
 
   const handleClearCompletedTasks = () => {
-    const doneCount = tasks.filter((t) => t.status === 'done').length;
+    const doneIds = tasks.filter((t) => t.status === 'done').map((t) => t.id);
+    if (!doneIds.length) return;
     setTasks((prev) => prev.filter((t) => t.status !== 'done'));
-    showToast(`Cleared ${doneCount} completed tasks.`);
+    runSave(() => deleteTickets(doneIds), 'Could not clear completed tasks').then((done) => {
+      if (done) showToast(`Cleared ${doneIds.length} completed tasks.`);
+    });
   };
 
   // Auth & Portal Handlers
@@ -705,10 +675,12 @@ export default function App() {
     );
   }
 
-  const handleUserSubmitTicket = (ticketData: Partial<Task>): string => {
+  // Waits for the save, so the employee only sees a ticket number once it is stored.
+  const handleUserSubmitTicket = async (ticketData: Partial<Task>): Promise<string> => {
     const fullTask: Task = {
       id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      ticketNumber: issueTicketNumber(),
+      // Given the next REQ number by the server.
+      ticketNumber: '',
       title: ticketData.title || 'Service Request',
       description: ticketData.description || '',
       rawLogs: ticketData.rawLogs,
@@ -716,11 +688,9 @@ export default function App() {
       automatedTags: ticketData.automatedTags || ['User Request', 'PORTAL'],
       manualTags: ticketData.manualTags || ['Portal Submission'],
       category: ticketData.category || 'Others',
-      assignee: ticketData.assignee || {
-        name: 'IT Helpdesk Queue',
-        role: 'Triage Specialist',
-        email: 'helpdesk@company.com',
-      },
+      // Arrives unassigned; IT picks a technician when triaging.
+      assigneeId: '',
+      assignee: { name: 'Unassigned', role: '', email: '' },
       requesterId: currentUser?.id,
       requesterName: currentUser?.name || 'Employee',
       requesterEmail: currentUser?.email,
@@ -742,9 +712,11 @@ export default function App() {
       ],
     };
 
-    setTasks((prev) => [fullTask, ...prev]);
-    showToast(`Ticket ${fullTask.ticketNumber} submitted and synced.`);
-    return fullTask.ticketNumber;
+    const saved = normalizeTask(await saveTicket(fullTask));
+    setTasks((prev) => upsertById(prev, saved));
+    noteServerTime(new Date().toISOString());
+    showToast(`Ticket ${saved.ticketNumber} submitted and synced.`);
+    return saved.ticketNumber;
   };
 
   const isEmployeeView = currentUser?.role === 'user';
@@ -928,6 +900,7 @@ export default function App() {
           onOpenRunbook={handleOpenRunbookFromAnywhere}
           onGenerateRunbookFromTask={handleGenerateRunbookFromTask}
           userRole={currentUser?.role}
+          staff={staff}
         />
       )}
 

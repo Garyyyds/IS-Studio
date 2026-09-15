@@ -221,6 +221,9 @@ CREATE TABLE IF NOT EXISTS tickets (
   requester_id      VARCHAR(64)  REFERENCES app_users (id),
   assignee_id       VARCHAR(64)  REFERENCES app_users (id),
   site_id           BIGINT       REFERENCES sites (id),
+  -- Location as the requester typed it. Kept alongside site_id until a site
+  -- list is in use; see db/patches/001_location_text.sql.
+  location_text     VARCHAR(200),
   device_info       VARCHAR(300),
   phone_ext         VARCHAR(32),
   hod_name          VARCHAR(200),
@@ -299,6 +302,8 @@ CREATE TABLE IF NOT EXISTS form_submissions (
   department        VARCHAR(200),
   request_date      DATE,
   site_id           BIGINT       REFERENCES sites (id),
+  -- Location as typed on the form; kept until a site list is in use.
+  location_text     VARCHAR(200),
   -- Attachment declaration. NULL when the form did not ask or it was left blank.
   has_attachments   VARCHAR(3),
   attachment_format VARCHAR(10),
@@ -496,6 +501,18 @@ CREATE INDEX IF NOT EXISTS ix_attachments_ticket ON attachments (ticket_id);
 CREATE INDEX IF NOT EXISTS ix_attachments_form   ON attachments (form_submission_id);
 CREATE INDEX IF NOT EXISTS ix_app_users_company  ON app_users (company_id);
 CREATE INDEX IF NOT EXISTS ix_sites_company      ON sites (company_id);
+
+
+-- -----------------------------------------------------------------------------
+-- PATCHES
+-- -----------------------------------------------------------------------------
+-- Columns added after the first release of this file. CREATE TABLE IF NOT
+-- EXISTS above skips a table that already exists, so a database built from an
+-- earlier copy gets them here. Each patch is also kept in db/patches/.
+
+-- 001: free-text location kept until sites are in use.
+ALTER TABLE tickets          ADD COLUMN IF NOT EXISTS location_text VARCHAR(200);
+ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS location_text VARCHAR(200);
 
 
 -- -----------------------------------------------------------------------------

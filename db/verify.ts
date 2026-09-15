@@ -318,6 +318,7 @@ async function main() {
     field(rec, 'category', categoryName, categoryById.get(r.category_id) ?? null, () => noCategory(categoryName));
     field(rec, 'requester (email)', lower(x.requesterEmail) || null, r.requester_id ? lower(userById.get(r.requester_id)?.email) : null, () => noUser(x.requesterEmail));
     field(rec, 'assignee (email)', lower(x.assignee?.email) || null, r.assignee_id ? lower(userById.get(r.assignee_id)?.email) : null, () => noUser(x.assignee?.email));
+    field(rec, 'location_text', t(x.userLocation), t(r.location_text));
     field(rec, 'site (location)', t(x.userLocation), siteById.get(r.site_id) ?? null, () => noSite(x.userLocation));
     field(rec, 'device_info', t(x.deviceInfo), t(r.device_info));
     field(rec, 'phone_ext', t(x.userPhoneExt), t(r.phone_ext));
@@ -412,6 +413,7 @@ async function main() {
     field(rec, 'designation', isAsset ? null : t(d.designation), t(r.designation));
     field(rec, 'department', t(d.department), t(r.department));
     field(rec, 'request_date', day(d.requestDate), day(r.request_date), () => (day(d.requestDate) === 'unparseable' ? 'date did not parse' : null));
+    field(rec, 'location_text', t(d.location), t(r.location_text));
     field(rec, 'site (location)', t(d.location), siteById.get(r.site_id) ?? null, () => noSite(d.location));
     field(rec, 'has_attachments', isAsset ? null : ['yes', 'no'].includes(d.hasAttachments) ? d.hasAttachments : null, r.has_attachments);
     field(rec, 'attachment_format', isAsset ? null : ['hardcopy', 'softcopy'].includes(d.attachmentFormat) ? d.attachmentFormat : null, r.attachment_format);

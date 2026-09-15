@@ -39,6 +39,14 @@ export interface AppUser {
   createdAt?: string;
 }
 
+/** An IT account a ticket can be assigned to. */
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  department?: string;
+}
+
 export interface ChecklistItem {
   id: string;
   text: string;
@@ -57,6 +65,9 @@ export interface Task {
   automatedTags: string[];
   manualTags: string[];
   category: ITCategory;
+  /** The assigned IT staff account; empty string means deliberately unassigned. */
+  assigneeId?: string;
+  /** Display copy of the assignee, filled in by the server from assigneeId. */
   assignee: {
     name: string;
     role: string;

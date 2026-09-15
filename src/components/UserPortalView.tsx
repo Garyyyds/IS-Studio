@@ -50,7 +50,8 @@ interface UserPortalViewProps {
   tasks: Task[];
   runbooks: Runbook[];
   /** Creates the ticket and returns the number it was given. */
-  onSubmitTicket: (newTask: Partial<Task>) => string;
+  /** Saves the request and resolves to its ticket number; rejects with a message to show. */
+  onSubmitTicket: (newTask: Partial<Task>) => Promise<string>;
   onSelectTask: (task: Task) => void;
   onOpenRunbook: (runbookId: string) => void;
   /** Changes each time the user asks to go home; the portal resets to its start page. */
@@ -227,11 +228,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         { id: 'step-2', text: 'Reach out to employee or apply remediation runbook', done: false },
         { id: 'step-3', text: 'Verify resolution with employee and close ticket', done: false }
       ],
-      assignee: {
-        name: 'IT Helpdesk Queue',
-        role: 'Triage Specialist',
-        email: 'helpdesk@company.com'
-      },
+      // New requests arrive unassigned; IT picks a technician when triaging.
+      assigneeId: '',
+      assignee: { name: 'Unassigned', role: '', email: '' },
       // Requester metadata
       requesterId: currentUser.id,
       requesterName: currentUser.name,
@@ -247,7 +246,15 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       attachments: attachments.length ? attachments : undefined,
     };
 
-    const ticketNumber = onSubmitTicket(newTicket);
+    let ticketNumber: string;
+    try {
+      ticketNumber = await onSubmitTicket(newTicket);
+    } catch (err: any) {
+      // Nothing was saved; keep what the employee entered so they can retry.
+      setSubmitError(err?.message || 'Could not submit the request. Please try again.');
+      setIsSubmitting(false);
+      return;
+    }
     setSubmittedId(ticketNumber);
     setIsSubmitting(false);
 
