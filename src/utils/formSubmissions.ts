@@ -90,25 +90,17 @@ export async function markFormViewed(id: string): Promise<FormSubmission | null>
   return res.ok ? body?.submission ?? null : null;
 }
 
+// Both send the signed-in account (via apiFetch), so the form records who
+// closed it even when two accounts share a name.
 export async function completeFormSubmission(id: string, completedBy: string): Promise<FormSubmission> {
-  const res = await fetch(`/api/forms/${encodeURIComponent(id)}/complete`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completedBy }),
-  });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body?.submission) throw new Error(body?.error || 'Could not mark the form as done.');
+  const body = await apiFetch(`/api/forms/${encodeURIComponent(id)}/complete`, { method: 'POST', body: { completedBy } });
+  if (!body?.submission) throw new Error('Could not mark the form as done.');
   return body.submission;
 }
 
 export async function rejectFormSubmission(id: string, reason: string, rejectedBy: string): Promise<FormSubmission> {
-  const res = await fetch(`/api/forms/${encodeURIComponent(id)}/reject`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason, rejectedBy }),
-  });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body?.submission) throw new Error(body?.error || 'Could not reject the form.');
+  const body = await apiFetch(`/api/forms/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason, rejectedBy } });
+  if (!body?.submission) throw new Error('Could not reject the form.');
   return body.submission;
 }
 
