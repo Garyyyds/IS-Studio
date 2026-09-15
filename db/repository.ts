@@ -987,7 +987,10 @@ export class WorkspaceRepository {
       const u = users.find((x) => x.id === who.id);
       if (u) return u.id;
     }
-    const matches = users.filter((x) => lower(x.name) === lower(who?.name));
+    // Only IT closes forms, so a name several accounts share still matches
+    // when exactly one of them is an admin.
+    const named = users.filter((x) => lower(x.name) === lower(who?.name));
+    const matches = named.length > 1 ? named.filter((x) => x.role === 'admin') : named;
     return matches.length === 1 ? matches[0].id : null;
   }
 

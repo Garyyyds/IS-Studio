@@ -217,7 +217,7 @@ async function main() {
   const submissions = (Array.isArray(formStore.submissions) ? formStore.submissions : []) as Row[];
   const formCounters = (formStore.counters && typeof formStore.counters === 'object' ? formStore.counters : {}) as Record<string, unknown>;
 
-  const users = await selectAll(sb, 'app_users', 'id, email, name, company_id');
+  const users = await selectAll(sb, 'app_users', 'id, email, name, role, company_id');
   countRead('tickets (workspace_data.tasks)', tasks.length);
   countRead('runbooks (workspace_data.runbooks)', runbooks.length);
   countRead('form submissions (form-submissions row)', submissions.length);
@@ -275,13 +275,19 @@ async function main() {
     note(report.unmatchedUsers, label, where);
     return null;
   };
-  /** completedBy / rejectedBy store only a name: accept exactly one user with that name. */
+  /**
+   * completedBy / rejectedBy store only a name: accept exactly one user with
+   * that name. Only IT closes forms, so when several accounts share the name,
+   * exactly one admin among them is accepted too.
+   */
   const resolveUserByName = (name: unknown, where: string): string | null => {
     const n = key(name);
     if (!n) return null;
-    const found = users.filter((u) => key(u.name) === n);
+    const named = users.filter((u) => key(u.name) === n);
+    const found = named.length > 1 ? named.filter((u) => u.role === 'admin') : named;
     if (found.length === 1) return String(found[0].id);
-    note(report.unmatchedUsers, `${text(name)} (name only${found.length > 1 ? `, ${found.length} users share it` : ''})`, where);
+    if (named.length > 1) note(report.unmatchedUsers, `${text(name)} (name only, ${named.length} users share it and ${found.length} are admins)`, where);
+    else note(report.unmatchedUsers, `${text(name)} (name only)`, where);
     return null;
   };
 
