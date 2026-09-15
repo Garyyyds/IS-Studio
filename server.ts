@@ -1466,9 +1466,6 @@ function chatSessionEndedMessage(retryInMs: number): string {
   const minutes = Math.max(1, Math.ceil(retryInMs / 60000));
   return `Session ended. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
 }
-// Keeps the guide text sent per question bounded as the handbook grows.
-const CHAT_KNOWLEDGE_MAX_CHARS = 60000;
-
 // Guides are read on the server, from storage, rather than taken from the
 // browser: the full steps are needed, and the browser copy may be stale.
 async function readRunbooksForChat(): Promise<any[]> {
@@ -1488,9 +1485,10 @@ async function readRunbooksForChat(): Promise<any[]> {
 // Plain-text rendering of the guides an employee may be walked through. Steps
 // flagged dangerous and raw commands are left out: the assistant talks to
 // employees, who should only ever be given safe self-service actions.
+// Every active guide is included, with no size cap, so no guide is left out as
+// the handbook grows. Each question then sends the whole handbook to Gemini.
 function knowledgeBaseText(runbooks: any[]): string {
   const blocks: string[] = [];
-  let used = 0;
   for (const rb of runbooks.filter((r) => r && r.status !== 'draft' && r.status !== 'deprecated')) {
     const lines: string[] = [];
     lines.push(`[${rb.code}] ${rb.title}`);
@@ -1508,10 +1506,7 @@ function knowledgeBaseText(runbooks: any[]): string {
       .forEach((s: any, i: number) => {
         lines.push(`Fix ${i + 1}: ${s.title}${s.instruction ? ' - ' + s.instruction : ''}${s.verification ? ' (Confirm: ' + s.verification + ')' : ''}`);
       });
-    const block = lines.join('\n');
-    if (used + block.length > CHAT_KNOWLEDGE_MAX_CHARS) break;
-    blocks.push(block);
-    used += block.length;
+    blocks.push(lines.join('\n'));
   }
   return blocks.join('\n\n');
 }

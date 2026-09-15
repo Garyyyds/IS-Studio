@@ -115,3 +115,4 @@ away later work permanently.
 | `15092026ver007` | 2026-09-15 | Form header buttons standardised: primary buttons (Export to PDF on IT Support Request, Submit to IT) now match Back and Export exactly in height on all five forms |
 | `15092026ver008` | 2026-09-15 | IT Hardware, Software & Peripherals Requisition can be rejected: Reject beside Done opens a reason window (Cancel / Submit); rejected forms move to Form History, and employees see Rejected with the reason in My Forms |
 | `15092026ver009` | 2026-09-15 | Submitted requisition forms now show Section E (For IT Department Use) with its item table and total, for both admins and employees |
+| `15092026ver010` | 2026-09-15 | IT Assistant reads the whole IT Handbook: the 60,000-character cap on guide text sent to the AI is removed, so no guide is left out as the handbook grows |
