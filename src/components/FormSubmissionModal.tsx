@@ -20,6 +20,7 @@ import { exportUserIdFormPdf, SERVER_REQUEST_ROWS } from '../utils/userIdFormPdf
 import {
   exportRequisitionFormPdf,
   REQ_COST_FIELDS,
+  REQ_IT_REMARKS_LABEL,
   formatAmount,
   formatTotal,
   itemsTotal,
@@ -500,6 +501,21 @@ const RequisitionDetails: React.FC<{ data: RequisitionFormData }> = ({ data }) =
           item.price.trim() ? formatTotal(lineTotal(item)) : '',
         ])}
         footer={['', '', 'Total', formatTotal(itemsTotal(data.items || []))]}
+      />
+    </Section>
+    <Section title="E. For IT Department Use">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        {REQ_IT_REMARKS_LABEL.replace(/:$/, '')}
+      </p>
+      <Table
+        headers={['Description', 'Qty', 'Unit Price (RM)', 'Total (RM)']}
+        rows={(data.itItems || []).map((item) => [
+          item.description,
+          item.quantity,
+          formatAmount(item.price),
+          item.price.trim() ? formatTotal(lineTotal(item)) : '',
+        ])}
+        footer={['', '', 'Total', formatTotal(itemsTotal(data.itItems || []))]}
       />
     </Section>
   </>
