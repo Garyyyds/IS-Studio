@@ -15,6 +15,7 @@ import { AppUser, FormSubmission, FormSubmissionType } from '../types';
 import { FORM_TYPE_INFO, FORM_TYPE_ORDER, fetchFormSubmissions, formHeadline } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
 import { FORM_ICONS } from './FormHistoryView';
+import { secondaryHeaderButton } from './FormSubmitControls';
 
 interface MyFormsViewProps {
   currentUser: AppUser;
@@ -64,12 +65,8 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
     : [];
 
   const refreshButton = (
-    <button
-      type="button"
-      onClick={load}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer"
-    >
-      <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+    <button type="button" onClick={load} className={secondaryHeaderButton}>
+      <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
       <span>Refresh</span>
     </button>
   );
@@ -162,15 +159,11 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {refreshButton}
-              <button
-                type="button"
-                onClick={() => setSelectedType(null)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-              >
+              <button type="button" onClick={() => setSelectedType(null)} className={secondaryHeaderButton}>
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back</span>
               </button>
+              {refreshButton}
             </div>
           </div>
 

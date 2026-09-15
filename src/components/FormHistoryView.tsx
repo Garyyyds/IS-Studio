@@ -24,6 +24,7 @@ import {
   deleteFormSubmission,
 } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
+import { secondaryHeaderButton } from './FormSubmitControls';
 
 export const FORM_ICONS: Record<FormSubmissionType, React.ElementType> = {
   requisition: ClipboardList,
@@ -159,11 +160,7 @@ export const FormHistoryView: React.FC = () => {
                   Form history · {countOf(selectedType)} completed
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedType(null)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-              >
+              <button type="button" onClick={() => setSelectedType(null)} className={secondaryHeaderButton}>
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back</span>
               </button>
