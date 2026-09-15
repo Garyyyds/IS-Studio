@@ -25,7 +25,7 @@ import {
 } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
 
-const FORM_ICONS: Record<FormSubmissionType, React.ElementType> = {
+export const FORM_ICONS: Record<FormSubmissionType, React.ElementType> = {
   requisition: ClipboardList,
   'user-id': KeyRound,
   allocation: PackageCheck,
