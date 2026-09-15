@@ -112,3 +112,4 @@ away later work permanently.
 | `15092026ver004` | 2026-09-15 | My Forms on the employee portal now opens on a picker of the four form types with submitted and in-progress counts, and each type lists only its own forms, matching Form History |
 | `15092026ver005` | 2026-09-15 | My Forms and Form History header buttons standardised: Refresh and Back share the same size and style, with Back first |
 | `15092026ver006` | 2026-09-15 | Ticket History: removed the Avg Resolution Time card; the three remaining summary cards share the row |
+| `15092026ver007` | 2026-09-15 | Form header buttons standardised: primary buttons (Export to PDF on IT Support Request, Submit to IT) now match Back and Export exactly in height on all five forms |

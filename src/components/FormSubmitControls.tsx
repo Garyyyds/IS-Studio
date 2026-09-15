@@ -39,7 +39,7 @@ export const SubmitFormButton: React.FC<SubmitFormButtonProps> = ({ onClick, isS
     onClick={onClick}
     disabled={isSubmitting || alreadySubmitted}
     title={alreadySubmitted ? 'This form has been submitted. Edit it to submit again.' : 'Send this form to IT'}
-    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
+    className={primaryHeaderButton}
   >
     {isSubmitting ? (
       <Loader2 className="w-4 h-4 animate-spin" />
@@ -66,6 +66,13 @@ export const FormSubmittedNotice: React.FC<{ formNumber: string }> = ({ formNumb
   </div>
 );
 
-/** Secondary style for Export to PDF once Submit is the main action. */
+/**
+ * Primary header action. The transparent border matches the secondary button's
+ * 1px border, so the two sit at exactly the same height side by side.
+ */
+export const primaryHeaderButton =
+  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors';
+
+/** Secondary style for Back and Export to PDF beside the primary action. */
 export const secondaryHeaderButton =
   'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-xs transition-colors';

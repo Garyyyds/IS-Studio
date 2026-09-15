@@ -42,6 +42,7 @@ import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
 import { RequisitionFormView } from './RequisitionFormView';
 import { MyFormsView } from './MyFormsView';
+import { primaryHeaderButton, secondaryHeaderButton } from './FormSubmitControls';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
@@ -638,11 +639,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedForm(null)}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-                  >
+                  <button type="button" onClick={() => setSelectedForm(null)} className={secondaryHeaderButton}>
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
                   </button>
@@ -651,7 +648,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                     type="button"
                     onClick={handleExportPdf}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
+                    className={primaryHeaderButton}
                   >
                     {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
                     <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
