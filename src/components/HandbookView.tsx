@@ -208,6 +208,14 @@ export const HandbookView: React.FC<HandbookViewProps> = ({
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">{rb.title}</h3>
+                        {rb.status === 'draft' && (
+                          <span
+                            title={rb.needsConfirming?.length ? `${rb.needsConfirming.length} item(s) need confirming` : 'Hidden from the IT Assistant'}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 shrink-0"
+                          >
+                            Draft
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">

@@ -15,6 +15,8 @@ import {
   knowledgeBaseText,
   selectScopedRunbooks,
 } from './src/utils/knowledgeBase';
+import { checkGeneratedSop, type GeneratedSop } from './src/utils/sopDraft';
+import { IT_CATEGORIES } from './src/types';
 
 dotenv.config();
 
@@ -1293,114 +1295,179 @@ extract useful operational tags, and suggest a short remediation checklist.`;
 });
 
 // API: Generate Issue-Solution Handbook Runbook
-app.post('/api/ai/generate-runbook', async (req, res) => {
-  try {
-    const problemTitle = req.body.problemTitle || req.body.incidentTitle || req.body.title;
-    const errorLogs = req.body.errorLogs || req.body.rawLogs || '';
-    const category = req.body.category || 'Network';
-    const systemContext = req.body.systemContext || req.body.incidentDescription || req.body.description || '';
+// --- SOP writer: rough notes in, finished handbook SOPs out ---
+const SOP_NOTES_MAX_CHARS = 20000;
 
-    if (!problemTitle) {
-      return res.status(400).json({ error: 'Problem title is required' });
-    }
+const SOP_WRITER_RULES = `You write Standard Operating Procedures for Eadeco's IT handbook. You are given
+rough notes; you return finished SOPs in the structure below, ready to import into
+IS Studio's Runbook model. Return them as JSON matching the response schema: each
+field is one part of the SOP.
 
-    const ai = getAi();
+=== SOP STRUCTURE ===
 
-    const prompt = `You are a Senior Principal Site Reliability Engineer and IT Operations Architect. 
-Write an exhaustive, high-standard IT Issue-Solution Handbook Standard Operating Procedure (SOP) / Runbook for:
+Header: code SOP-<AREA>-<NNN>, v1.0.0, and a title naming the failure or task, with
+the system named in brackets if useful. Owner only if the notes name one.
 
-Problem: ${problemTitle}
-Category: ${category}
-System Context: ${systemContext}
-Error Output / Logs: ${errorLogs || 'None provided'}
+1. SYMPTOMS & TRIGGER SIGNATURES ("symptom", "triggerAlertPatterns")
+   One short paragraph: what the user sees and what stops working.
+   Matched Alert Patterns: the LITERAL error text, verbatim, including error codes.
+   These are what users paste, so they are the highest-value matching signal.
 
-Provide real, production-tested diagnostic and remediation CLI commands (Bash, PowerShell, cmd, kubectl, docker, SQL, systemctl, netsh, ping).
-Make the handbook thorough, unambiguous, and formatted for junior and senior engineers during live outages.`;
+2. ROOT CAUSE ANALYSIS ("rootCauseAnalysis")
+   One paragraph: why it happens. Name the secondary cause too when there is one.
 
-    const response = await generateWithRetry(ai, {
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: 'Descriptive, professional SOP title' },
-            code: { type: Type.STRING, description: 'Standard code like SOP-OPS-042 or RUN-DB-019' },
-            category: { type: Type.STRING },
-            symptom: { type: Type.STRING, description: 'Observable behavior, alert triggers, metrics deviation' },
-            triggerAlertPatterns: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Alert message snippets or error keywords',
-            },
-            rootCauseAnalysis: {
-              type: Type.STRING,
-              description: 'Deep technical analysis of why this failure occurs at OS, network, DB, or code level',
-            },
-            diagnosticSteps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  cli: { type: Type.STRING, description: 'Exact copy-pasteable terminal command' },
-                  explanation: { type: Type.STRING, description: 'What to look for in the output' },
-                  shellType: { type: Type.STRING, description: 'bash, powershell, kubectl, sql, or docker' },
-                },
-                required: ['title', 'cli', 'explanation', 'shellType'],
+3. DIAGNOSTIC WORKFLOW & TRIAGE CLI ("diagnosticSteps")
+   3-5 numbered checks. Each: a short title, one or two sentences of explanation,
+   a command, and a shell type: general, powershell, bash, sql, kubectl or docker.
+   Checks only: nothing here may change system state.
+
+4. STEP-BY-STEP REMEDIATION PROCEDURES ("remediationSteps")
+   Each step: an imperative title; the instruction as numbered sub-steps for GUI
+   actions, one per line; an optional command; and a verification stating the
+   observable proof the step worked. Every step needs one.
+
+5. ROLLBACK & DISASTER SAFEGUARD PROTOCOL ("rollbackPlan")
+   How to undo it, or plainly state it cannot be undone and what to do instead.
+
+6. POST-INCIDENT PREVENTATIVE ACTION ITEMS ("postMortemChecklist")
+   What would stop this recurring.
+
+TAGS ("tags"): 8-15 of them, in the words STAFF actually use, not IT vocabulary.
+"cannot print", "no printout", "printer code", not "job handling". This is what
+the chatbot matches against, so it matters more than any other field.
+
+=== RULES ===
+
+- NEVER put a real credential in the output. Use a named placeholder such as
+  <DOMAIN_ADMIN_PASSWORD> and list it under "placeholders". The handbook is
+  readable by every employee and is fed to the AI assistant.
+- Category must be one of: E-mail, FTP, NAV, File Server, Internet,
+  Advance Retails System, Network, HRIS, Ebuilder, Printer, Database, Others.
+- Write for an employee, not an engineer. No destructive commands, no registry
+  edits, no admin actions in the user-facing steps; if it needs IT, say so. Set
+  "dangerous" true on any step that still changes system state.
+- Cross-reference sibling SOPs by code where relevant (e.g. "see SOP-NET-003"),
+  using only codes from the existing handbook listed below.
+- Use only what the notes contain. Where something is missing, write the section
+  with a clear placeholder and list every gap under "needsConfirming". Do not
+  invent screen labels, policy values, timings or IP addresses.
+- One SOP per topic. If the notes cover several, return one SOP per topic and
+  explain the split in "splitNote"; otherwise leave "splitNote" empty.`;
+
+const SOP_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    splitNote: { type: Type.STRING, description: 'Why the notes were split into several SOPs; empty when there is one' },
+    sops: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          code: { type: Type.STRING, description: 'SOP-<AREA>-<NNN>' },
+          category: { type: Type.STRING },
+          owner: { type: Type.STRING, description: 'Author / owner, only if the notes name one; otherwise empty' },
+          symptom: { type: Type.STRING },
+          triggerAlertPatterns: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Literal error text, verbatim' },
+          rootCauseAnalysis: { type: Type.STRING },
+          diagnosticSteps: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                explanation: { type: Type.STRING },
+                cli: { type: Type.STRING },
+                shellType: { type: Type.STRING, description: 'general, powershell, bash, sql, kubectl or docker' },
               },
-            },
-            remediationSteps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  stepNumber: { type: Type.NUMBER },
-                  title: { type: Type.STRING },
-                  instruction: { type: Type.STRING },
-                  command: { type: Type.STRING },
-                  dangerous: { type: Type.BOOLEAN, description: 'True if restart, data drop, or brief downtime is involved' },
-                  verification: { type: Type.STRING, description: 'How to confirm the step succeeded' },
-                },
-                required: ['stepNumber', 'title', 'instruction', 'verification'],
-              },
-            },
-            rollbackPlan: {
-              type: Type.STRING,
-              description: 'Immediate rollback instructions if remediation fails or worsens the incident',
-            },
-            postMortemChecklist: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Preventive steps, monitoring metrics to add, or architectural improvements',
-            },
-            tags: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              required: ['title', 'explanation', 'cli', 'shellType'],
             },
           },
-          required: [
-            'title',
-            'code',
-            'category',
-            'symptom',
-            'triggerAlertPatterns',
-            'rootCauseAnalysis',
-            'diagnosticSteps',
-            'remediationSteps',
-            'rollbackPlan',
-            'postMortemChecklist',
-            'tags',
-          ],
+          remediationSteps: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                instruction: { type: Type.STRING, description: 'Numbered sub-steps, one per line' },
+                command: { type: Type.STRING },
+                dangerous: { type: Type.BOOLEAN },
+                verification: { type: Type.STRING },
+              },
+              required: ['title', 'instruction', 'verification'],
+            },
+          },
+          rollbackPlan: { type: Type.STRING },
+          postMortemChecklist: { type: Type.ARRAY, items: { type: Type.STRING } },
+          tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+          placeholders: { type: Type.ARRAY, items: { type: Type.STRING } },
+          needsConfirming: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
+        required: [
+          'title', 'code', 'category', 'symptom', 'triggerAlertPatterns', 'rootCauseAnalysis',
+          'diagnosticSteps', 'remediationSteps', 'rollbackPlan', 'postMortemChecklist', 'tags',
+          'placeholders', 'needsConfirming',
+        ],
       },
+    },
+  },
+  required: ['sops'],
+};
+
+app.post('/api/ai/generate-runbook', async (req, res) => {
+  try {
+    const notes = typeof req.body.notes === 'string' ? req.body.notes.trim() : '';
+    const categoryHint = typeof req.body.categoryHint === 'string' ? req.body.categoryHint.trim() : '';
+    const owner = typeof req.body.owner === 'string' && req.body.owner.trim() ? req.body.owner.trim() : 'IT Department';
+
+    if (!notes) return res.status(400).json({ error: 'Paste your notes first.' });
+    if (notes.length > SOP_NOTES_MAX_CHARS) {
+      return res.status(400).json({ error: `Notes are too long. Keep them under ${SOP_NOTES_MAX_CHARS.toLocaleString()} characters.` });
+    }
+
+    // The existing handbook, read on the server, gives the writer real codes to
+    // cross-reference and lets every new SOP get a code not already in use.
+    const { runbooks } = await readChatWorkspace();
+    const handbookIndex = runbooks.length
+      ? runbooks.map((rb: any) => `- ${rb.code}: ${rb.title} (${rb.category})`).join('\n')
+      : '(The handbook is empty.)';
+
+    const prompt = `${SOP_WRITER_RULES}
+
+=== EXISTING HANDBOOK (codes already in use) ===
+${handbookIndex}
+
+${(IT_CATEGORIES as readonly string[]).includes(categoryHint) ? `The admin expects the category to be ${categoryHint}, unless the notes clearly say otherwise.\n` : ''}
+=== NOTES ===
+${notes}`;
+
+    const response = await generateWithRetry(getAi(), {
+      contents: prompt,
+      config: { responseMimeType: 'application/json', responseSchema: SOP_RESPONSE_SCHEMA },
     });
 
-    const result = JSON.parse(response.text?.trim() || '{}');
-    res.json(result);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(response.text?.trim() || '{}');
+    } catch {
+      return res.status(502).json({ error: 'The SOP writer returned an unreadable reply. Please try again.' });
+    }
+    const drafts = Array.isArray(parsed.sops) ? parsed.sops : [];
+    if (!drafts.length) {
+      return res.status(502).json({ error: 'The SOP writer did not return an SOP. Add more detail to the notes and try again.' });
+    }
+
+    const usedCodes = new Set<string>(runbooks.map((rb: any) => String(rb.code || '').toUpperCase()).filter(Boolean));
+    const today = new Date().toISOString().slice(0, 10);
+    const stamp = Date.now();
+    const sops = drafts.map((draft: GeneratedSop, i: number) =>
+      checkGeneratedSop(draft, { usedCodes, owner, today, idSuffix: `${stamp}-${i}` })
+    );
+
+    res.json({ sops, splitNote: typeof parsed.splitNote === 'string' ? parsed.splitNote.trim() : '' });
   } catch (error: any) {
     console.error('Runbook generation error:', error);
-    sendAiError(res, error, 'Failed to generate handbook runbook');
+    sendAiError(res, error, 'Failed to write the SOP');
   }
 });
 

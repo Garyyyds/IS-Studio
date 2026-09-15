@@ -134,6 +134,10 @@ export interface Runbook {
   postMortemChecklist: string[];
   relatedTaskIds: string[];
   tags: string[];
+  /** Gaps the SOP writer could not fill from the notes; the SOP stays draft while any remain. */
+  needsConfirming?: string[];
+  /** Named stand-ins such as <DOMAIN_ADMIN_PASSWORD> used instead of real values. */
+  placeholders?: string[];
 }
 
 export interface UserSettings {

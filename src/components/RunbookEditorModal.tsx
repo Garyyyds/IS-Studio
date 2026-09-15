@@ -238,6 +238,8 @@ const buildDefaultRunbook = (rb?: Runbook | null): Runbook => ({
   postMortemChecklist: rb?.postMortemChecklist || ['Verify DHCP scope options across corporate subnets'],
   relatedTaskIds: rb?.relatedTaskIds || [],
   tags: rb?.tags || ['networking', 'sop'],
+  needsConfirming: rb?.needsConfirming || [],
+  placeholders: rb?.placeholders || [],
 });
 
 export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
@@ -638,7 +640,62 @@ export const RunbookEditorModal: React.FC<RunbookEditorModalProps> = ({
                 className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
               />
             </div>
+
+            {!isReadOnly && (
+              <div>
+                <label htmlFor="runbook-status" className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  Status
+                </label>
+                {/* Drafts and deprecated guides are never given to the IT Assistant. */}
+                <select
+                  id="runbook-status"
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as Runbook['status'] })}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800"
+                >
+                  <option value="active">Active (used by the IT Assistant)</option>
+                  <option value="draft">Draft (hidden from the IT Assistant)</option>
+                  <option value="deprecated">Deprecated</option>
+                </select>
+              </div>
+            )}
           </div>
+
+          {/* Gaps the AI SOP writer could not fill from the notes */}
+          {!isReadOnly && (formData.needsConfirming?.length || formData.placeholders?.length) ? (
+            <div data-editor-needs-confirming className="rounded-lg px-3 py-2.5 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 space-y-2">
+              {formData.needsConfirming?.length ? (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Needs confirming ({formData.needsConfirming.length})
+                  </p>
+                  <ul className="mt-1 space-y-0.5 list-disc pl-4 text-xs text-amber-700 dark:text-amber-300">
+                    {formData.needsConfirming.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {formData.placeholders?.length ? (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  <span className="font-semibold">Placeholders to fill:</span>{' '}
+                  <span className="font-mono">{formData.placeholders.join(', ')}</span>
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  Fill these in, set Status to Active, then clear this list.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, needsConfirming: [], placeholders: [] })}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium border border-amber-200 dark:border-amber-900 bg-white dark:bg-slate-900 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 transition-colors"
+                >
+                  Mark all confirmed
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {/* Observable Symptoms */}
           <div>

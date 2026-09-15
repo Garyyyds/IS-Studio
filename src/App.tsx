@@ -633,14 +633,21 @@ export default function App() {
     setIsAiRunbookGeneratorOpen(true);
   };
 
-  const handleRunbookGenerated = (newRunbook: Runbook) => {
-    setRunbooks((prev) => [newRunbook, ...prev]);
+  // The SOP writer can split one set of notes into several SOPs. A ticket they
+  // were written from is linked to the first.
+  const handleRunbooksGenerated = (newRunbooks: Runbook[]) => {
+    if (!newRunbooks.length) return;
+    setRunbooks((prev) => [...newRunbooks, ...prev]);
     if (taskForAiRunbook) {
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskForAiRunbook.id ? { ...t, linkedRunbookId: newRunbook.id } : t))
+        prev.map((t) => (t.id === taskForAiRunbook.id ? { ...t, linkedRunbookId: newRunbooks[0].id } : t))
       );
     }
-    showToast(`Generated and added SOP: ${newRunbook.code}`);
+    const drafts = newRunbooks.filter((rb) => rb.status === 'draft').length;
+    showToast(
+      `Added ${newRunbooks.map((rb) => rb.code).join(', ')} to the handbook` +
+        (drafts ? ` (${drafts} draft${drafts > 1 ? 's' : ''} to confirm)` : '')
+    );
   };
 
   const handleExportFullHandbook = () => {
@@ -956,7 +963,8 @@ export default function App() {
             setIsAiRunbookGeneratorOpen(false);
             setTaskForAiRunbook(null);
           }}
-          onRunbookGenerated={handleRunbookGenerated}
+          onRunbooksGenerated={handleRunbooksGenerated}
+          ownerName={currentUser?.name || settings.operatorName || 'IT Department'}
           initialTask={taskForAiRunbook}
         />
       )}
