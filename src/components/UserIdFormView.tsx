@@ -25,6 +25,7 @@ import {
   USER_ID_SIGNATURE_LABELS,
   USER_ID_IT_SIGNATURE_LABELS,
 } from '../utils/userIdFormPdf';
+import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface UserIdFormViewProps {
   currentUser: AppUser;
@@ -53,6 +54,11 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
 
   const [form, setForm] = useState(initialForm);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The picked files themselves, by name, for uploading on submit. The form
+  // state keeps only names, which is all the PDF needs.
+  const pickedFilesRef = useRef(new Map<string, File>());
+  const { submit, isSubmitting, submitted } = useFormSubmit('user-id', currentUser);
+  const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
 
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +100,9 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     // Annotated because the event type resolves to any without React's types,
     // which would otherwise leave each entry as unknown.
     const list: FileList | null = e.target.files;
-    const picked: string[] = list ? Array.from(list).map((file) => file.name) : [];
+    const pickedFiles: File[] = list ? Array.from(list) : [];
+    pickedFiles.forEach((file) => pickedFilesRef.current.set(file.name, file));
+    const picked: string[] = pickedFiles.map((file) => file.name);
     if (picked.length) {
       setForm((prev) => ({
         ...prev,
@@ -125,10 +133,30 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
     el.style.height = `${el.scrollHeight}px`;
   };
 
+  const missingSystems = (action: string) =>
+    Object.values(form.systems).some(Boolean) ? null : `Select at least one system under Section B before ${action}.`;
+
+  const handleSubmit = async () => {
+    const problem = !form.requestorName.trim() ? 'User/Requestor Name is required.' : missingSystems('submitting');
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    const files = form.attachmentFormat === 'softcopy'
+      ? form.attachmentFileNames.map((name) => pickedFilesRef.current.get(name)).filter((f): f is File => Boolean(f))
+      : [];
+    try {
+      await submit(form, files, JSON.stringify(form));
+    } catch (err: any) {
+      setError(err?.message || 'Could not submit the form. Please try again.');
+    }
+  };
+
   const handleExport = async () => {
-    const anyTicked = Object.values(form.systems).some(Boolean);
-    if (!anyTicked) {
-      setError('Select at least one system under Section B before exporting.');
+    const problem = missingSystems('exporting');
+    if (problem) {
+      setError(problem);
       return;
     }
 
@@ -156,31 +184,26 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
             <span>New User ID Requisition</span>
           </h2>
           <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-            Fill in and export as PDF for signing
+            Submit to IT, or export as PDF for signing
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onBack} className={secondaryHeaderButton}>
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
-          >
+          <button type="button" onClick={handleExport} disabled={isExporting} className={secondaryHeaderButton}>
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>
       </div>
+
+      {submitted && <FormSubmittedNotice formNumber={submitted.formNumber} />}
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">

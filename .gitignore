@@ -10,3 +10,5 @@ coverage/
 
 # Files employees upload with tickets when Supabase storage is unavailable
 data/attachments/
+# Submitted forms when Supabase is unavailable; they hold employee details
+data/form-submissions.json

@@ -458,6 +458,177 @@ app.post('/api/data', async (req, res) => {
   }
 });
 
+// --- Form Inbox: forms employees submit to IT ---
+// Kept apart from the workspace autosave on purpose. Every browser re-posts the
+// whole workspace on each save, last write wins, so a stale tab or an older
+// deployment would otherwise wipe submissions it never loaded. Each change here
+// is a small read-modify-write on its own record instead.
+// In Supabase that record is a second workspace_data row (id 'form-submissions')
+// holding { submissions, counters } in its settings column, which needs no
+// schema change; /api/data only ever reads the 'default' row. Without Supabase
+// it is data/form-submissions.json.
+const FORM_STORE_ROW_ID = 'form-submissions';
+const FORM_STORE_FILE = path.join(DATA_DIR, 'form-submissions.json');
+const FORM_TYPES: Record<string, { prefix: string }> = {
+  'user-id': { prefix: 'UID' },
+  requisition: { prefix: 'IRQ' },
+  disposal: { prefix: 'DSP' },
+  allocation: { prefix: 'ALC' },
+};
+const FORM_MAX_BYTES = 200 * 1024;
+
+type FormStore = { submissions: any[]; counters: Record<string, number> };
+
+async function readFormStore(): Promise<{ store: FormStore; storageType: 'supabase' | 'file' }> {
+  const empty = (): FormStore => ({ submissions: [], counters: {} });
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('workspace_data')
+      .select('settings')
+      .eq('id', FORM_STORE_ROW_ID)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const saved = data?.settings || {};
+    return {
+      store: {
+        submissions: Array.isArray(saved.submissions) ? saved.submissions : [],
+        counters: saved.counters && typeof saved.counters === 'object' ? saved.counters : {},
+      },
+      storageType: 'supabase',
+    };
+  }
+  try {
+    if (fs.existsSync(FORM_STORE_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(FORM_STORE_FILE, 'utf-8'));
+      return { store: { ...empty(), ...saved }, storageType: 'file' };
+    }
+  } catch (err) {
+    console.error('Error reading form-submissions.json:', err);
+  }
+  return { store: empty(), storageType: 'file' };
+}
+
+async function writeFormStore(store: FormStore, storageType: 'supabase' | 'file') {
+  if (storageType === 'supabase') {
+    const supabase = getSupabase();
+    const { error } = await supabase!
+      .from('workspace_data')
+      .upsert(
+        { id: FORM_STORE_ROW_ID, settings: store, updated_at: new Date().toISOString() },
+        { onConflict: 'id' }
+      );
+    if (error) throw new Error(error.message);
+    return;
+  }
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(FORM_STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
+}
+
+// Requests touching the store run one at a time, so two submissions arriving
+// together cannot both read the same list and drop one of them.
+let formStoreQueue: Promise<unknown> = Promise.resolve();
+function withFormStore<T>(change: (store: FormStore) => T): Promise<T> {
+  const run = formStoreQueue.then(async () => {
+    const { store, storageType } = await readFormStore();
+    const result = change(store);
+    await writeFormStore(store, storageType);
+    return result;
+  });
+  formStoreQueue = run.catch(() => {});
+  return run;
+}
+
+app.get('/api/forms', async (req, res) => {
+  try {
+    const { store, storageType } = await readFormStore();
+    // ?email= narrows the list to one employee's own forms for the portal.
+    const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+    const submissions = email
+      ? store.submissions.filter((s: any) => String(s.submittedBy?.email || '').toLowerCase() === email)
+      : store.submissions;
+    res.json({ submissions, storageType });
+  } catch (err: any) {
+    console.error('Error in GET /api/forms:', err);
+    res.status(500).json({ error: 'Could not load submitted forms.' });
+  }
+});
+
+app.post('/api/forms', async (req, res) => {
+  try {
+    const { type, data, attachments, submittedBy } = req.body || {};
+    if (!FORM_TYPES[type]) {
+      return res.status(400).json({ error: 'Unknown form type.' });
+    }
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: 'The form is empty.' });
+    }
+    if (!submittedBy?.email) {
+      return res.status(400).json({ error: 'Sign in again before submitting.' });
+    }
+    if (JSON.stringify(data).length > FORM_MAX_BYTES) {
+      return res.status(413).json({ error: 'The form is too large to submit.' });
+    }
+
+    const submission = await withFormStore((store) => {
+      const sequence = (Number(store.counters[type]) || 0) + 1;
+      store.counters[type] = sequence;
+      const created = {
+        id: `form-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        formNumber: `${FORM_TYPES[type].prefix}-${String(sequence).padStart(4, '0')}`,
+        type,
+        submittedAt: new Date().toISOString(),
+        submittedBy: {
+          id: String(submittedBy.id || ''),
+          name: String(submittedBy.name || ''),
+          email: String(submittedBy.email),
+          department: submittedBy.department ? String(submittedBy.department) : undefined,
+        },
+        data,
+        attachments: Array.isArray(attachments) && attachments.length ? attachments : undefined,
+      };
+      store.submissions.unshift(created);
+      return created;
+    });
+
+    res.json({ submission });
+  } catch (err: any) {
+    console.error('Error in POST /api/forms:', err);
+    res.status(500).json({ error: 'Could not submit the form. Please try again.' });
+  }
+});
+
+// Marks a form as opened, so it stops showing as new.
+app.post('/api/forms/:id/viewed', async (req, res) => {
+  try {
+    const submission = await withFormStore((store) => {
+      const found = store.submissions.find((s: any) => s.id === req.params.id);
+      if (found && !found.viewedAt) found.viewedAt = new Date().toISOString();
+      return found;
+    });
+    if (!submission) return res.status(404).json({ error: 'Form not found.' });
+    res.json({ submission });
+  } catch (err: any) {
+    console.error('Error in POST /api/forms/:id/viewed:', err);
+    res.status(500).json({ error: 'Could not update the form.' });
+  }
+});
+
+app.delete('/api/forms/:id', async (req, res) => {
+  try {
+    const removed = await withFormStore((store) => {
+      const before = store.submissions.length;
+      store.submissions = store.submissions.filter((s: any) => s.id !== req.params.id);
+      return store.submissions.length < before;
+    });
+    if (!removed) return res.status(404).json({ error: 'Form not found.' });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error in DELETE /api/forms/:id:', err);
+    res.status(500).json({ error: 'Could not delete the form.' });
+  }
+});
+
 // API: Storage and Supabase status check
 app.get('/api/data/status', async (req, res) => {
   try {

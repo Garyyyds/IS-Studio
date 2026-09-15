@@ -143,8 +143,10 @@ export interface UserSettings {
     history: boolean;
     handbook: boolean;
     analytics: boolean;
+    /** Optional so settings saved before the Form Inbox existed still show it. */
+    forms?: boolean;
   };
-  defaultView: 'kanban' | 'list' | 'history' | 'handbook' | 'analytics';
+  defaultView: 'kanban' | 'list' | 'history' | 'handbook' | 'analytics' | 'forms';
   themeMode: 'light' | 'dark' | 'system';
   completedTicketRetentionMinutes?: number; // Minutes a resolved ticket stays on the board (default 60 = 1 hour)
   /** Highest REQ number issued so far; numbers are never reused. */
@@ -153,7 +155,30 @@ export interface UserSettings {
   defaultCategory: ITCategory;
 }
 
-export type ActiveTab = 'kanban' | 'list' | 'history' | 'handbook' | 'analytics' | 'settings';
+export type ActiveTab = 'kanban' | 'list' | 'history' | 'handbook' | 'analytics' | 'forms' | 'settings';
+
+/** The printable forms an employee can submit to IT (the support request is a ticket instead). */
+export type FormSubmissionType = 'user-id' | 'requisition' | 'disposal' | 'allocation';
+
+/** A form an employee submitted, as received in the admin Form Inbox. */
+export interface FormSubmission {
+  id: string;
+  /** e.g. "UID-0001"; numbered per form type and never reused. */
+  formNumber: string;
+  type: FormSubmissionType;
+  submittedAt: string;
+  submittedBy: {
+    id: string;
+    name: string;
+    email: string;
+    department?: string;
+  };
+  data: UserIdFormData | RequisitionFormData | AssetFormData;
+  /** The softcopy files, uploaded to the attachment store. */
+  attachments?: TicketAttachment[];
+  /** Set the first time an admin opens it; unset means new. */
+  viewedAt?: string;
+}
 
 export interface StorageStatusInfo {
   storageType: 'supabase' | 'file';

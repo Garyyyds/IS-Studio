@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AppUser, AssetFormData, AssetFormItem } from '../types';
 import { exportAssetFormPdf, AssetFormConfig } from '../utils/assetFormPdf';
+import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface AssetFormViewProps {
   config: AssetFormConfig;
@@ -55,6 +56,8 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
 
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { submit, isSubmitting, submitted } = useFormSubmit(config.key, currentUser);
+  const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
 
   const setField = (field: keyof Omit<AssetFormData, 'items' | 'itReturnOptions'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -86,32 +89,45 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
     }));
   };
 
-  const handleExport = async () => {
-    const hasItem = form.items.some((item) => item.description.trim());
-    if (!hasItem) {
-      setError(config.emptyItemsError);
+  const problem = () => {
+    if (!form.items.some((item) => item.description.trim())) return config.emptyItemsError;
+    if (!form.submittedBy.trim()) return 'Submitted By is required.';
+    return null;
+  };
+
+  // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
+  const withoutBlankRows = (): AssetFormData => ({
+    ...form,
+    items: form.items.filter((item) =>
+      [item.description, item.specModel, item.serialNumber, item.quantity, item.remarks].some((v) => v.trim())
+    ),
+  });
+
+  const handleSubmit = async () => {
+    const found = problem();
+    if (found) {
+      setError(found.replace(/exporting/i, 'submitting'));
       return;
     }
-    if (!form.submittedBy.trim()) {
-      setError('Submitted By is required.');
+    setError(null);
+    try {
+      await submit(withoutBlankRows(), [], JSON.stringify(form));
+    } catch (err: any) {
+      setError(err?.message || 'Could not submit the form. Please try again.');
+    }
+  };
+
+  const handleExport = async () => {
+    const found = problem();
+    if (found) {
+      setError(found);
       return;
     }
 
     setError(null);
     setIsExporting(true);
     try {
-      // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
-      await exportAssetFormPdf(
-        {
-          ...form,
-          items: form.items.filter((item) =>
-            [item.description, item.specModel, item.serialNumber, item.quantity, item.remarks].some(
-              (v) => v.trim()
-            )
-          ),
-        },
-        config
-      );
+      await exportAssetFormPdf(withoutBlankRows(), config);
     } catch (err: any) {
       setError(err?.message || 'Could not generate the PDF. Please try again.');
     } finally {
@@ -137,31 +153,26 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
             <span>{config.screenTitle}</span>
           </h2>
           <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-            Fill in and export as PDF for signing
+            Submit to IT, or export as PDF for signing
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onBack} className={secondaryHeaderButton}>
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
-          >
+          <button type="button" onClick={handleExport} disabled={isExporting} className={secondaryHeaderButton}>
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>
       </div>
+
+      {submitted && <FormSubmittedNotice formNumber={submitted.formNumber} />}
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">

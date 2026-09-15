@@ -41,6 +41,7 @@ import { uploadAttachment, formatBytes } from '../utils/attachments';
 import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
 import { RequisitionFormView } from './RequisitionFormView';
+import { MyFormsView } from './MyFormsView';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
@@ -67,7 +68,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   homeSignal = 0,
   ticketPrefill = null,
 }) => {
-  const [activeTab, setActiveTab] = useState<'my-tickets' | 'create-form' | 'help'>('create-form');
+  const [activeTab, setActiveTab] = useState<'my-tickets' | 'my-forms' | 'create-form' | 'help'>('create-form');
   // null shows the picker; a value opens that form.
   // Home = the Create Form picker, the page the portal opens on.
   useEffect(() => {
@@ -355,9 +356,9 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
       {/* Portal Tabs */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-        {/* Three equal columns, each as wide as the longest label, so the
-            selected tab and the gaps look the same whichever tab is active. */}
-        <div className="grid grid-cols-[repeat(3,1fr)] gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
+        {/* Equal columns, each as wide as the longest label, so the selected
+            tab and the gaps look the same whichever tab is active. */}
+        <div className="grid grid-cols-[repeat(4,1fr)] gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => {
@@ -387,6 +388,19 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           >
             <Inbox className="w-3.5 h-3.5" />
             <span>My Tickets</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('my-forms')}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+              activeTab === 'my-forms'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>My Forms</span>
           </button>
 
           <button
@@ -438,6 +452,17 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* MY FORMS: history of forms submitted to IT */}
+      {activeTab === 'my-forms' && (
+        <MyFormsView
+          currentUser={currentUser}
+          onCreateForm={() => {
+            setSelectedForm(null);
+            setActiveTab('create-form');
+          }}
+        />
       )}
 
       {/* TAB 2: MY TICKETS LIST & STATUS TRACKER */}
@@ -894,7 +919,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   Create a Form
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
-                  Choose the form you need. Requests go straight to IT; the other forms export a PDF to print and sign.
+                  Choose the form you need. Every form can be submitted straight to IT, and the printable forms also export a PDF to sign.
                 </p>
               </div>
 

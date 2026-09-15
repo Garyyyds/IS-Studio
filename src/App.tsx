@@ -28,6 +28,7 @@ import { AiRunbookGeneratorModal } from './components/AiRunbookGeneratorModal';
 import { AuthPage } from './components/AuthPage';
 import { UserPortalView } from './components/UserPortalView';
 import { SupportChatAssistant } from './components/SupportChatAssistant';
+import { FormInboxView } from './components/FormInboxView';
 import { formatTicketNumber, nextTicketSequence, sequenceOf } from './utils/ticketNumber';
 import { normalizeRunbooks, normalizeSettings, normalizeTasks } from './utils/categories';
 import { exportHandbookToPdf, exportRunbookToPdf } from './utils/pdfExport';
@@ -848,6 +849,8 @@ export default function App() {
                 onBatchDeleteTasks={handleBatchDeleteTasks}
               />
             )}
+
+            {activeView === 'forms' && <FormInboxView />}
 
             {activeView === 'handbook' && (
               <HandbookView

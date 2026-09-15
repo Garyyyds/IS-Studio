@@ -39,6 +39,7 @@ import {
   itemsTotal,
   formatTotal,
 } from '../utils/requisitionFormPdf';
+import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface RequisitionFormViewProps {
   currentUser: AppUser;
@@ -93,6 +94,11 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
 
   const [form, setForm] = useState(initialForm);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The picked files themselves, by name, for uploading on submit. The form
+  // state keeps only names, which is all the PDF needs.
+  const pickedFilesRef = useRef(new Map<string, File>());
+  const { submit, isSubmitting, submitted } = useFormSubmit('requisition', currentUser);
+  const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,7 +144,9 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   // de-duplicated because the same file adds nothing the second time.
   const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list: FileList | null = e.target.files;
-    const picked: string[] = list ? Array.from(list).map((file) => file.name) : [];
+    const pickedFiles: File[] = list ? Array.from(list) : [];
+    pickedFiles.forEach((file) => pickedFilesRef.current.set(file.name, file));
+    const picked: string[] = pickedFiles.map((file) => file.name);
     if (picked.length) {
       setForm((prev) => ({
         ...prev,
@@ -193,28 +201,49 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   // particular request will need it.
   const needsCeo = Math.max(requestTotal, itTotal) > REQ_CEO_THRESHOLD;
 
-  const handleExport = async () => {
-    if (!form.requestorName.trim()) {
-      setError('User/Requestor Name is required.');
+  const problemWith = (action: string) => {
+    if (!form.requestorName.trim()) return 'User/Requestor Name is required.';
+    if (!form.items.some((item) => item.description.trim())) {
+      return `Add at least one item under Section C before ${action}.`;
+    }
+    return null;
+  };
+
+  // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
+  const withoutBlankRows = (): RequisitionFormData => {
+    const used = (items: RequisitionItem[]) =>
+      items.filter((item) => [item.description, item.quantity, item.price].some((v) => v.trim()));
+    return { ...form, items: used(form.items), itItems: used(form.itItems) };
+  };
+
+  const handleSubmit = async () => {
+    const problem = problemWith('submitting');
+    if (problem) {
+      setError(problem);
       return;
     }
-    if (!form.items.some((item) => item.description.trim())) {
-      setError('Add at least one item under Section C before exporting.');
+    setError(null);
+    const files = form.attachmentFormat === 'softcopy'
+      ? form.attachmentFileNames.map((name) => pickedFilesRef.current.get(name)).filter((f): f is File => Boolean(f))
+      : [];
+    try {
+      await submit(withoutBlankRows(), files, JSON.stringify(form));
+    } catch (err: any) {
+      setError(err?.message || 'Could not submit the form. Please try again.');
+    }
+  };
+
+  const handleExport = async () => {
+    const problem = problemWith('exporting');
+    if (problem) {
+      setError(problem);
       return;
     }
 
     setError(null);
     setIsExporting(true);
     try {
-      // Blank rows are dropped so the PDF numbering runs 1..n without gaps.
-      const used = (items: RequisitionItem[]) =>
-        items.filter((item) => [item.description, item.quantity, item.price].some((v) => v.trim()));
-
-      await exportRequisitionFormPdf({
-        ...form,
-        items: used(form.items),
-        itItems: used(form.itItems),
-      });
+      await exportRequisitionFormPdf(withoutBlankRows());
     } catch (err: any) {
       setError(err?.message || 'Could not generate the PDF. Please try again.');
     } finally {
@@ -436,26 +465,17 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
             <span>IT Hardware, Software &amp; Peripherals Requisition</span>
           </h2>
           <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-            Fill in and export as PDF for signing
+            Submit to IT, or export as PDF for signing
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onBack} className={secondaryHeaderButton}>
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors"
-          >
+          <button type="button" onClick={handleExport} disabled={isExporting} className={secondaryHeaderButton}>
             {isExporting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
@@ -463,8 +483,12 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
             )}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>
       </div>
+
+      {submitted && <FormSubmittedNotice formNumber={submitted.formNumber} />}
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">

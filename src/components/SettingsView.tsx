@@ -43,6 +43,7 @@ import {
   RefreshCcw,
   Shield,
   ArrowLeft,
+  Inbox,
 } from 'lucide-react';
 
 export type SettingsSection = 'profile' | 'theme' | 'views' | 'defaults' | 'data';
@@ -254,6 +255,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       category: 'Task Workflow',
     },
     {
+      id: 'forms',
+      title: 'Form Inbox',
+      description: 'Requisition, user ID, asset allocation and asset disposal forms submitted by employees, one lane per form.',
+      icon: <Inbox className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
+      category: 'Task Workflow',
+    },
+    {
       id: 'handbook',
       title: 'Troubleshooting & SOP Handbook',
       description: 'SRE issue-solution runbooks, interactive terminal diagnostic commands, and one-click PDF team documentation export.',
@@ -270,11 +278,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   ];
 
   const handleToggleView = (viewKey: keyof UserSettings['visibleViews']) => {
-    const currentVal = settings.visibleViews[viewKey];
+    // The Form Inbox is on unless it has been switched off.
+    const currentVal = viewKey === 'forms' ? settings.visibleViews.forms !== false : Boolean(settings.visibleViews[viewKey]);
     
     // Safety check: Don't allow disabling the last remaining view
     if (currentVal) {
-      const activeCount = Object.values(settings.visibleViews).filter(Boolean).length;
+      const activeCount = Object.values({ forms: true, ...settings.visibleViews }).filter(Boolean).length;
       if (activeCount <= 1) {
         alert('At least one navigation view must remain enabled so you can interact with your workspace.');
         return;
@@ -315,6 +324,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           history: false,
           handbook: false,
           analytics: false,
+          forms: false,
         },
         defaultView: 'kanban',
       });
@@ -327,6 +337,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           history: true,
           handbook: true,
           analytics: true,
+          forms: true,
         },
       });
     }
@@ -919,7 +930,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* View Switch Cards */}
                 <div className="space-y-3">
                   {viewDefinitions.map((view) => {
-                    const isVisible = settings.visibleViews[view.id];
+                    const isVisible = view.id === 'forms' ? settings.visibleViews.forms !== false : settings.visibleViews[view.id];
                     const isDefault = settings.defaultView === view.id;
 
                     return (
@@ -994,7 +1005,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     }
                     className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
                   >
-                    {Object.entries(settings.visibleViews)
+                    {Object.entries({ forms: true, ...settings.visibleViews })
                       .filter(([_, enabled]) => enabled)
                       .map(([key]) => (
                         <option key={key} value={key}>
