@@ -183,6 +183,12 @@ export interface FormSubmission {
   completedAt?: string;
   /** Name of the admin who marked it Done. */
   completedBy?: string;
+  /** Set when an admin rejects it (requisitions only); it then leaves the inbox for Form History. */
+  rejectedAt?: string;
+  /** Name of the admin who rejected it. */
+  rejectedBy?: string;
+  /** Why it was rejected, shown to the employee. */
+  rejectionReason?: string;
 }
 
 export interface StorageStatusInfo {

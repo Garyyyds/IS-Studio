@@ -12,7 +12,7 @@ import {
   Search,
 } from 'lucide-react';
 import { AppUser, FormSubmission, FormSubmissionType } from '../types';
-import { FORM_TYPE_INFO, FORM_TYPE_ORDER, fetchFormSubmissions, formHeadline } from '../utils/formSubmissions';
+import { FORM_TYPE_INFO, FORM_TYPE_ORDER, fetchFormSubmissions, formHeadline, isFormClosed } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
 import { FORM_ICONS } from './FormHistoryView';
 import { secondaryHeaderButton } from './FormSubmitControls';
@@ -99,7 +99,8 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
             {FORM_TYPE_ORDER.map((type) => {
               const Icon = FORM_ICONS[type];
               const forms = ofType(type);
-              const inProgress = forms.filter((s) => !s.completedAt).length;
+              const inProgress = forms.filter((s) => !isFormClosed(s)).length;
+              const rejected = forms.filter((s) => s.rejectedAt).length;
               return (
                 <button
                   key={type}
@@ -128,6 +129,11 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                           {inProgress > 0 && (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                               {inProgress} in progress
+                            </span>
+                          )}
+                          {rejected > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                              {rejected} rejected
                             </span>
                           )}
                         </>
@@ -223,7 +229,11 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                       </span>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{formHeadline(submission)}</h3>
                     </div>
-                    {submission.completedAt ? (
+                    {submission.rejectedAt ? (
+                      <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800">
+                        Rejected
+                      </span>
+                    ) : submission.completedAt ? (
                       <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
                         Completed
                       </span>
@@ -234,6 +244,15 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                     )}
                   </div>
 
+                  {submission.rejectedAt && (
+                    <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                      <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed whitespace-pre-wrap break-words">
+                        <span className="font-semibold">Reason for rejection:</span> {submission.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="flex items-center gap-1">
@@ -242,6 +261,9 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                       </span>
                       {submission.completedAt && (
                         <span>Completed on {new Date(submission.completedAt).toLocaleDateString()}</span>
+                      )}
+                      {submission.rejectedAt && (
+                        <span>Rejected on {new Date(submission.rejectedAt).toLocaleDateString()}</span>
                       )}
                       {submission.attachments && submission.attachments.length > 0 && (
                         <span className="flex items-center gap-1">

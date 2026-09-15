@@ -100,6 +100,23 @@ export async function completeFormSubmission(id: string, completedBy: string): P
   return body.submission;
 }
 
+export async function rejectFormSubmission(id: string, reason: string, rejectedBy: string): Promise<FormSubmission> {
+  const res = await fetch(`/api/forms/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason, rejectedBy }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.submission) throw new Error(body?.error || 'Could not reject the form.');
+  return body.submission;
+}
+
+/** Only this form type can be rejected; the others are simply marked Done. */
+export const canReject = (submission: FormSubmission) => submission.type === 'requisition';
+
+/** A form is closed once it is marked Done or rejected. */
+export const isFormClosed = (submission: FormSubmission) => Boolean(submission.completedAt || submission.rejectedAt);
+
 export async function deleteFormSubmission(id: string): Promise<void> {
   const res = await fetch(`/api/forms/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!res.ok) {

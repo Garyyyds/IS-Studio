@@ -621,7 +621,7 @@ app.post('/api/forms/:id/complete', async (req, res) => {
     const completedBy = typeof req.body?.completedBy === 'string' ? req.body.completedBy.trim() : '';
     const submission = await withFormStore((store) => {
       const found = store.submissions.find((s: any) => s.id === req.params.id);
-      if (found && !found.completedAt) {
+      if (found && !found.completedAt && !found.rejectedAt) {
         const now = new Date().toISOString();
         found.completedAt = now;
         found.completedBy = completedBy || undefined;
@@ -634,6 +634,41 @@ app.post('/api/forms/:id/complete', async (req, res) => {
   } catch (err: any) {
     console.error('Error in POST /api/forms/:id/complete:', err);
     res.status(500).json({ error: 'Could not mark the form as done.' });
+  }
+});
+
+// Rejects a requisition with a reason the employee will see. Only the IT
+// Hardware, Software & Peripherals Requisition can be rejected, and only while
+// it is still open.
+const FORM_REJECTION_MAX_CHARS = 1000;
+app.post('/api/forms/:id/reject', async (req, res) => {
+  try {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    const rejectedBy = typeof req.body?.rejectedBy === 'string' ? req.body.rejectedBy.trim() : '';
+    if (!reason) return res.status(400).json({ error: 'Write the reason for rejecting this request.' });
+    if (reason.length > FORM_REJECTION_MAX_CHARS) {
+      return res.status(400).json({ error: `Keep the reason under ${FORM_REJECTION_MAX_CHARS} characters.` });
+    }
+
+    const outcome = await withFormStore((store) => {
+      const found = store.submissions.find((s: any) => s.id === req.params.id);
+      if (!found) return { status: 404, error: 'Form not found.' };
+      if (found.type !== 'requisition') return { status: 400, error: 'Only requisition forms can be rejected.' };
+      if (found.completedAt) return { status: 409, error: 'This form is already marked Done.' };
+      if (!found.rejectedAt) {
+        const now = new Date().toISOString();
+        found.rejectedAt = now;
+        found.rejectedBy = rejectedBy || undefined;
+        found.rejectionReason = reason;
+        if (!found.viewedAt) found.viewedAt = now;
+      }
+      return { status: 200, submission: found };
+    });
+    if (outcome.status !== 200) return res.status(outcome.status).json({ error: outcome.error });
+    res.json({ submission: outcome.submission });
+  } catch (err: any) {
+    console.error('Error in POST /api/forms/:id/reject:', err);
+    res.status(500).json({ error: 'Could not reject the form.' });
   }
 });
 

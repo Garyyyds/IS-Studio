@@ -113,3 +113,4 @@ away later work permanently.
 | `15092026ver005` | 2026-09-15 | My Forms and Form History header buttons standardised: Refresh and Back share the same size and style, with Back first |
 | `15092026ver006` | 2026-09-15 | Ticket History: removed the Avg Resolution Time card; the three remaining summary cards share the row |
 | `15092026ver007` | 2026-09-15 | Form header buttons standardised: primary buttons (Export to PDF on IT Support Request, Submit to IT) now match Back and Export exactly in height on all five forms |
+| `15092026ver008` | 2026-09-15 | IT Hardware, Software & Peripherals Requisition can be rejected: Reject beside Done opens a reason window (Cancel / Submit); rejected forms move to Form History, and employees see Rejected with the reason in My Forms |

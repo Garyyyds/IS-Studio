@@ -11,9 +11,10 @@ import {
   AlertTriangle,
   ExternalLink,
   CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { AssetFormData, FormSubmission, RequisitionFormData, UserIdFormData } from '../types';
-import { FORM_TYPE_INFO } from '../utils/formSubmissions';
+import { FORM_TYPE_INFO, canReject, isFormClosed } from '../utils/formSubmissions';
 import { attachmentUrl, formatBytes } from '../utils/attachments';
 import { exportUserIdFormPdf, SERVER_REQUEST_ROWS } from '../utils/userIdFormPdf';
 import {
@@ -33,6 +34,8 @@ interface FormSubmissionModalProps {
   onDelete?: (id: string) => Promise<void>;
   /** Shows a Done button; given only in the admin inbox. */
   onComplete?: (id: string) => Promise<void>;
+  /** Shows a Reject button on requisitions; opens the reason dialog. */
+  onRequestReject?: (id: string) => void;
 }
 
 type Row = { label: string; value?: string };
@@ -41,7 +44,14 @@ const yesNo = (value: string) => (value === 'yes' ? 'Yes' : value === 'no' ? 'No
 const formatDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString() : '');
 
 /** Read-only view of a submitted form, with the same PDF the employee can export. */
-export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submission, onClose, onDelete, onComplete }) => {
+export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({
+  submission,
+  onClose,
+  onDelete,
+  onComplete,
+  onRequestReject,
+}) => {
+  const isOpen = !isFormClosed(submission);
   const [isExporting, setIsExporting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -123,7 +133,12 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
               <Lock className="w-3 h-3 text-slate-400" />
               <span>Submitted by employee</span>
             </span>
-            {submission.completedAt ? (
+            {submission.rejectedAt ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                <XCircle className="w-3 h-3" />
+                <span>Rejected</span>
+              </span>
+            ) : submission.completedAt ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
                 <CheckCircle2 className="w-3 h-3" />
                 <span>Completed</span>
@@ -163,6 +178,25 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
             <div className="flex items-start gap-2 rounded-lg px-3 py-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900">
               <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
               <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">{error}</p>
+            </div>
+          )}
+
+          {submission.rejectedAt && (
+            <div
+              data-rejection-reason
+              className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 p-4 space-y-1.5"
+            >
+              <h3 className="text-sm font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4" />
+                <span>Request rejected</span>
+              </h3>
+              <p className="text-sm text-rose-700 dark:text-rose-300 whitespace-pre-wrap break-words">
+                {submission.rejectionReason}
+              </p>
+              <p className="text-[11px] text-rose-600/80 dark:text-rose-400/80">
+                Rejected on {new Date(submission.rejectedAt).toLocaleString()}
+                {submission.rejectedBy ? ` by ${submission.rejectedBy}` : ''}
+              </p>
             </div>
           )}
 
@@ -218,9 +252,11 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
           {!onDelete ? (
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {submission.completedAt
-                ? `Completed by IT on ${formatDate(submission.completedAt)}`
-                : 'In progress with IT'}
+              {submission.rejectedAt
+                ? `Rejected by IT on ${formatDate(submission.rejectedAt)}`
+                : submission.completedAt
+                  ? `Completed by IT on ${formatDate(submission.completedAt)}`
+                  : 'In progress with IT'}
             </span>
           ) : confirmDelete ? (
             <div className="flex items-center gap-2">
@@ -257,7 +293,18 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
               <Clock className="w-3 h-3" />
               <span>{formatDate(submission.submittedAt)}</span>
             </span>
-            {onComplete && !submission.completedAt && (
+            {onRequestReject && isOpen && canReject(submission) && (
+              <button
+                type="button"
+                onClick={() => onRequestReject(submission.id)}
+                disabled={isCompleting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 disabled:opacity-60 transition cursor-pointer"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Reject</span>
+              </button>
+            )}
+            {onComplete && isOpen && (
               <button
                 type="button"
                 onClick={handleComplete}

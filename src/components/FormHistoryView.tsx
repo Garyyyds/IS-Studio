@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Loader2,
   Archive,
+  XCircle,
 } from 'lucide-react';
 import { FormSubmission, FormSubmissionType } from '../types';
 import {
@@ -22,6 +23,7 @@ import {
   fetchFormSubmissions,
   formHeadline,
   deleteFormSubmission,
+  isFormClosed,
 } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
 import { secondaryHeaderButton } from './FormSubmitControls';
@@ -68,11 +70,11 @@ export const FormHistoryView: React.FC = () => {
     setOpenId(null);
   };
 
-  // Newest completion first.
-  const completed = submissions
-    .filter((s) => s.completedAt)
-    .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+  // Done or rejected, newest first.
+  const closedAt = (s: FormSubmission) => s.completedAt || s.rejectedAt || '';
+  const completed = submissions.filter(isFormClosed).sort((a, b) => closedAt(b).localeCompare(closedAt(a)));
   const countOf = (type: FormSubmissionType) => completed.filter((s) => s.type === type).length;
+  const rejectedCountOf = (type: FormSubmissionType) => completed.filter((s) => s.type === type && s.rejectedAt).length;
   const opened = openId ? submissions.find((s) => s.id === openId) : undefined;
 
   const q = searchQuery.trim().toLowerCase();
@@ -82,7 +84,7 @@ export const FormHistoryView: React.FC = () => {
         .filter(
           (s) =>
             !q ||
-            [s.formNumber, s.submittedBy.name, s.submittedBy.email, s.submittedBy.department, s.completedBy, formHeadline(s), JSON.stringify(s.data)]
+            [s.formNumber, s.submittedBy.name, s.submittedBy.email, s.submittedBy.department, s.completedBy, s.rejectedBy, s.rejectionReason, formHeadline(s), JSON.stringify(s.data)]
               .join(' ')
               .toLowerCase()
               .includes(q)
@@ -107,14 +109,15 @@ export const FormHistoryView: React.FC = () => {
                 <span>Form History</span>
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
-                Forms marked Done in the Form Inbox. Choose a form type to see its records.
+                Forms marked Done or rejected in the Form Inbox. Choose a form type to see its records.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {FORM_TYPE_ORDER.map((type) => {
                 const Icon = FORM_ICONS[type];
-                const count = countOf(type);
+                const rejected = rejectedCountOf(type);
+                const count = countOf(type) - rejected;
                 return (
                   <button
                     key={type}
@@ -134,6 +137,11 @@ export const FormHistoryView: React.FC = () => {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           {isLoading ? '…' : `${count} completed`}
                         </span>
+                        {!isLoading && rejected > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                            {rejected} rejected
+                          </span>
+                        )}
                         <ChevronRight className="w-4 h-4 text-slate-400" />
                       </div>
                     </div>
@@ -157,7 +165,8 @@ export const FormHistoryView: React.FC = () => {
                   <span>{FORM_TYPE_INFO[selectedType].title}</span>
                 </h2>
                 <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-                  Form history · {countOf(selectedType)} completed
+                  Form history · {countOf(selectedType) - rejectedCountOf(selectedType)} completed
+                  {rejectedCountOf(selectedType) > 0 ? ` · ${rejectedCountOf(selectedType)} rejected` : ''}
                 </p>
               </div>
               <button type="button" onClick={() => setSelectedType(null)} className={secondaryHeaderButton}>
@@ -210,11 +219,24 @@ export const FormHistoryView: React.FC = () => {
                         </span>
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{formHeadline(submission)}</h3>
                       </div>
-                      <span className="self-start sm:self-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Completed
-                      </span>
+                      {submission.rejectedAt ? (
+                        <span className="self-start sm:self-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800">
+                          <XCircle className="w-3 h-3" />
+                          Rejected
+                        </span>
+                      ) : (
+                        <span className="self-start sm:self-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Completed
+                        </span>
+                      )}
                     </div>
+
+                    {submission.rejectionReason && (
+                      <p className="text-xs text-rose-700 dark:text-rose-300 line-clamp-2">
+                        <span className="font-semibold">Reason:</span> {submission.rejectionReason}
+                      </p>
+                    )}
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -235,8 +257,10 @@ export const FormHistoryView: React.FC = () => {
                         )}
                       </div>
                       <span className="text-slate-700 dark:text-slate-300 font-medium">
-                        Completed {new Date(submission.completedAt!).toLocaleDateString()}
-                        {submission.completedBy ? ` by ${submission.completedBy}` : ''}
+                        {submission.rejectedAt ? 'Rejected' : 'Completed'} {new Date(closedAt(submission)).toLocaleDateString()}
+                        {(submission.rejectedAt ? submission.rejectedBy : submission.completedBy)
+                          ? ` by ${submission.rejectedAt ? submission.rejectedBy : submission.completedBy}`
+                          : ''}
                       </span>
                     </div>
                   </div>
