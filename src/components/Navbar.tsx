@@ -20,6 +20,7 @@ import {
   LifeBuoy,
   ChevronDown,
   Inbox,
+  Archive,
 } from 'lucide-react';
 import { ActiveTab, Task, UserSettings, AppUser } from '../types';
 
@@ -109,6 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'handbook': return { icon: <BookOpen className="w-3.5 h-3.5" />, label: 'Handbook' };
       case 'analytics': return { icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Metrics' };
       case 'forms': return { icon: <Inbox className="w-3.5 h-3.5" />, label: 'Form Inbox' };
+      case 'formHistory': return { icon: <Archive className="w-3.5 h-3.5" />, label: 'Form History' };
       case 'settings': return { icon: <Settings2 className="w-3.5 h-3.5" />, label: 'Settings' };
       default: return { icon: <Kanban className="w-3.5 h-3.5" />, label: 'Board' };
     }
@@ -119,6 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'list', label: 'Detailed List', icon: <ListOrdered className="w-3.5 h-3.5" />, visible: settings.visibleViews.list },
     { id: 'history', label: 'Ticket History', icon: <History className="w-3.5 h-3.5" />, visible: settings.visibleViews.history, count: resolvedTasksCount },
     { id: 'forms', label: 'Form Inbox', icon: <Inbox className="w-3.5 h-3.5" />, visible: settings.visibleViews.forms !== false },
+    { id: 'formHistory', label: 'Form History', icon: <Archive className="w-3.5 h-3.5" />, visible: settings.visibleViews.formHistory !== false },
     { id: 'handbook', label: 'IT Handbook', icon: <BookOpen className="w-3.5 h-3.5" />, visible: settings.visibleViews.handbook },
     { id: 'analytics', label: 'Ops Metrics', icon: <BarChart3 className="w-3.5 h-3.5" />, visible: settings.visibleViews.analytics },
   ];

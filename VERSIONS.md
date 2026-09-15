@@ -108,3 +108,4 @@ away later work permanently.
 | `15092026ver000` | 2026-09-15 | IT Assistant usage window extended from 10 to 30 minutes (still followed by a 30-minute lock) |
 | `15092026ver001` | 2026-09-15 | Board tickets can be dragged onto any lane to change their progress; the lane under the ticket highlights and empty lanes say Drop to move here (arrow buttons kept for touch screens) |
 | `15092026ver002` | 2026-09-15 | Form Inbox: employees can Submit to IT the Requisition, New User ID, Asset Allocation and Asset Disposal forms (with softcopy files); admins get a new Form Inbox workspace with one fixed lane per form, New badges, read-only details, PDF export and delete; employees see their submissions under a new My Forms tab |
+| `15092026ver003` | 2026-09-15 | Form Inbox Done button moves a form to a new Form History workspace, where admins pick one of the four form types to see only that type's completed records; employees' My Forms now shows In Progress or Completed |

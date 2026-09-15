@@ -44,7 +44,7 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
         <div>
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">My Submitted Forms</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Every form you have submitted to IT, and whether IT has opened it.
+            Every form you have submitted to IT: In Progress while IT works on it, Completed once IT is done.
           </p>
         </div>
         <button
@@ -105,13 +105,13 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                     {FORM_TYPE_INFO[submission.type].title}
                   </h3>
                 </div>
-                {submission.viewedAt ? (
-                  <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
-                    Viewed by IT
+                {submission.completedAt ? (
+                  <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                    Completed
                   </span>
                 ) : (
-                  <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                    Received / In Queue
+                  <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
+                    In Progress
                   </span>
                 )}
               </div>
@@ -124,6 +124,11 @@ export const MyFormsView: React.FC<MyFormsViewProps> = ({ currentUser, onCreateF
                     <Calendar className="w-3 h-3" />
                     Submitted on {new Date(submission.submittedAt).toLocaleDateString()}
                   </span>
+                  {submission.completedAt && (
+                    <span className="flex items-center gap-1">
+                      Completed on {new Date(submission.completedAt).toLocaleDateString()}
+                    </span>
+                  )}
                   {submission.attachments && submission.attachments.length > 0 && (
                     <span className="flex items-center gap-1">
                       <Paperclip className="w-3 h-3" />

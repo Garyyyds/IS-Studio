@@ -614,6 +614,29 @@ app.post('/api/forms/:id/viewed', async (req, res) => {
   }
 });
 
+// Marks a form Done: it leaves the inbox for Form History, and the employee sees
+// it as Completed. Marking it again keeps the original completion.
+app.post('/api/forms/:id/complete', async (req, res) => {
+  try {
+    const completedBy = typeof req.body?.completedBy === 'string' ? req.body.completedBy.trim() : '';
+    const submission = await withFormStore((store) => {
+      const found = store.submissions.find((s: any) => s.id === req.params.id);
+      if (found && !found.completedAt) {
+        const now = new Date().toISOString();
+        found.completedAt = now;
+        found.completedBy = completedBy || undefined;
+        if (!found.viewedAt) found.viewedAt = now;
+      }
+      return found;
+    });
+    if (!submission) return res.status(404).json({ error: 'Form not found.' });
+    res.json({ submission });
+  } catch (err: any) {
+    console.error('Error in POST /api/forms/:id/complete:', err);
+    res.status(500).json({ error: 'Could not mark the form as done.' });
+  }
+});
+
 app.delete('/api/forms/:id', async (req, res) => {
   try {
     const removed = await withFormStore((store) => {

@@ -44,6 +44,7 @@ import {
   Shield,
   ArrowLeft,
   Inbox,
+  Archive,
 } from 'lucide-react';
 
 export type SettingsSection = 'profile' | 'theme' | 'views' | 'defaults' | 'data';
@@ -262,6 +263,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       category: 'Task Workflow',
     },
     {
+      id: 'formHistory',
+      title: 'Form History',
+      description: 'Forms marked Done in the Form Inbox, kept separately for each form type.',
+      icon: <Archive className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+      category: 'Task Workflow',
+    },
+    {
       id: 'handbook',
       title: 'Troubleshooting & SOP Handbook',
       description: 'SRE issue-solution runbooks, interactive terminal diagnostic commands, and one-click PDF team documentation export.',
@@ -277,13 +285,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     },
   ];
 
+  // The form workspaces arrived after settings were first saved, so they are on
+  // unless they have been switched off.
+  const withFormViews = () => ({ forms: true, formHistory: true, ...settings.visibleViews });
+  const isViewOn = (viewKey: keyof UserSettings['visibleViews']) => withFormViews()[viewKey] !== false;
+
   const handleToggleView = (viewKey: keyof UserSettings['visibleViews']) => {
-    // The Form Inbox is on unless it has been switched off.
-    const currentVal = viewKey === 'forms' ? settings.visibleViews.forms !== false : Boolean(settings.visibleViews[viewKey]);
+    const currentVal = isViewOn(viewKey);
     
     // Safety check: Don't allow disabling the last remaining view
     if (currentVal) {
-      const activeCount = Object.values({ forms: true, ...settings.visibleViews }).filter(Boolean).length;
+      const activeCount = Object.values(withFormViews()).filter(Boolean).length;
       if (activeCount <= 1) {
         alert('At least one navigation view must remain enabled so you can interact with your workspace.');
         return;
@@ -291,7 +303,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
 
     const updatedViews = {
-      ...settings.visibleViews,
+      ...withFormViews(),
       [viewKey]: !currentVal,
     };
 
@@ -325,6 +337,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           handbook: false,
           analytics: false,
           forms: false,
+          formHistory: false,
         },
         defaultView: 'kanban',
       });
@@ -338,6 +351,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           handbook: true,
           analytics: true,
           forms: true,
+          formHistory: true,
         },
       });
     }
@@ -930,7 +944,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* View Switch Cards */}
                 <div className="space-y-3">
                   {viewDefinitions.map((view) => {
-                    const isVisible = view.id === 'forms' ? settings.visibleViews.forms !== false : settings.visibleViews[view.id];
+                    const isVisible = isViewOn(view.id);
                     const isDefault = settings.defaultView === view.id;
 
                     return (
@@ -1005,7 +1019,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     }
                     className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
                   >
-                    {Object.entries({ forms: true, ...settings.visibleViews })
+                    {Object.entries(withFormViews())
                       .filter(([_, enabled]) => enabled)
                       .map(([key]) => (
                         <option key={key} value={key}>

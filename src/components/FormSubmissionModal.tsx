@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { X, FileText, Trash2, Lock, Clock, User, Paperclip, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
+import {
+  X,
+  FileText,
+  Trash2,
+  Lock,
+  Clock,
+  User,
+  Paperclip,
+  Loader2,
+  AlertTriangle,
+  ExternalLink,
+  CheckCircle2,
+} from 'lucide-react';
 import { AssetFormData, FormSubmission, RequisitionFormData, UserIdFormData } from '../types';
 import { FORM_TYPE_INFO } from '../utils/formSubmissions';
 import { attachmentUrl, formatBytes } from '../utils/attachments';
@@ -19,6 +31,8 @@ interface FormSubmissionModalProps {
   onClose: () => void;
   /** Omitted for employees viewing their own form, who cannot delete it. */
   onDelete?: (id: string) => Promise<void>;
+  /** Shows a Done button; given only in the admin inbox. */
+  onComplete?: (id: string) => Promise<void>;
 }
 
 type Row = { label: string; value?: string };
@@ -27,8 +41,9 @@ const yesNo = (value: string) => (value === 'yes' ? 'Yes' : value === 'no' ? 'No
 const formatDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString() : '');
 
 /** Read-only view of a submitted form, with the same PDF the employee can export. */
-export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submission, onClose, onDelete }) => {
+export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submission, onClose, onDelete, onComplete }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +72,18 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
       setError(err?.message || 'Could not generate the PDF.');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!onComplete) return;
+    setError(null);
+    setIsCompleting(true);
+    try {
+      await onComplete(submission.id);
+    } catch (err: any) {
+      setError(err?.message || 'Could not mark the form as done.');
+      setIsCompleting(false);
     }
   };
 
@@ -96,6 +123,16 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
               <Lock className="w-3 h-3 text-slate-400" />
               <span>Submitted by employee</span>
             </span>
+            {submission.completedAt ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Completed</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900">
+                <span>In Progress</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
@@ -136,6 +173,12 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
                 { label: 'Email', value: submission.submittedBy.email },
                 { label: 'Department', value: submission.submittedBy.department },
                 { label: 'Submitted on', value: new Date(submission.submittedAt).toLocaleString() },
+                ...(submission.completedAt
+                  ? [
+                      { label: 'Completed on', value: new Date(submission.completedAt).toLocaleString() },
+                      { label: 'Completed by', value: submission.completedBy },
+                    ]
+                  : []),
               ]}
             />
           </Section>
@@ -175,7 +218,9 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
           {!onDelete ? (
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {submission.viewedAt ? `Viewed by IT on ${formatDate(submission.viewedAt)}` : 'Received by IT, not opened yet'}
+              {submission.completedAt
+                ? `Completed by IT on ${formatDate(submission.completedAt)}`
+                : 'In progress with IT'}
             </span>
           ) : confirmDelete ? (
             <div className="flex items-center gap-2">
@@ -207,10 +252,23 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({ submis
               <span>Delete</span>
             </button>
           )}
-          <span className="hidden sm:flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-            <Clock className="w-3 h-3" />
-            <span>{formatDate(submission.submittedAt)}</span>
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <Clock className="w-3 h-3" />
+              <span>{formatDate(submission.submittedAt)}</span>
+            </span>
+            {onComplete && !submission.completedAt && (
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={isCompleting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white shadow-xs transition cursor-pointer"
+              >
+                {isCompleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>Done</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

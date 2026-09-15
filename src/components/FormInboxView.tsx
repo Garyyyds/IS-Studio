@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Search, Layers, Paperclip, User, Calendar, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Search, Layers, Paperclip, User, Calendar, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { FormSubmission, FormSubmissionType } from '../types';
 import {
   FORM_TYPE_INFO,
@@ -7,6 +7,7 @@ import {
   fetchFormSubmissions,
   formHeadline as headline,
   markFormViewed,
+  completeFormSubmission,
   deleteFormSubmission,
 } from '../utils/formSubmissions';
 import { FormSubmissionModal } from './FormSubmissionModal';
@@ -28,7 +29,12 @@ function searchText(submission: FormSubmission): string {
     .toLowerCase();
 }
 
-export const FormInboxView: React.FC = () => {
+interface FormInboxViewProps {
+  /** Recorded as who marked a form Done. */
+  currentUserName: string;
+}
+
+export const FormInboxView: React.FC<FormInboxViewProps> = ({ currentUserName }) => {
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,9 +82,18 @@ export const FormInboxView: React.FC = () => {
     setOpenId((current) => (current === id ? null : current));
   };
 
+  // Done moves the form to Form History straight away.
+  const handleComplete = async (id: string) => {
+    const updated = await completeFormSubmission(id, currentUserName);
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    setOpenId((current) => (current === id ? null : current));
+  };
+
+  // The inbox holds only forms still being worked on.
+  const open = submissions.filter((s) => !s.completedAt);
   const q = searchQuery.trim().toLowerCase();
-  const visible = q ? submissions.filter((s) => searchText(s).includes(q)) : submissions;
-  const newCount = submissions.filter((s) => !s.viewedAt).length;
+  const visible = q ? open.filter((s) => searchText(s).includes(q)) : open;
+  const newCount = open.filter((s) => !s.viewedAt).length;
   const openSubmissionRecord = openId ? submissions.find((s) => s.id === openId) : undefined;
 
   return (
@@ -89,11 +104,11 @@ export const FormInboxView: React.FC = () => {
           <div className="w-full flex items-center gap-2">
             <div
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 text-xs"
-              title={`${newCount} new, ${submissions.length} total`}
+              title={`${newCount} new, ${open.length} in the inbox`}
             >
               <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
               <span className="font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{newCount} New</span>
-              <span className="hidden sm:inline text-[11px] text-slate-400 font-mono">({submissions.length})</span>
+              <span className="hidden sm:inline text-[11px] text-slate-400 font-mono">({open.length})</span>
             </div>
 
             <div className="relative flex-1 min-w-0">
@@ -199,6 +214,7 @@ export const FormInboxView: React.FC = () => {
                           submission={submission}
                           onOpen={() => openSubmission(submission)}
                           onDelete={() => handleDelete(submission.id)}
+                          onComplete={() => handleComplete(submission.id)}
                         />
                       ))
                     )}
@@ -215,6 +231,7 @@ export const FormInboxView: React.FC = () => {
           submission={openSubmissionRecord}
           onClose={() => setOpenId(null)}
           onDelete={handleDelete}
+          onComplete={handleComplete}
         />
       )}
     </div>
@@ -225,11 +242,13 @@ interface FormCardProps {
   submission: FormSubmission;
   onOpen: () => void;
   onDelete: () => Promise<void>;
+  onComplete: () => Promise<void>;
 }
 
 /** A submitted form. Deliberately not draggable: forms stay in their type's lane. */
-const FormCard: React.FC<FormCardProps> = ({ submission, onOpen, onDelete }) => {
+const FormCard: React.FC<FormCardProps> = ({ submission, onOpen, onDelete, onComplete }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const isNew = !submission.viewedAt;
   const firstName = submission.submittedBy.name ? submission.submittedBy.name.split(' ')[0] : 'User';
 
@@ -312,10 +331,25 @@ const FormCard: React.FC<FormCardProps> = ({ submission, onOpen, onDelete }) => 
           </button>
         )}
 
-        <span className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
-          <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-          <span>{new Date(submission.submittedAt).toLocaleDateString()}</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+            <span>{new Date(submission.submittedAt).toLocaleDateString()}</span>
+          </span>
+          <button
+            type="button"
+            disabled={isCompleting}
+            onClick={() => {
+              setIsCompleting(true);
+              onComplete().catch(() => setIsCompleting(false));
+            }}
+            title="Mark as done and move to Form History"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 disabled:opacity-60 transition cursor-pointer"
+          >
+            {isCompleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+            <span>Done</span>
+          </button>
+        </div>
       </div>
     </div>
   );
