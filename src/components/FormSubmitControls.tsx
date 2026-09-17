@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Send, Loader2, CheckCircle2, Eraser } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Send, Loader2, CheckCircle2, Eraser, X } from 'lucide-react';
 import { AppUser, FormSubmission, FormSubmissionType } from '../types';
 import { submitForm } from '../utils/formSubmissions';
 
@@ -59,44 +59,106 @@ interface ClearFormButtonProps {
 }
 
 /**
- * Clears the whole form. Asks first, in place, so one stray click cannot wipe a
- * long form; the confirm buttons keep the header's height so nothing jumps.
+ * Clears the whole form. Asks first in a pop-up, so one stray click cannot wipe
+ * a long form.
  */
 export const ClearFormButton: React.FC<ClearFormButtonProps> = ({ onClear, disabled = false }) => {
   const [confirming, setConfirming] = useState(false);
 
-  if (confirming) {
-    return (
-      <div className="inline-flex items-center gap-2" role="group" aria-label="Confirm clearing the form">
-        <button
-          type="button"
-          onClick={() => {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        disabled={disabled}
+        title="Empty every field and start this form again"
+        className={secondaryHeaderButton}
+      >
+        <Eraser className="w-4 h-4" />
+        <span>Clear Form</span>
+      </button>
+
+      {confirming && (
+        <ClearFormDialog
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
             onClear();
             setConfirming(false);
           }}
-          className={dangerHeaderButton}
-        >
-          <Eraser className="w-4 h-4" />
-          <span>Clear all fields</span>
-        </button>
-        <button type="button" onClick={() => setConfirming(false)} className={secondaryHeaderButton}>
-          <span>Cancel</span>
-        </button>
-      </div>
-    );
-  }
+        />
+      )}
+    </>
+  );
+};
+
+/** The confirmation pop-up, laid out like the Reject request dialog. */
+const ClearFormDialog: React.FC<{ onCancel: () => void; onConfirm: () => void }> = ({ onCancel, onConfirm }) => {
+  // Cancel has focus, so pressing Enter by habit keeps the form.
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopImmediatePropagation();
+      onCancel();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [onCancel]);
 
   return (
-    <button
-      type="button"
-      onClick={() => setConfirming(true)}
-      disabled={disabled}
-      title="Empty every field and start this form again"
-      className={secondaryHeaderButton}
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
+      onClick={onCancel}
     >
-      <Eraser className="w-4 h-4" />
-      <span>Clear Form</span>
-    </button>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="clear-form-title"
+        aria-describedby="clear-form-description"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
+          <div className="flex items-center gap-2 min-w-0">
+            <Eraser className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <h2 id="clear-form-title" className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              Clear this form?
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Cancel"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p id="clear-form-description" className="p-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          Everything you have entered, including any attached files, will be removed and the form starts again. This
+          cannot be undone.
+        </p>
+
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
+          <button ref={cancelRef} type="button" onClick={onCancel} className={secondaryHeaderButton}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors"
+          >
+            <Eraser className="w-4 h-4" />
+            <span>Clear Form</span>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -120,10 +182,6 @@ export const FormSubmittedNotice: React.FC<{ formNumber: string }> = ({ formNumb
  */
 export const primaryHeaderButton =
   'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors';
-
-/** Destructive header action (DESIGN.md Danger button), same height as the others. */
-export const dangerHeaderButton =
-  'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 shadow-xs transition-colors';
 
 /** Secondary style for Back and Export to PDF beside the primary action. */
 export const secondaryHeaderButton =
