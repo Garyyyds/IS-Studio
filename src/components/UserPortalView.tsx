@@ -42,7 +42,7 @@ import { AssetFormView } from './AssetFormView';
 import { UserIdFormView } from './UserIdFormView';
 import { RequisitionFormView } from './RequisitionFormView';
 import { MyFormsView } from './MyFormsView';
-import { primaryHeaderButton, secondaryHeaderButton } from './FormSubmitControls';
+import { primaryHeaderButton, secondaryHeaderButton, ClearFormButton } from './FormSubmitControls';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
 
 interface UserPortalViewProps {
@@ -164,6 +164,22 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Empties the IT Support Request. A confirmation of an earlier submission stays.
+  const clearRequestForm = () => {
+    setTitle('');
+    setDescription('');
+    setDeviceInfo('');
+    setSystemRequested('');
+    setUserLocation('');
+    setUserPhoneExt('');
+    setHodName('');
+    setHodEmail('');
+    setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setSubmitError(null);
+    setExportError(null);
   };
 
   // Prints what is on screen right now, so it works before or after submitting.
@@ -645,11 +661,13 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button type="button" onClick={() => setSelectedForm(null)} className={secondaryHeaderButton}>
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
                   </button>
+
+                  <ClearFormButton onClear={clearRequestForm} disabled={isSubmitting || isExporting} />
 
                   <button
                     type="button"

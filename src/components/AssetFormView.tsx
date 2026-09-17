@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { AppUser, AssetFormData, AssetFormItem } from '../types';
 import { exportAssetFormPdf, AssetFormConfig } from '../utils/assetFormPdf';
-import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
+import { useFormSubmit, SubmitFormButton, ClearFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface AssetFormViewProps {
   config: AssetFormConfig;
@@ -44,7 +44,7 @@ const autoGrow = (el: HTMLTextAreaElement) => {
 };
 
 export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUser, onBack }) => {
-  const [form, setForm] = useState<AssetFormData>(() => ({
+  const freshForm = (): AssetFormData => ({
     employeeId: '',
     referenceNo: '',
     submittedBy: currentUser.name || '',
@@ -52,12 +52,19 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
     department: currentUser.department || '',
     location: '',
     items: Array.from({ length: STARTING_ROWS }, blankItem),
-  }));
+  });
+  const [form, setForm] = useState<AssetFormData>(freshForm);
 
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { submit, isSubmitting, submitted } = useFormSubmit(config.key, currentUser);
   const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
+
+  // Back to a fresh form: the defaults it opened with and no messages.
+  const clearForm = () => {
+    setForm(freshForm());
+    setError(null);
+  };
 
   const setField = (field: keyof Omit<AssetFormData, 'items' | 'itReturnOptions'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -167,6 +174,8 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <ClearFormButton onClear={clearForm} disabled={isSubmitting || isExporting} />
 
           <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>

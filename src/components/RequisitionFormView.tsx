@@ -39,7 +39,7 @@ import {
   itemsTotal,
   formatTotal,
 } from '../utils/requisitionFormPdf';
-import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
+import { useFormSubmit, SubmitFormButton, ClearFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface RequisitionFormViewProps {
   currentUser: AppUser;
@@ -101,6 +101,14 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Back to a fresh form: the defaults it opened with, no files, no messages.
+  const clearForm = () => {
+    setForm(initialForm);
+    pickedFilesRef.current.clear();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setError(null);
+  };
 
   const setField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -483,6 +491,8 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
             )}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <ClearFormButton onClear={clearForm} disabled={isSubmitting || isExporting} />
 
           <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>

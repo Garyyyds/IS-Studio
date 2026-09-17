@@ -25,7 +25,7 @@ import {
   USER_ID_SIGNATURE_LABELS,
   USER_ID_IT_SIGNATURE_LABELS,
 } from '../utils/userIdFormPdf';
-import { useFormSubmit, SubmitFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
+import { useFormSubmit, SubmitFormButton, ClearFormButton, FormSubmittedNotice, secondaryHeaderButton } from './FormSubmitControls';
 
 interface UserIdFormViewProps {
   currentUser: AppUser;
@@ -62,6 +62,14 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
 
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Back to a fresh form: the defaults it opened with, no files, no messages.
+  const clearForm = () => {
+    setForm(initialForm);
+    pickedFilesRef.current.clear();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setError(null);
+  };
 
   const toggleSystem = (id: string, checked: boolean) => {
     setForm((prev) => ({ ...prev, systems: { ...prev.systems, [id]: checked } }));
@@ -198,6 +206,8 @@ export const UserIdFormView: React.FC<UserIdFormViewProps> = ({ currentUser, onB
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             <span>{isExporting ? 'Generating...' : 'Export to PDF'}</span>
           </button>
+
+          <ClearFormButton onClear={clearForm} disabled={isSubmitting || isExporting} />
 
           <SubmitFormButton onClick={handleSubmit} isSubmitting={isSubmitting} alreadySubmitted={alreadySubmitted} />
         </div>

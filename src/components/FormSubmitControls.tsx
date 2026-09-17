@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Send, Loader2, CheckCircle2, Eraser } from 'lucide-react';
 import { AppUser, FormSubmission, FormSubmissionType } from '../types';
 import { submitForm } from '../utils/formSubmissions';
 
@@ -52,6 +52,54 @@ export const SubmitFormButton: React.FC<SubmitFormButtonProps> = ({ onClick, isS
   </button>
 );
 
+interface ClearFormButtonProps {
+  /** Empties every field the employee filled in. */
+  onClear: () => void;
+  disabled?: boolean;
+}
+
+/**
+ * Clears the whole form. Asks first, in place, so one stray click cannot wipe a
+ * long form; the confirm buttons keep the header's height so nothing jumps.
+ */
+export const ClearFormButton: React.FC<ClearFormButtonProps> = ({ onClear, disabled = false }) => {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="inline-flex items-center gap-2" role="group" aria-label="Confirm clearing the form">
+        <button
+          type="button"
+          onClick={() => {
+            onClear();
+            setConfirming(false);
+          }}
+          className={dangerHeaderButton}
+        >
+          <Eraser className="w-4 h-4" />
+          <span>Clear all fields</span>
+        </button>
+        <button type="button" onClick={() => setConfirming(false)} className={secondaryHeaderButton}>
+          <span>Cancel</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirming(true)}
+      disabled={disabled}
+      title="Empty every field and start this form again"
+      className={secondaryHeaderButton}
+    >
+      <Eraser className="w-4 h-4" />
+      <span>Clear Form</span>
+    </button>
+  );
+};
+
 /** Confirmation shown after a form reaches IT. */
 export const FormSubmittedNotice: React.FC<{ formNumber: string }> = ({ formNumber }) => (
   <div
@@ -72,6 +120,10 @@ export const FormSubmittedNotice: React.FC<{ formNumber: string }> = ({ formNumb
  */
 export const primaryHeaderButton =
   'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-xs transition-colors';
+
+/** Destructive header action (DESIGN.md Danger button), same height as the others. */
+export const dangerHeaderButton =
+  'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 shadow-xs transition-colors';
 
 /** Secondary style for Back and Export to PDF beside the primary action. */
 export const secondaryHeaderButton =
