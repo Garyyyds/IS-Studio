@@ -13,7 +13,6 @@ import {
   User,
   Building2,
   Laptop,
-  HelpCircle,
   Sparkles,
   Inbox,
   Filter,
@@ -34,7 +33,7 @@ import {
   UserCheck,
   Tag,
 } from 'lucide-react';
-import { Task, Runbook, AppUser, ITCategory, TaskStatus } from '../types';
+import { Task, AppUser, ITCategory, TaskStatus } from '../types';
 import { SYSTEM_OPTIONS, MAX_ATTACHMENT_BYTES } from '../data/requestOptions';
 import { exportSupportRequestPdf } from '../utils/supportRequestPdf';
 import { uploadAttachment, formatBytes } from '../utils/attachments';
@@ -44,16 +43,14 @@ import { RequisitionFormView } from './RequisitionFormView';
 import { MyFormsView } from './MyFormsView';
 import { primaryHeaderButton, secondaryHeaderButton, ClearFormButton } from './FormSubmitControls';
 import { DISPOSAL_FORM, ALLOCATION_FORM } from '../utils/assetFormPdf';
+import { openItAssistant } from './SupportChatAssistant';
 
 interface UserPortalViewProps {
   currentUser: AppUser;
   tasks: Task[];
-  runbooks: Runbook[];
-  /** Creates the ticket and returns the number it was given. */
   /** Saves the request and resolves to its ticket number; rejects with a message to show. */
   onSubmitTicket: (newTask: Partial<Task>) => Promise<string>;
   onSelectTask: (task: Task) => void;
-  onOpenRunbook: (runbookId: string) => void;
   /** Changes each time the user asks to go home; the portal resets to its start page. */
   homeSignal?: number;
   /** When the IT Assistant hands over, opens the IT Support Request pre-filled. */
@@ -63,14 +60,12 @@ interface UserPortalViewProps {
 export const UserPortalView: React.FC<UserPortalViewProps> = ({
   currentUser,
   tasks,
-  runbooks,
   onSubmitTicket,
   onSelectTask,
-  onOpenRunbook,
   homeSignal = 0,
   ticketPrefill = null,
 }) => {
-  const [activeTab, setActiveTab] = useState<'my-tickets' | 'my-forms' | 'create-form' | 'help'>('create-form');
+  const [activeTab, setActiveTab] = useState<'my-tickets' | 'my-forms' | 'create-form'>('create-form');
   // null shows the picker; a value opens that form.
   // Home = the Create Form picker, the page the portal opens on.
   useEffect(() => {
@@ -114,8 +109,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
   // My Tickets Filter
   const [ticketFilter, setTicketFilter] = useState<'all' | 'active' | 'resolved'>('all');
   
-  // Help Center Search
-  const [helpSearch, setHelpSearch] = useState('');
 
   // Filter tasks submitted by the current user (or matching their email)
   const myTickets = tasks.filter(t => 
@@ -132,14 +125,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
     if (ticketFilter === 'resolved') return t.status === 'done';
     return true;
   });
-
-  const filteredRunbooks = runbooks.filter(r => 
-    r.status === 'active' && (
-      r.title.toLowerCase().includes(helpSearch.toLowerCase()) ||
-      r.symptom.toLowerCase().includes(helpSearch.toLowerCase()) ||
-      r.tags.some(tag => tag.toLowerCase().includes(helpSearch.toLowerCase()))
-    )
-  );
 
   // Picked files are appended, so the button can be used more than once. A file
   // already in the list (same name and size) is skipped, and anything over the
@@ -382,7 +367,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
         {/* Equal columns, each as wide as the longest label, so the selected
             tab and the gaps look the same whichever tab is active. */}
-        <div className="grid grid-cols-[repeat(4,1fr)] gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
+        <div className="grid grid-cols-[repeat(3,1fr)] gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => {
@@ -425,19 +410,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
           >
             <FileText className="w-3.5 h-3.5" />
             <span>My Forms</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('help')}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              activeTab === 'help'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Self-Service SOP Guides</span>
           </button>
         </div>
       </div>
@@ -644,7 +616,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: SELF-SERVICE HELP CENTER & SOP GUIDES */}
       {/* CREATE FORM TAB */}
       {activeTab === 'create-form' && (
         <div>
@@ -910,14 +881,15 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
                       <span>Self-Service Troubleshooting</span>
                     </h3>
                     <p className="text-xs text-indigo-900/80 dark:text-indigo-300 leading-relaxed">
-                      Need a quick fix for VPN, Wi-Fi passwords, or laptop monitors? Check our company SOP guides first:
+                      Need a quick fix for VPN, Wi-Fi passwords, or laptop monitors? Ask the IT Assistant first. It
+                      walks you through the company fix and fills in this request if it cannot solve it.
                     </p>
                     <button
                       type="button"
-                      onClick={() => setActiveTab('help')}
+                      onClick={openItAssistant}
                       className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
                     >
-                      <span>Browse {runbooks.length} Help Guides</span>
+                      <span>Ask the IT Assistant</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1052,64 +1024,6 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
         </div>
       )}
 
-      {activeTab === 'help' && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-indigo-600" />
-              <span>Company IT Self-Service Knowledge Base</span>
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Browse approved standard operating procedures and solutions for common IT issues.
-            </p>
-
-            <div className="relative pt-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={helpSearch}
-                onChange={(e) => setHelpSearch(e.target.value)}
-                placeholder="Search troubleshooting guides (e.g. VPN, password, Wi-Fi, monitor)..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredRunbooks.map((runbook) => (
-              <div
-                key={runbook.id}
-                onClick={() => onOpenRunbook(runbook.id)}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-indigo-400 dark:hover:border-indigo-600 transition cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-                      {runbook.code}
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      v{runbook.version}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {runbook.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                    {runbook.symptom}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>{runbook.diagnosticSteps.length + runbook.remediationSteps.length} Guided Steps</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
-                    Read Guide <ChevronRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );

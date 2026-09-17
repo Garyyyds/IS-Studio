@@ -23,6 +23,10 @@ export interface TicketPrefill {
   description: string;
 }
 
+/** Other screens ask the chat panel to open with this window event. */
+const OPEN_EVENT = 'it-assistant:open';
+export const openItAssistant = () => window.dispatchEvent(new Event(OPEN_EVENT));
+
 interface SupportChatAssistantProps {
   currentUser: AppUser;
   tasks: Task[];
@@ -203,6 +207,12 @@ export const SupportChatAssistant: React.FC<SupportChatAssistantProps> = ({
   // Only categories with at least one active guide are worth narrowing to.
   const guideCounts = activeGuideCountsByCategory(runbooks);
   const availableCategories: string[] = IT_CATEGORIES.filter((category) => (guideCounts[category] || 0) > 0);
+
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener(OPEN_EVENT, open);
+    return () => window.removeEventListener(OPEN_EVENT, open);
+  }, []);
 
   // Escape closes the panel, matching the app's modals.
   useEffect(() => {

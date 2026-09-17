@@ -780,10 +780,8 @@ export default function App() {
           <UserPortalView
             currentUser={currentUser}
             tasks={tasks}
-            runbooks={runbooks}
             onSubmitTicket={handleUserSubmitTicket}
             onSelectTask={handleSelectTask}
-            onOpenRunbook={handleOpenRunbookFromAnywhere}
             homeSignal={portalHomeSignal}
             ticketPrefill={ticketPrefill}
           />
