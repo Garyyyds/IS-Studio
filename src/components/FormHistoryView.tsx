@@ -22,6 +22,7 @@ import {
   FORM_TYPE_ORDER,
   fetchFormSubmissions,
   formHeadline,
+  withEmail,
   deleteFormSubmission,
   isFormClosed,
 } from '../utils/formSubmissions';
@@ -84,7 +85,7 @@ export const FormHistoryView: React.FC = () => {
         .filter(
           (s) =>
             !q ||
-            [s.formNumber, s.submittedBy.name, s.submittedBy.email, s.submittedBy.department, s.completedBy, s.rejectedBy, s.rejectionReason, formHeadline(s), JSON.stringify(s.data)]
+            [s.formNumber, s.submittedBy.name, s.submittedBy.email, s.submittedBy.department, s.completedBy && withEmail(s.completedBy, s.completedByEmail), s.rejectedBy && withEmail(s.rejectedBy, s.rejectedByEmail), s.rejectionReason, formHeadline(s), JSON.stringify(s.data)]
               .join(' ')
               .toLowerCase()
               .includes(q)
@@ -259,7 +260,7 @@ export const FormHistoryView: React.FC = () => {
                       <span className="text-slate-700 dark:text-slate-300 font-medium">
                         {submission.rejectedAt ? 'Rejected' : 'Completed'} {new Date(closedAt(submission)).toLocaleDateString()}
                         {(submission.rejectedAt ? submission.rejectedBy : submission.completedBy)
-                          ? ` by ${submission.rejectedAt ? submission.rejectedBy : submission.completedBy}`
+                          ? ` by ${submission.rejectedAt ? withEmail(submission.rejectedBy!, submission.rejectedByEmail) : withEmail(submission.completedBy!, submission.completedByEmail)}`
                           : ''}
                       </span>
                     </div>

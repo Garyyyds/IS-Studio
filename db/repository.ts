@@ -832,8 +832,10 @@ export class WorkspaceRepository {
         viewedAt: f.viewed_at || undefined,
         completedAt: f.completed_at || undefined,
         completedBy: f.completed_by_id ? userById.get(f.completed_by_id)?.name : undefined,
+        completedByEmail: f.completed_by_id ? userById.get(f.completed_by_id)?.email : undefined,
         rejectedAt: f.rejected_at || undefined,
         rejectedBy: f.rejected_by_id ? userById.get(f.rejected_by_id)?.name : undefined,
+        rejectedByEmail: f.rejected_by_id ? userById.get(f.rejected_by_id)?.email : undefined,
         rejectionReason: f.rejection_reason || undefined,
       };
     });
@@ -981,38 +983,40 @@ export class WorkspaceRepository {
     return (await this.loadForm(legacyId))!.form;
   }
 
-  /** People are recorded by account; the name the browser sends is matched to one. */
-  private static userByNameOrId(users: Row[], who?: { id?: string; name?: string }) {
-    if (who?.id) {
-      const u = users.find((x) => x.id === who.id);
-      if (u) return u.id;
-    }
-    // Only IT closes forms, so a name several accounts share still matches
-    // when exactly one of them is an admin.
-    const named = users.filter((x) => lower(x.name) === lower(who?.name));
-    const matches = named.length > 1 ? named.filter((x) => x.role === 'admin') : named;
-    return matches.length === 1 ? matches[0].id : null;
+  /**
+   * The IT account closing a form, identified by account id only. Names are
+   * never used: different people can share a name, so a name match could
+   * record the wrong person.
+   */
+  private static closingAdmin(users: Row[], who?: { id?: string }): string | RepositoryError {
+    const user = who?.id ? users.find((x) => x.id === who.id) : undefined;
+    if (!user || user.role !== 'admin') return new RepositoryError(403, 'Only IT staff can close a form. Sign out and sign in again, then retry.');
+    return user.id;
   }
 
   markFormViewed(id: string) {
     return this.updateForm(id, (row) => (row.viewed_at ? null : { viewed_at: new Date().toISOString() }));
   }
 
-  completeForm(id: string, by: { id?: string; name?: string }) {
+  completeForm(id: string, by: { id?: string }) {
     return this.updateForm(id, (row, users) => {
       if (row.completed_at || row.rejected_at) return null;
+      const admin = WorkspaceRepository.closingAdmin(users, by);
+      if (admin instanceof RepositoryError) return admin;
       const now = new Date().toISOString();
-      return { completed_at: now, completed_by_id: WorkspaceRepository.userByNameOrId(users, by), viewed_at: row.viewed_at || now };
+      return { completed_at: now, completed_by_id: admin, viewed_at: row.viewed_at || now };
     });
   }
 
-  rejectForm(id: string, reason: string, by: { id?: string; name?: string }) {
+  rejectForm(id: string, reason: string, by: { id?: string }) {
     return this.updateForm(id, (row, users) => {
       if (row.form_type !== 'requisition') return new RepositoryError(400, 'Only requisition forms can be rejected.');
       if (row.completed_at) return new RepositoryError(409, 'This form is already marked Done.');
       if (row.rejected_at) return null;
+      const admin = WorkspaceRepository.closingAdmin(users, by);
+      if (admin instanceof RepositoryError) return admin;
       const now = new Date().toISOString();
-      return { rejected_at: now, rejected_by_id: WorkspaceRepository.userByNameOrId(users, by), rejection_reason: reason, viewed_at: row.viewed_at || now };
+      return { rejected_at: now, rejected_by_id: admin, rejection_reason: reason, viewed_at: row.viewed_at || now };
     });
   }
 

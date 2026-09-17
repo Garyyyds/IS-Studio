@@ -14,7 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { AssetFormData, FormSubmission, RequisitionFormData, UserIdFormData } from '../types';
-import { FORM_TYPE_INFO, canReject, isFormClosed } from '../utils/formSubmissions';
+import { FORM_TYPE_INFO, canReject, isFormClosed, withEmail } from '../utils/formSubmissions';
 import { attachmentUrl, formatBytes } from '../utils/attachments';
 import { exportUserIdFormPdf, SERVER_REQUEST_ROWS } from '../utils/userIdFormPdf';
 import {
@@ -196,7 +196,7 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({
               </p>
               <p className="text-[11px] text-rose-600/80 dark:text-rose-400/80">
                 Rejected on {new Date(submission.rejectedAt).toLocaleString()}
-                {submission.rejectedBy ? ` by ${submission.rejectedBy}` : ''}
+                {submission.rejectedBy ? ` by ${withEmail(submission.rejectedBy, submission.rejectedByEmail)}` : ''}
               </p>
             </div>
           )}
@@ -211,7 +211,7 @@ export const FormSubmissionModal: React.FC<FormSubmissionModalProps> = ({
                 ...(submission.completedAt
                   ? [
                       { label: 'Completed on', value: new Date(submission.completedAt).toLocaleString() },
-                      { label: 'Completed by', value: submission.completedBy },
+                      { label: 'Completed by', value: submission.completedBy && withEmail(submission.completedBy, submission.completedByEmail) },
                     ]
                   : []),
               ]}

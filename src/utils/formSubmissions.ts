@@ -90,8 +90,8 @@ export async function markFormViewed(id: string): Promise<FormSubmission | null>
   return res.ok ? body?.submission ?? null : null;
 }
 
-// Both send the signed-in account (via apiFetch), so the form records who
-// closed it even when two accounts share a name.
+// Both send the signed-in account (via apiFetch). The server records the form
+// against that account only, never a name, since people can share one.
 export async function completeFormSubmission(id: string, completedBy: string): Promise<FormSubmission> {
   const body = await apiFetch(`/api/forms/${encodeURIComponent(id)}/complete`, { method: 'POST', body: { completedBy } });
   if (!body?.submission) throw new Error('Could not mark the form as done.');
@@ -106,6 +106,9 @@ export async function rejectFormSubmission(id: string, reason: string, rejectedB
 
 /** Only this form type can be rejected; the others are simply marked Done. */
 export const canReject = (submission: FormSubmission) => submission.type === 'requisition';
+
+/** "Name (email)", so two people who share a name can be told apart. */
+export const withEmail = (name: string, email?: string) => (email ? `${name} (${email})` : name);
 
 /** A form is closed once it is marked Done or rejected. */
 export const isFormClosed = (submission: FormSubmission) => Boolean(submission.completedAt || submission.rejectedAt);

@@ -528,8 +528,8 @@ app.post('/api/forms/:id/viewed', async (req, res) => {
 // it as Completed. Marking it again keeps the original completion.
 app.post('/api/forms/:id/complete', async (req, res) => {
   try {
-    const completedBy = typeof req.body?.completedBy === 'string' ? req.body.completedBy.trim() : '';
-    res.json({ submission: await getRepository().completeForm(req.params.id, { id: actorId(req), name: completedBy }) });
+    // Recorded by the signed-in account; a name alone is not trusted, since people can share one.
+    res.json({ submission: await getRepository().completeForm(req.params.id, { id: actorId(req) }) });
   } catch (err) {
     sendDataError(res, err, 'POST /api/forms/:id/complete', 'Could not mark the form as done.');
   }
@@ -542,12 +542,11 @@ const FORM_REJECTION_MAX_CHARS = 1000;
 app.post('/api/forms/:id/reject', async (req, res) => {
   try {
     const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
-    const rejectedBy = typeof req.body?.rejectedBy === 'string' ? req.body.rejectedBy.trim() : '';
     if (!reason) return res.status(400).json({ error: 'Write the reason for rejecting this request.' });
     if (reason.length > FORM_REJECTION_MAX_CHARS) {
       return res.status(400).json({ error: `Keep the reason under ${FORM_REJECTION_MAX_CHARS} characters.` });
     }
-    res.json({ submission: await getRepository().rejectForm(req.params.id, reason, { id: actorId(req), name: rejectedBy }) });
+    res.json({ submission: await getRepository().rejectForm(req.params.id, reason, { id: actorId(req) }) });
   } catch (err) {
     sendDataError(res, err, 'POST /api/forms/:id/reject', 'Could not reject the form.');
   }
