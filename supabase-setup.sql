@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS app_users (
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user', -- 'admin' for IT Staff, 'user' for Normal Employee
   department TEXT DEFAULT 'General',
-  avatar TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

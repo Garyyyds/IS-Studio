@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- app_users already exists (supabase-setup.sql) and holds live accounts. It is
 -- extended, never recreated. Its TEXT primary key is kept as-is, so every
 -- foreign key to a user is VARCHAR(64).
--- The unused avatar column is left for a separate, deliberate DROP.
+-- The unused avatar column is dropped by db/patches/002_drop_avatar.sql.
 
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS company_id BIGINT REFERENCES companies (id);
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS site_id    BIGINT REFERENCES sites (id);

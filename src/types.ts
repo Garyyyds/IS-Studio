@@ -35,7 +35,6 @@ export interface AppUser {
   name: string;
   role: UserRole; // 'admin' = IT Operations / Admin, 'user' = Employee / Requester
   department?: string;
-  avatar?: string;
   createdAt?: string;
 }
 
