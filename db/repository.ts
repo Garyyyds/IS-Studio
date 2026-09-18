@@ -938,7 +938,8 @@ export class WorkspaceRepository {
           (
             await this.sb.from('form_requisition').insert({
               submission_id: submissionId,
-              ref_no: text(d.refNo, 60),
+              // The reference is the form number itself, never what was typed.
+              ref_no: formNumber,
               company_name: text(d.company, 200),
               attachment_remark: text(d.attachmentRemark, 500),
               budgeted: d.budgeted === 'yes' || d.budgeted === 'no' ? d.budgeted : null,
@@ -950,7 +951,7 @@ export class WorkspaceRepository {
         );
         if (reqItems.length) check((await this.sb.from('form_requisition_items').insert(reqItems.map((i) => ({ ...i, submission_id: submissionId })))).error, 'Saving items');
       } else {
-        check((await this.sb.from('form_asset').insert({ submission_id: submissionId, employee_id: text(d.employeeId, 60), reference_no: text(d.referenceNo, 60), it_remarks: text(d.itRemarks) })).error, 'Saving form details');
+        check((await this.sb.from('form_asset').insert({ submission_id: submissionId, employee_id: text(d.employeeId, 60), reference_no: formNumber, it_remarks: text(d.itRemarks) })).error, 'Saving form details');
         if (assetItems.length) check((await this.sb.from('form_asset_items').insert(assetItems.map((i: Row) => ({ ...i, submission_id: submissionId })))).error, 'Saving items');
         const { data: options } = await this.sb.from('form_asset_return_options').select('id, sort_order').eq('form_type', input.type).order('sort_order');
         const ticked = (Array.isArray(d.itReturnOptions) ? d.itReturnOptions : [])

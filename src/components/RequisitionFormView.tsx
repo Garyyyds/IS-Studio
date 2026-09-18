@@ -98,7 +98,10 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
   // state keeps only names, which is all the PDF needs.
   const pickedFilesRef = useRef(new Map<string, File>());
   const { submit, isSubmitting, submitted } = useFormSubmit('requisition', currentUser);
-  const alreadySubmitted = submitted?.snapshot === JSON.stringify(form);
+  // The reference number is filled in on submit, so it is left out of the
+  // comparison that decides whether this exact form has already been sent.
+  const snapshot = (f: RequisitionFormData) => JSON.stringify({ ...f, refNo: '' });
+  const alreadySubmitted = submitted?.snapshot === snapshot(form);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -235,7 +238,9 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
       ? form.attachmentFileNames.map((name) => pickedFilesRef.current.get(name)).filter((f): f is File => Boolean(f))
       : [];
     try {
-      await submit(withoutBlankRows(), files, JSON.stringify(form));
+      const saved = await submit(withoutBlankRows(), files, snapshot(form));
+      // Ref No. and the form number are the same thing.
+      setForm((prev) => ({ ...prev, refNo: saved.formNumber }));
     } catch (err: any) {
       setError(err?.message || 'Could not submit the form. Please try again.');
     }
@@ -261,6 +266,10 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
 
   const inputClass =
     'w-full px-3.5 py-2 rounded-lg text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition';
+
+  // Boxes the employee cannot type in, such as the reference number.
+  const readOnlyInputClass =
+    'w-full px-3.5 py-2 rounded-lg text-sm bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 placeholder:text-slate-400 font-medium cursor-not-allowed focus:outline-none';
 
   const cellClass =
     'w-full px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition resize-y min-h-[30px] leading-snug';
@@ -513,7 +522,18 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
           <h3 className={headingClass}>{REQ_SECTION_A_TITLE}</h3>
         </div>
         <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {textField('Ref No.', 'refNo', 'IT/IR/__ /__ /__')}
+          {/* Given by IT when the form is submitted: the form's own number. */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">Ref No.</label>
+            <input
+              type="text"
+              readOnly
+              value={form.refNo}
+              placeholder="Given when you submit"
+              title="The reference number is the form number, given when you submit"
+              className={readOnlyInputClass}
+            />
+          </div>
           <div>
             <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
               Request Date
