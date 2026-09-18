@@ -59,7 +59,7 @@ const emptyTask: Task = {
   checklist: [],
   requesterName: '',
   requesterEmail: '',
-  requesterDepartment: 'General',
+  requesterDepartment: '',
   deviceInfo: '',
   assignee: {
     name: 'Unassigned',

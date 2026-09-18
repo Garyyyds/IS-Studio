@@ -123,7 +123,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // User Profile Form State
   const [profileName, setProfileName] = useState(currentUser?.name || '');
-  const [profileDepartment, setProfileDepartment] = useState(currentUser?.department || 'IT Operations');
+  const [profileDepartment, setProfileDepartment] = useState(currentUser?.department || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -132,7 +132,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     if (currentUser) {
       setProfileName(currentUser.name || '');
-      setProfileDepartment(currentUser.department || 'IT Operations');
+      setProfileDepartment(currentUser.department || '');
     }
   }, [currentUser]);
 
@@ -559,6 +559,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           placeholder="e.g. IT Operations & Infrastructure"
                         />
                       </div>
+                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        Filled in on every form you submit. Leave it blank to leave that box empty on the forms.
+                      </p>
                     </div>
 
                     <div>

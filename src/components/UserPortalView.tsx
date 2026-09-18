@@ -236,7 +236,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
       requesterId: currentUser.id,
       requesterName: currentUser.name,
       requesterEmail: currentUser.email,
-      requesterDepartment: currentUser.department || 'General',
+      requesterDepartment: currentUser.department,
       deviceInfo: deviceInfo.trim() || undefined,
       isUserSubmitted: true,
       systemRequested,
@@ -335,7 +335,7 @@ export const UserPortalView: React.FC<UserPortalViewProps> = ({
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Building2 className="w-3 h-3 text-slate-400" />
-                {currentUser.department || 'General Staff'}
+                {currentUser.department || 'Department not set'}
               </span>
             </p>
           </div>

@@ -880,7 +880,9 @@ app.post('/api/auth/register', async (req, res) => {
       password: await hashPassword(password),
       name: String(name).trim(),
       role: cleanRole,
-      department: department?.trim() || (cleanRole === 'admin' ? 'IT Operations & SRE' : 'General Staff'),
+      // Left empty on purpose: the person fills it in under Settings > My
+      // Profile, and the forms then take it from there.
+      department: typeof department === 'string' ? department.trim() : '',
       created_at: new Date().toISOString()
     };
 

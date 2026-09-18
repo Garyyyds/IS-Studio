@@ -42,7 +42,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regDepartment, setRegDepartment] = useState('Product & Design');
+  // Department is not asked for here: the account starts without one and the
+  // person sets it themselves in Settings > My Profile.
   const [regRole, setRegRole] = useState<UserRole>('user');
 
   // Forgot password form state with 2-step email verification
@@ -194,7 +195,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           email: regEmail,
           password: regPassword,
           role: regRole,
-          department: regDepartment
         })
       });
       const data = await res.json();
@@ -217,7 +217,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         email: regEmail.trim().toLowerCase(),
         name: regName.trim(),
         role: regRole,
-        department: regDepartment,
       };
       setSuccessMsg(`Account created for ${newFallbackUser.name}! Please sign in with your credentials.`);
       setLoginEmail(regEmail.trim());
@@ -572,28 +571,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Department
-                    </label>
-                    <div className="relative">
-                      <Building2 className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <select
-                        value={regDepartment}
-                        onChange={(e) => setRegDepartment(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer transition"
-                      >
-                        <option value="Product & Design">Product & Design</option>
-                        <option value="Engineering">Engineering</option>
-                        <option value="Marketing & Sales">Marketing & Sales</option>
-                        <option value="Finance & HR">Finance & HR</option>
-                        <option value="Operations">Operations</option>
-                        <option value="IT Operations & SRE">IT Operations & SRE</option>
-                      </select>
-                    </div>
-                  </div>
-
+                <div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Password
