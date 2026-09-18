@@ -529,7 +529,7 @@ export const RequisitionFormView: React.FC<RequisitionFormViewProps> = ({
               type="text"
               readOnly
               value={form.refNo}
-              placeholder="Given when you submit"
+              placeholder="Auto-Fill"
               title="The reference number is the form number, given when you submit"
               className={readOnlyInputClass}
             />

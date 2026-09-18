@@ -134,3 +134,4 @@ away later work permanently.
 | `18092026ver000` | 2026-09-18 | Department is no longer asked for when registering: new accounts start without one and the person types it themselves under Settings > My Profile, where the forms then read it from. No database change: app_users.department already exists. |
 | `18092026ver001` | 2026-09-18 | Changed 1 file(s): src/components/SettingsView.tsx |
 | `18092026ver002` | 2026-09-18 | Reference No. is now the form's own number: the box is read-only on the Requisition, Allocation and Disposal forms, shows "Given when you submit", and is filled with IRQ-/ALC-/DSP- number once submitted; the server stores the form number as the reference whatever the browser sends. Also corrected DSP-0001 in Supabase (department, location, reference). |
+| `18092026ver003` | 2026-09-18 | Changed 2 file(s): src/components/AssetFormView.tsx src/components/RequisitionFormView.tsx |

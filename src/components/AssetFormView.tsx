@@ -228,7 +228,7 @@ export const AssetFormView: React.FC<AssetFormViewProps> = ({ config, currentUse
               type="text"
               readOnly
               value={form.referenceNo}
-              placeholder="Given when you submit"
+              placeholder="Auto-Fill"
               title="The reference number is the form number, given when you submit"
               className={readOnlyInputClass}
             />
