@@ -132,3 +132,4 @@ away later work permanently.
 | `17092026ver002` | 2026-09-17 | Clear Form now confirms in a pop-up ("Clear this form?" with Cancel / Clear Form, styled like the Reject request dialog) on all five employee forms; Cancel, Escape or clicking outside keep the form. |
 | `17092026ver003` | 2026-09-17 | Removed the Self-Service SOP Guides tab from the employee portal (employees use the IT Assistant; the handbook stays in the admin portal). The IT Support Request sidebar now has "Ask the IT Assistant", which opens the chat panel. |
 | `18092026ver000` | 2026-09-18 | Department is no longer asked for when registering: new accounts start without one and the person types it themselves under Settings > My Profile, where the forms then read it from. No database change: app_users.department already exists. |
+| `18092026ver001` | 2026-09-18 | Changed 1 file(s): src/components/SettingsView.tsx |

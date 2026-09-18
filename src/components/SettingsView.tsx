@@ -556,7 +556,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           value={profileDepartment}
                           onChange={(e) => setProfileDepartment(e.target.value)}
                           className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
-                          placeholder="e.g. IT Operations & Infrastructure"
+                          placeholder="Information Technology"
                         />
                       </div>
                       <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
